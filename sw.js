@@ -1,4 +1,4 @@
-const CACHE = 'mms-v14';
+const CACHE = 'mms-v15';
 const ASSETS = [
   './index.html',
   './manifest.json',
