@@ -29,9 +29,11 @@
 }
 /* ── 라이트 모드 ── */
 body.light{
-  --bg:#f0f2f5; --surf:#ffffff; --card:#ffffff; --card2:#f8f9fb;
-  --border:#dde1e8; --border2:#c8cdd7;
-  --text:#1a2030; --muted:#8896a8; --muted2:#5a6a80;
+  --bg:#f0f4f8; --surf:#ffffff; --card:#ffffff; --card2:#f5f7fa;
+  --border:#d4d9e2; --border2:#b8c0cc;
+  --amber:#c47f00; --amber2:#d4890a; --amber-d:#7a4f00;
+  --green:#0a9168; --red:#d42b2b; --blue:#1d5fc4; --purple:#6b3fc4;
+  --text:#111827; --muted:#4b5563; --muted2:#374151;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;background:var(--bg);}
@@ -300,11 +302,69 @@ canvas{display:block;width:100%!important;}
 
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-body.light .finput::placeholder,body.light .ftextarea::placeholder{color:#b0bec8;}
-body.light .finput,body.light .fselect,body.light .ftextarea{background:#f4f6f9;}
+/* ── 라이트모드 세부 색상 보정 ── */
+body.light .finput::placeholder,body.light .ftextarea::placeholder{color:#9ca3af;}
+body.light .finput,body.light .fselect,body.light .ftextarea{background:#f9fafb;color:#111827;border-color:#b8c0cc;}
+body.light .finput:focus,body.light .fselect:focus,body.light .ftextarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px #c47f0015;}
 body.light .ac-list{background:#fff;border-color:var(--amber);box-shadow:0 8px 24px #00000020;}
-body.light .ac-item:hover{background:#f8f9fb;}
+body.light .ac-item{color:#111827;border-color:#e5e7eb;}
+body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
 body.light mark{background:transparent;color:var(--amber);font-weight:700;}
+body.light .topbar{background:#fff;}
+body.light .ttitle{color:#111827;}
+body.light .topbar-date{color:#6b7280;}
+body.light .tab{color:#6b7280;}
+body.light .sec-title{color:#374151;}
+body.light .flabel{color:#374151;}
+body.light .kpi-label{color:#4b5563;}
+body.light .kpi-val{color:#111827;}
+body.light .kpi-sub{color:#6b7280;}
+body.light .eq-name{color:#111827;}
+body.light .mlog-content{color:#111827;}
+body.light .mlog-date{color:#6b7280;}
+body.light .mchip{background:#f3f4f6;border-color:#d4d9e2;color:#374151;}
+body.light .part-name{color:#111827;}
+body.light .btn-ghost{color:#374151;border-color:#b8c0cc;}
+body.light .alarm-btn{border-color:#b8c0cc;color:#374151;}
+body.light .theme-btn{border-color:#b8c0cc;color:#374151;}
+body.light .modal{background:#fff;}
+body.light .modal-title{color:#111827;}
+body.light .insp-summary-bar{background:#f9fafb;}
+body.light .insp-summary-title{color:#374151;}
+body.light .insp-summary-count{color:#374151;}
+body.light .chk-item{background:#f9fafb;border-color:#d4d9e2;}
+body.light .chk-label{color:#111827;}
+body.light .chk-sub{color:#6b7280;}
+body.light .chk-section-title{color:#4b5563;}
+body.light .insp-cat-tab{background:#f3f4f6;border-color:#d4d9e2;color:#374151;}
+body.light .insp-cat-tab.active{background:#c47f0010;border-color:var(--amber);color:var(--amber);}
+body.light .ev-title{color:#111827;}
+body.light .ev-meta{color:#6b7280;}
+body.light .ev-content{color:#374151;}
+body.light .search-bar{background:#f9fafb;color:#111827;border-color:#b8c0cc;}
+body.light .search-bar::placeholder{color:#9ca3af;}
+body.light .filter-chip{background:#f3f4f6;border-color:#d4d9e2;color:#374151;}
+body.light .filter-chip.active{background:#c47f0015;border-color:var(--amber);color:var(--amber);}
+body.light .alarm-panel{background:#fff;}
+body.light .alarm-text{color:#111827;}
+body.light .alarm-sub{color:#4b5563;}
+body.light .alarm-item.warning{background:#fffbf0;border-color:#c47f0030;}
+body.light .alarm-item.critical{background:#fff5f5;border-color:#d42b2b30;}
+body.light .share-note{color:#4b5563;}
+body.light .eq-info-cell{background:#f9fafb;border-color:#d4d9e2;}
+body.light .eq-info-cell-label{color:#4b5563;}
+body.light .eq-info-cell-val{color:#111827;}
+body.light .eq-memo-box{background:#fffbf0;border-left-color:var(--amber);}
+body.light .eq-memo-text{color:#374151;}
+body.light .eq-stat{background:#f3f4f6;border-color:#d4d9e2;}
+body.light .eq-stat-label{color:#4b5563;}
+body.light .chk-reset-btn{color:#374151;border-color:#b8c0cc;}
+body.light .grade-btn{background:#f3f4f6;color:#374151;border-color:#d4d9e2;}
+body.light .grade-table td{color:#111827;}
+body.light .gt-desc{color:#4b5563;}
+body.light .empty{color:#6b7280;}
+body.light .topbar::after{background:linear-gradient(90deg,transparent,var(--amber),transparent);}
+body.light .sec-title::after{background:#d4d9e2;}
 
 /* ── 일정 ── */
 .ev-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;border-left:4px solid var(--blue);position:relative;}
