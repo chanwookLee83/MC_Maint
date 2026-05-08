@@ -128,7 +128,7 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 .alarm-btn{background:none;border:1px solid var(--border2);border-radius:6px;color:var(--muted2);font-size:18px;padding:5px 8px;cursor:pointer;position:relative;}
 .alarm-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:10px;font-weight:700;width:15px;height:15px;border-radius:50%;display:none;align-items:center;justify-content:center;font-family:var(--mono);}
 .alarm-badge.show{display:flex;}
-.topbar-date{font-family:var(--mono);font-size:12px;color:var(--muted);}
+.topbar-date{font-family:var(--mono);font-size:14px;color:var(--muted);white-space:nowrap;}
 .theme-btn{background:none;border:1px solid var(--border2);border-radius:6px;color:var(--muted2);font-size:16px;padding:5px 8px;cursor:pointer;transition:all .2s;}
 .theme-btn:active{border-color:var(--amber);color:var(--amber);}
 /* 동기화 뱃지 */
@@ -200,9 +200,9 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;}
 .kpi-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px;}
-.kpi-label{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:3px;color:var(--muted);margin-bottom:5px;}
-.kpi-val{font-family:var(--mono);font-size:26px;font-weight:bold;}
-.kpi-sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px;}
+.kpi-label{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:5px;}
+.kpi-val{font-family:var(--mono);font-size:28px;font-weight:bold;}
+.kpi-sub{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:3px;}
 
 /* EQUIPMENT CARD */
 .eq-card{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:9px;overflow:hidden;}
@@ -216,8 +216,8 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 .eq-body.open{display:block;}
 .eq-stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
 .eq-stat{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:9px;text-align:center;}
-.eq-stat-label{font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;font-weight:700;}
-.eq-stat-val{font-family:var(--mono);font-size:17px;font-weight:bold;}
+.eq-stat-label{font-family:var(--cond);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;font-weight:700;}
+.eq-stat-val{font-family:var(--mono);font-size:20px;font-weight:bold;}
 .eq-actions{display:flex;gap:7px;}
 
 /* 장비 등급 */
@@ -441,6 +441,10 @@ body.light .eq-stat{background:#f3f4f6;border-color:#d4d9e2;}
 body.light .eq-stat-label{color:#4b5563;}
 body.light .chk-reset-btn{color:#374151;border-color:#b8c0cc;}
 body.light .grade-btn{background:#f3f4f6;color:#374151;border-color:#d4d9e2;}
+body.light .grade-btn.sel-S{background:#ff4d4d15;border-color:#ff4d4d;color:#ff4d4d;}
+body.light .grade-btn.sel-A{background:#c47f0015;border-color:var(--amber);color:var(--amber);}
+body.light .grade-btn.sel-B{background:#1d5fc415;border-color:var(--blue);color:var(--blue);}
+body.light .grade-btn.sel-C{background:#0a916815;border-color:var(--green);color:var(--green);}
 body.light .grade-table td{color:#111827;}
 body.light .gt-desc{color:#4b5563;}
 body.light .empty{color:#6b7280;}
@@ -1588,7 +1592,7 @@ function renderEqList(){
         <div class="eq-stat-row">
           <div class="eq-stat"><div class="eq-stat-label">MTBF</div><div class="eq-stat-val" style="color:var(--green)">${mtbf?mtbf.toFixed(0)+'h':'—'}</div></div>
           <div class="eq-stat"><div class="eq-stat-label">MTTR</div><div class="eq-stat-val" style="color:var(--amber)">${mttr?mttr.toFixed(1)+'h':'—'}</div></div>
-          <div class="eq-stat"><div class="eq-stat-label">누적비용</div><div class="eq-stat-val" style="color:var(--blue);font-size:12px;">${fmtCost(totalCost)}</div></div>
+          <div class="eq-stat"><div class="eq-stat-label">누적비용</div><div class="eq-stat-val" style="color:var(--blue);font-size:15px;">${fmtCost(totalCost)}</div></div>
         </div>
 
         <!-- 상세 정보 그리드 -->
