@@ -496,7 +496,29 @@ body.light .sec-title::after{background:#d4d9e2;}
 .ev-actions{display:flex;gap:6px;margin-top:8px;}
 
 /* 이벤트 모달 */
-.ac-wrap{position:relative;}
+/* ── BOM 트리 ── */
+.bom-eq-group{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;}
+.bom-eq-head{padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+.bom-eq-head:active{background:var(--card2);}
+.bom-eq-name{font-size:15px;font-weight:700;color:var(--text);flex:1;}
+.bom-eq-count{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:2px 9px;}
+.bom-eq-body{display:none;border-top:1px solid var(--border);padding:10px 12px;}
+.bom-eq-body.open{display:block;}
+.bom-cat-title{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:8px 0 5px;display:flex;align-items:center;gap:6px;}
+.bom-cat-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.bom-part-row{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;margin-bottom:5px;}
+.bom-part-info{flex:1;min-width:0;}
+.bom-part-name{font-size:13px;font-weight:600;color:var(--text);}
+.bom-part-detail{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
+.bom-part-qty{font-family:var(--mono);font-size:12px;color:var(--amber);background:#f59e0b15;border:1px solid #f59e0b30;border-radius:4px;padding:2px 7px;flex-shrink:0;}
+/* 점검 목록 수정 */
+.chk-edit-item{display:flex;align-items:flex-start;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:9px 11px;margin-bottom:6px;}
+.chk-edit-text{flex:1;}
+.chk-edit-label{font-size:13px;color:var(--text);}
+.chk-edit-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
+.chk-edit-del{background:#ef444415;border:1px solid #ef444430;color:var(--red);border-radius:5px;padding:5px 9px;font-family:var(--cond);font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;}
+
+/* ── 자동완성 ── */
 .ac-list{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--card2);border:1px solid var(--amber);border-radius:8px;z-index:999;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px #00000060;display:none;}
 .ac-list.open{display:block;}
 .ac-item{padding:10px 13px;font-size:14px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
@@ -651,6 +673,7 @@ body.light .sec-title::after{background:#d4d9e2;}
   <div class="tab" onclick="gotoTab('parts')"  id="tab-parts"> <span class="tab-icon">📦</span>부품</div>
   <div class="tab" onclick="gotoTab('stats')"  id="tab-stats"> <span class="tab-icon">📊</span>통계</div>
   <div class="tab" onclick="gotoTab('insp')"   id="tab-insp">  <span class="tab-icon">📋</span>점검</div>
+  <div class="tab" onclick="gotoTab('bom')"    id="tab-bom">   <span class="tab-icon">🔩</span>파트</div>
   <div class="tab" onclick="gotoTab('event')"  id="tab-event"> <span class="tab-icon">📅</span>일정<div class="tbadge" id="evBadge"></div></div>
   <div class="tab" onclick="gotoTab('share')"  id="tab-share"> <span class="tab-icon">📤</span>공유</div>
 </div>
@@ -661,7 +684,7 @@ body.light .sec-title::after{background:#d4d9e2;}
     <div class="sec-title">장비 등록</div>
     <div class="card amber-t">
       <!-- 기본 정보 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">장비명 *</label><div class="ac-wrap"><input class="finput" id="eqName" placeholder="예) 용접 로봇 #1" autocomplete="off" oninput="acShow('eqName','eqNames')"><div class="ac-list" id="ac-eqName"></div></div></div>
       <div class="frow">
         <div class="field"><label class="flabel">시리얼번호</label><div class="ac-wrap"><input class="finput" id="eqSerial" placeholder="예) WR-2024-001" autocomplete="off" oninput="acShow('eqSerial','eqSerials')"><div class="ac-list" id="ac-eqSerial"></div></div></div>
@@ -683,7 +706,7 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
 
       <!-- 장비 등급 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
+      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
       <input type="hidden" id="eqGrade" value="">
       <div class="grade-selector">
         <div class="grade-btn" id="gbtn-S" onclick="selectGrade('eqGrade','S')">S<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">최우선</div></div>
@@ -693,7 +716,7 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
 
       <!-- 전기 사양 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">전원 종류</label>
         <div class="fselect-w"><select class="fselect" id="eqPower">
           <option value="">미입력</option>
@@ -706,11 +729,11 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
 
       <!-- 공압 사양 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">사용 압력 (MPa)</label><input class="finput" id="eqAirPres" type="number" placeholder="예) 0.5" step="0.01" min="0" inputmode="decimal"></div>
 
       <!-- 비고 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">📝 비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">📝 비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">메모</label><textarea class="ftextarea" id="eqMemo" placeholder="특이사항, 주의사항 등 자유롭게 입력..."></textarea></div>
 
       <button class="btn-primary" onclick="registerEq()">🏭 장비 등록</button>
@@ -742,7 +765,7 @@ body.light .sec-title::after{background:#d4d9e2;}
           <div class="fselect-w"><select class="fselect" id="mType">
             <option value="예방">예방정비</option>
             <option value="고장">고장수리</option>
-            <option value="수정">프로그램수정</option>
+            <option value="정기">정기점검</option>
             <option value="개선">개선작업</option>
           </select></div>
         </div>
@@ -888,7 +911,7 @@ body.light .sec-title::after{background:#d4d9e2;}
 
   <!-- 정기점검 체크리스트 -->
   <div class="sec">
-    <div class="sec-title">정기점검 체크리스트</div>
+    <div class="sec-title">정기점검 체크리스트 <button onclick="openChkEdit()" style="background:#3b82f615;border:1px solid #3b82f630;border-radius:6px;color:var(--blue);font-family:var(--cond);font-size:10px;font-weight:700;padding:3px 10px;cursor:pointer;letter-spacing:1px;margin-left:4px;">✏️ 목록 수정</button></div>
     <div class="card amber-t">
 
       <!-- 장비 선택 -->
@@ -1101,6 +1124,114 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
     </div>
     <div id="evList"><div class="empty"><span class="empty-icon">📅</span>등록된 일정 없음</div></div>
+  </div>
+</div>
+
+<!-- ══════ 파트(BOM) ══════ -->
+<div class="page" id="page-bom">
+
+  <!-- 파트 등록 -->
+  <div class="sec" style="margin-top:4px;">
+    <div class="sec-title">파트 등록</div>
+    <div class="card" style="border-top:2px solid var(--blue);">
+      <div class="field"><label class="flabel">장비 선택 *</label>
+        <div class="fselect-w"><select class="fselect" id="bomEqSel" onchange="bomEqChange()">
+          <option value="">-- 장비 선택 --</option>
+        </select></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">카테고리</label>
+          <div class="fselect-w"><select class="fselect" id="bomCat">
+            <option value="구동부">⚙️ 구동부</option>
+            <option value="공압부">🔵 공압부</option>
+            <option value="전장부">⚡ 전장부</option>
+            <option value="센서부">📡 센서부</option>
+            <option value="소모품">🔄 소모품</option>
+            <option value="구조물">🏗 구조물</option>
+            <option value="기타">📦 기타</option>
+          </select></div>
+        </div>
+        <div class="field"><label class="flabel">수량</label>
+          <input class="finput" id="bomQty" type="number" value="1" min="1" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field"><label class="flabel">부품명 *</label>
+        <div class="ac-wrap"><input class="finput" id="bomName" placeholder="예) 서보모터" autocomplete="off" oninput="acShow('bomName','partNames')"><div class="ac-list" id="ac-bomName"></div></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">형번</label>
+          <div class="ac-wrap"><input class="finput" id="bomPN" placeholder="예) A06B-0227" autocomplete="off" oninput="acShow('bomPN','partPNs')"><div class="ac-list" id="ac-bomPN"></div></div>
+        </div>
+        <div class="field"><label class="flabel">수량</label>
+          <input class="finput" id="bomQty" type="number" value="1" min="1" inputmode="numeric">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">제조사</label>
+          <div class="ac-wrap"><input class="finput" id="bomMaker" placeholder="예) FANUC" autocomplete="off" oninput="acShow('bomMaker','makers')"><div class="ac-list" id="ac-bomMaker"></div></div>
+        </div>
+        <div class="field"><label class="flabel">비고</label>
+          <input class="finput" id="bomNote" placeholder="위치, 규격 등" autocomplete="off">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="registerBom()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">🔩 파트 등록</button>
+      <button class="btn-ghost" onclick="clearBomForm()">↺ 초기화</button>
+    </div>
+  </div>
+
+  <!-- 장비별 파트 트리 -->
+  <div class="sec">
+    <div class="sec-title">장비별 파트 목록</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div class="fselect-w" style="flex:1;">
+        <select class="fselect" id="bomViewEq" onchange="renderBomTree()" style="padding:9px 10px;font-size:14px;">
+          <option value="">전체 장비</option>
+        </select>
+      </div>
+      <div class="fselect-w" style="flex:1;">
+        <select class="fselect" id="bomViewCat" onchange="renderBomTree()" style="padding:9px 10px;font-size:14px;">
+          <option value="">전체 카테고리</option>
+          <option value="구동부">⚙️ 구동부</option>
+          <option value="공압부">🔵 공압부</option>
+          <option value="전장부">⚡ 전장부</option>
+          <option value="센서부">📡 센서부</option>
+          <option value="소모품">🔄 소모품</option>
+          <option value="구조물">🏗 구조물</option>
+          <option value="기타">📦 기타</option>
+        </select>
+      </div>
+    </div>
+    <div id="bomTree"><div class="empty"><span class="empty-icon">🔩</span>등록된 파트 없음</div></div>
+  </div>
+</div>
+
+<!-- ══════ 점검 목록 수정 ══════ -->
+<div id="chkEditModal" class="modal-bg" onclick="closeModal('chkEditModal',event)">
+  <div class="modal">
+    <div class="modal-title">📋 점검 목록 수정 <button class="modal-close" onclick="closeModal('chkEditModal')">✕</button></div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px;">항목을 수정하거나 추가/삭제할 수 있습니다.</div>
+
+    <div class="frow" style="margin-bottom:10px;">
+      <div class="field"><label class="flabel">카테고리</label>
+        <div class="fselect-w"><select class="fselect" id="chkEditCat" onchange="renderChkEditList()">
+          <option value="pn">🔧 공압</option>
+          <option value="el">⚡ 전기</option>
+          <option value="vs">🔩 외관</option>
+          <option value="fp">🛠 F/Proof</option>
+        </select></div>
+      </div>
+    </div>
+
+    <div id="chkEditList" style="margin-bottom:12px;"></div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;">
+      <div style="font-family:var(--cond);font-size:10px;letter-spacing:2px;color:var(--muted2);margin-bottom:8px;font-weight:700;">+ 새 항목 추가</div>
+      <input class="finput" id="chkNewLabel" placeholder="점검 항목명" autocomplete="off" style="margin-bottom:6px;">
+      <input class="finput" id="chkNewSub" placeholder="기준값 (예: 0.4~0.6 MPa)" autocomplete="off" style="margin-bottom:8px;">
+      <button class="btn-primary" onclick="addChkItem()" style="font-size:14px;padding:10px;">+ 추가</button>
+    </div>
+
+    <button class="btn-ghost" onclick="resetChkToDefault()">↺ 기본값으로 초기화</button>
   </div>
 </div>
 
@@ -1401,8 +1532,10 @@ function daysSince(d){if(!d)return null;return Math.floor((Date.now()-new Date(d
 document.getElementById('topDate').textContent=localToday();
 
 // ── 데이터 ──
-let db=JSON.parse(localStorage.getItem('mms_v1')||'{"eqs":[],"maints":[],"parts":[],"insps":[],"inbounds":[],"events":[]}');
-if(!db.events) db.events=[];  // 기존 데이터 호환
+let db=JSON.parse(localStorage.getItem('mms_v1')||'{"eqs":[],"maints":[],"parts":[],"insps":[],"inbounds":[],"events":[],"boms":[],"customChk":{}}');
+if(!db.events)db.events=[];
+if(!db.boms)db.boms=[];
+if(!db.customChk)db.customChk={};  // 기존 데이터 호환
 if(!db.inbounds) db.inbounds=[];
 function save(){
   localStorage.setItem('mms_v1',JSON.stringify(db));
@@ -1412,7 +1545,7 @@ function save(){
 
 // ── 탭 ──
 function gotoTab(n){
-  ['eq','maint','parts','stats','insp','event','share'].forEach(t=>{
+  ['eq','maint','parts','stats','insp','bom','event','share'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active',t===n);
     document.getElementById('tab-'+t).classList.toggle('active',t===n);
   });
@@ -1420,6 +1553,7 @@ function gotoTab(n){
   if(n==='stats') renderStats();
   if(n==='insp')  renderInsp();
   if(n==='parts') renderParts();
+  if(n==='bom')   {populateBomEqSel();renderBomTree();}
   if(n==='event') renderEvents();
   checkAlarms();
 }
@@ -2716,6 +2850,226 @@ function saveChkList(){
   checkAlarms();
   resetChkList();
   toast('✅ 점검 완료 저장: '+eqObj.name);
+}
+
+// ══════ BOM (장비별 파트) ══════
+const CAT_ICON={구동부:'⚙️',공압부:'🔵',전장부:'⚡',센서부:'📡',소모품:'🔄',구조물:'🏗',기타:'📦'};
+
+function populateBomEqSel(){
+  ['bomEqSel','bomViewEq'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    const prev=sel.value;
+    sel.innerHTML=id==='bomEqSel'?'<option value="">-- 장비 선택 --</option>':'<option value="">전체 장비</option>';
+    db.eqs.forEach(eq=>sel.innerHTML+=`<option value="${eq.id}">${eq.name}</option>`);
+    if(prev)sel.value=prev;
+  });
+}
+
+function bomEqChange(){} // 필요 시 확장
+
+function registerBom(){
+  const eqId=parseInt(document.getElementById('bomEqSel').value);
+  const name=document.getElementById('bomName').value.trim();
+  if(!eqId){toast('장비를 선택해 주세요','w');return;}
+  if(!name){toast('부품명을 입력해 주세요','w');return;}
+  const eq=db.eqs.find(e=>e.id===eqId);
+  db.boms.push({
+    id:Date.now(),
+    eqId,eqName:eq.name,
+    cat:document.getElementById('bomCat').value,
+    name,
+    pn:document.getElementById('bomPN').value.trim(),
+    maker:document.getElementById('bomMaker').value.trim(),
+    qty:parseInt(document.getElementById('bomQty').value)||1,
+    note:document.getElementById('bomNote').value.trim(),
+    date:localToday()
+  });
+  save();clearBomForm();renderBomTree();populateBomEqSel();
+  toast('🔩 파트 등록 완료: '+name);
+}
+
+function clearBomForm(){
+  ['bomName','bomPN','bomMaker','bomNote'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('bomQty').value=1;
+  document.getElementById('bomCat').value='구동부';
+}
+
+function renderBomTree(){
+  const filterEq=document.getElementById('bomViewEq')?.value||'';
+  const filterCat=document.getElementById('bomViewCat')?.value||'';
+  const el=document.getElementById('bomTree');
+  if(!el)return;
+
+  let list=db.boms;
+  if(filterEq) list=list.filter(b=>b.eqId==filterEq);
+  if(filterCat) list=list.filter(b=>b.cat===filterCat);
+
+  if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon">🔩</span>등록된 파트 없음</div>';return;}
+
+  // 장비별 그룹
+  const byEq={};
+  list.forEach(b=>{
+    if(!byEq[b.eqId])byEq[b.eqId]={eqName:b.eqName,parts:[]};
+    byEq[b.eqId].parts.push(b);
+  });
+
+  el.innerHTML=Object.entries(byEq).map(([eqId,{eqName,parts}])=>{
+    // 카테고리별 그룹
+    const byCat={};
+    parts.forEach(p=>{if(!byCat[p.cat])byCat[p.cat]=[];byCat[p.cat].push(p);});
+    const totalVal=parts.reduce((s,p)=>s+(p.price||0)*(p.qty||1),0);
+
+    const catHtml=Object.entries(byCat).map(([cat,catParts])=>`
+      <div class="bom-cat-title">${CAT_ICON[cat]||'📦'} ${cat}</div>
+      ${catParts.map(p=>`
+      <div class="bom-part-row">
+        <div class="bom-part-info">
+          <div class="bom-part-name">${p.name}</div>
+          <div class="bom-part-detail">${p.pn?'형번: '+p.pn+' &nbsp;':''} ${p.maker?'제조: '+p.maker:''} ${p.note?'| '+p.note:''}</div>
+        </div>
+        <div class="bom-part-qty">×${p.qty}</div>
+        <button class="btn-sm bsm-r" style="padding:4px 8px;font-size:10px;" onclick="deleteBom(${p.id})">🗑</button>
+      </div>`).join('')}
+    `).join('');
+
+    return `<div class="bom-eq-group">
+      <div class="bom-eq-head" onclick="toggleBomEq(${eqId})">
+        <span style="font-size:18px;">🏭</span>
+        <div class="bom-eq-name">${eqName}</div>
+        <span class="bom-eq-count">${parts.length}개 파트</span>
+        <span style="color:var(--muted);font-size:12px;" id="bom-chev-${eqId}">▾</span>
+      </div>
+      <div class="bom-eq-body" id="bom-body-${eqId}">${catHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleBomEq(eqId){
+  const body=document.getElementById('bom-body-'+eqId);
+  const chev=document.getElementById('bom-chev-'+eqId);
+  const isOpen=body.classList.toggle('open');
+  if(chev)chev.style.transform=isOpen?'rotate(180deg)':'';
+}
+
+function deleteBom(id){
+  if(!confirm('파트를 삭제할까요?'))return;
+  db.boms=db.boms.filter(b=>b.id!==id);
+  save();renderBomTree();toast('삭제됨','w');
+}
+
+// ══════ 점검 목록 수정 ══════
+const DEFAULT_CHK={
+  pn:{
+    labels:['공압 공급 압력 확인','에어 필터 / 드레인 상태','레귤레이터 설정값 확인','배관 / 피팅 누기 점검','실린더 동작 속도 / 쿠션','솔레노이드 밸브 동작 확인','루브리케이터 오일 잔량','진공 발생기 / 흡착패드 상태'],
+    subs:['정상 범위: 0.4~0.6 MPa','드레인 배출, 필터 막힘 여부','각 유닛 설정압 일치 여부','비눗물 또는 청음기 사용','스트로크 끝단 쿠션 이상음 확인','수동 Override 동작 테스트','적정 레벨 확인 및 보충','패드 마모, 진공압 정상 여부']
+  },
+  el:{
+    labels:['전원 전압 측정','NFB / 차단기 ON/OFF 확인','제어반 내부 청결 / 발열','단자대 / 커넥터 체결 상태','접지 저항 측정','센서 신호 정상 출력 확인','인버터 / 서보 드라이브 알람','케이블 덕트 / 케이블 베어 상태'],
+    subs:['AC 220V / DC 24V 레벨 확인','각 차단기 트립 이력 점검','먼지, 이물질, 과열 부위 확인','이완, 산화, 절연 손상 점검','10Ω 이하 확인','PLC I/O 모니터링 점검','경보 이력 확인 및 초기화','피복 손상, 꺾임, 고정 이상 확인']
+  },
+  vs:{
+    labels:['프레임 / 볼트 체결 상태','커버 / 가드 파손 여부','이물질 / 칩 퇴적 상태','오일 / 그리스 누유 확인','표시등 / HMI 패널 상태','벨트 / 체인 장력 및 마모','LM 가이드 / 볼스크류 상태','방진 / 방음재 이상 여부'],
+    subs:['느슨해진 볼트 조임 및 부식 확인','안전 커버 장착 상태 점검','가동부 주변 청소 및 확인','베어링, 감속기, 배관 주변 점검','파손, 점등 불량, 오염 확인','처짐량, 균열, 이물 끼임 확인','그리스 상태, 이물 유입 점검','탈락, 파손, 열화 상태 확인']
+  },
+  fp:{
+    labels:['비상정지(EMO) 동작 확인','안전 도어 인터락 동작','광전 센서(라이트 커튼) 점검','과부하 / 과전류 보호 동작','치구 / 지그 형상 이상 감지','클램프 미착 감지 센서','이중화 확인 센서 정합성','알람 / 에러 코드 이력 확인'],
+    subs:['전 구간 E-STOP 실제 동작 테스트','도어 열림 시 정지 여부 확인','차광 시 즉시 정지 동작 확인','모터 열동 계전기 설정값 확인','W/P 역삽 방지 핀·블록 상태 확인','클램프 Open 상태 기동 방지 확인','Primary / Secondary 신호 일치 여부','PLC 알람 로그 확인 및 원인 조치']
+  }
+};
+
+function openChkEdit(){openModal('chkEditModal');renderChkEditList();}
+
+function getChkData(cat){
+  const custom=db.customChk[cat];
+  if(custom) return custom;
+  return {labels:[...DEFAULT_CHK[cat].labels],subs:[...DEFAULT_CHK[cat].subs]};
+}
+
+function renderChkEditList(){
+  const cat=document.getElementById('chkEditCat').value;
+  const data=getChkData(cat);
+  const el=document.getElementById('chkEditList');
+  el.innerHTML=data.labels.map((label,i)=>`
+    <div class="chk-edit-item" id="chk-edit-row-${cat}-${i}">
+      <div class="chk-edit-text" id="chk-view-${cat}-${i}">
+        <div class="chk-edit-label">${i+1}. ${label}</div>
+        <div class="chk-edit-sub">${data.subs[i]||''}</div>
+        <div style="display:flex;gap:5px;margin-top:6px;">
+          <button class="chk-edit-del" onclick="editChkItem('${cat}',${i})">✏️ 수정</button>
+          <button class="chk-edit-del" onclick="deleteChkItem('${cat}',${i})">🗑 삭제</button>
+        </div>
+      </div>
+      <div class="chk-edit-form" id="chk-form-${cat}-${i}" style="display:none;width:100%;">
+        <input class="finput" id="chk-inp-label-${cat}-${i}" value="${label}" style="margin-bottom:5px;font-size:13px;">
+        <input class="finput" id="chk-inp-sub-${cat}-${i}" value="${data.subs[i]||''}" placeholder="기준값" style="margin-bottom:7px;font-size:13px;">
+        <div style="display:flex;gap:5px;">
+          <button class="chk-edit-del" style="background:#10b98115;border-color:#10b98130;color:var(--green);" onclick="saveChkItem('${cat}',${i})">✅ 저장</button>
+          <button class="chk-edit-del" onclick="cancelChkEdit('${cat}',${i})">취소</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function editChkItem(cat,i){
+  document.getElementById('chk-view-'+cat+'-'+i).style.display='none';
+  document.getElementById('chk-form-'+cat+'-'+i).style.display='block';
+}
+function cancelChkEdit(cat,i){
+  document.getElementById('chk-view-'+cat+'-'+i).style.display='block';
+  document.getElementById('chk-form-'+cat+'-'+i).style.display='none';
+}
+function saveChkItem(cat,i){
+  const label=document.getElementById('chk-inp-label-'+cat+'-'+i).value.trim();
+  const sub=document.getElementById('chk-inp-sub-'+cat+'-'+i).value.trim();
+  if(!label){toast('항목명을 입력해 주세요','w');return;}
+  const data=getChkData(cat);
+  data.labels[i]=label;
+  data.subs[i]=sub;
+  if(!db.customChk[cat])db.customChk[cat]={labels:[...DEFAULT_CHK[cat].labels],subs:[...DEFAULT_CHK[cat].subs]};
+  db.customChk[cat]=data;
+  save();renderChkEditList();toast('✅ 수정 완료');
+}
+function deleteChkItem(cat,idx){
+  const data=getChkData(cat);
+  data.labels.splice(idx,1);
+  data.subs.splice(idx,1);
+  if(!db.customChk[cat])db.customChk[cat]={labels:[...DEFAULT_CHK[cat].labels],subs:[...DEFAULT_CHK[cat].subs]};
+  db.customChk[cat]=data;
+  save();renderChkEditList();
+  // 체크리스트 카운트 업데이트
+  CHK_COUNTS[cat]=data.labels.length;
+  toast('삭제됨');
+}
+
+function addChkItem(){
+  const cat=document.getElementById('chkEditCat').value;
+  const label=document.getElementById('chkNewLabel').value.trim();
+  const sub=document.getElementById('chkNewSub').value.trim();
+  if(!label){toast('항목명을 입력해 주세요','w');return;}
+  const data=getChkData(cat);
+  data.labels.push(label);
+  data.subs.push(sub);
+  if(!db.customChk[cat])db.customChk[cat]={labels:[...DEFAULT_CHK[cat].labels],subs:[...DEFAULT_CHK[cat].subs]};
+  db.customChk[cat]=data;
+  CHK_COUNTS[cat]=data.labels.length;
+  save();renderChkEditList();
+  document.getElementById('chkNewLabel').value='';
+  document.getElementById('chkNewSub').value='';
+  toast('✅ 항목 추가됨: '+label);
+}
+
+function resetChkToDefault(){
+  if(!confirm('기본값으로 초기화할까요?'))return;
+  const cat=document.getElementById('chkEditCat').value;
+  delete db.customChk[cat];
+  CHK_COUNTS[cat]=8;
+  save();renderChkEditList();toast('↺ 기본값으로 초기화됨');
+}
+
+// 커스텀 체크리스트 항목 가져오기 (렌더링 시 사용)
+function getChkItems(cat){
+  return getChkData(cat);
 }
 
 // ══════ 일정 관리 ══════
