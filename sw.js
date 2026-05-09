@@ -1,4 +1,29 @@
-const CACHE = 'mms-v22';
+{
+  "name": "Maintenance History",
+  "short_name": "Maintenance",
+  "description": "설비 정비이력 / 부품재고 / MTBF·MTTR 관리",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0c0f",
+  "theme_color": "#f59e0b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
+const CACHE = 'mms-v25';
 const ASSETS = [
   './index.html',
   './manifest.json',
