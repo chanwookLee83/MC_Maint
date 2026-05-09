@@ -684,7 +684,7 @@ body.light .sec-title::after{background:#d4d9e2;}
     <div class="sec-title">장비 등록</div>
     <div class="card amber-t">
       <!-- 기본 정보 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">장비명 *</label><div class="ac-wrap"><input class="finput" id="eqName" placeholder="예) 용접 로봇 #1" autocomplete="off" oninput="acShow('eqName','eqNames')"><div class="ac-list" id="ac-eqName"></div></div></div>
       <div class="frow">
         <div class="field"><label class="flabel">시리얼번호</label><div class="ac-wrap"><input class="finput" id="eqSerial" placeholder="예) WR-2024-001" autocomplete="off" oninput="acShow('eqSerial','eqSerials')"><div class="ac-list" id="ac-eqSerial"></div></div></div>
@@ -1240,17 +1240,19 @@ body.light .sec-title::after{background:#d4d9e2;}
   <div class="sec" style="margin-top:4px;">
     <div class="sec-title">데이터 내보내기</div>
     <button class="share-btn sb-amber" onclick="exportAllCSV()"><span>📊</span> 전체 CSV 내보내기</button>
-    <div class="share-note">→ 장비 / 정비이력 / 부품재고 / 점검기록 / 일정 전체 포함</div>
+    <div class="share-note">→ 장비 / 정비이력 / 부품재고 / 점검기록 / 일정 / 파트(BOM) 전체 포함</div>
     <button class="share-btn sb-green" onclick="exportMaintCSV()"><span>🔧</span> 정비이력 CSV</button>
     <div class="share-note">→ 장비별 정비일지 + 부품사용 내역</div>
     <button class="share-btn sb-blue" onclick="exportPartsCSV()"><span>📦</span> 부품재고 CSV</button>
     <div class="share-note">→ 현재 재고 현황 + 안전재고 기준</div>
     <button class="share-btn sb-green" onclick="exportInboundCSV()"><span>📥</span> 입고이력 CSV</button>
     <div class="share-note">→ 부품별 입고 일자 / 수량 / 단가 / 공급업체 내역</div>
+    <button class="share-btn" style="background:linear-gradient(135deg,#00e5ff20,#00e5ff08);border:1px solid #00e5ff40;color:#00e5ff;" onclick="exportBomCSV()"><span>🔩</span> 파트(BOM) CSV</button>
+    <div class="share-note">→ 장비별 파트 목록 (부품명 / 형번 / 제조사 / 수량 / 카테고리)</div>
     <button class="share-btn" style="background:linear-gradient(135deg,#8b5cf620,#8b5cf608);border:1px solid #8b5cf640;color:var(--purple);" onclick="exportEventsCSV()"><span>📅</span> 일정 CSV</button>
     <div class="share-note">→ 등록된 일정 전체 (날짜 / 구분 / 제목 / 담당자 / 내용 / 완료여부)</div>
     <button class="share-btn sb-amber" onclick="exportJSON()"><span>💾</span> 전체 백업 (JSON)</button>
-    <div class="share-note">→ 전체 데이터 백업 파일 (일정 포함)</div>
+    <div class="share-note">→ 전체 데이터 백업 파일 (파트/일정 포함)</div>
   </div>
   <div class="share-divider"><span>복원</span></div>
   <div class="sec" style="margin-top:16px;">
@@ -3239,7 +3241,7 @@ function deleteInsp(i){
 
 // ══════ CSV 내보내기 ══════
 function exportAllCSV(){
-  if(!db.maints.length&&!db.eqs.length&&!db.events.length){toast('데이터 없음','w');return;}
+  if(!db.maints.length&&!db.eqs.length&&!db.events.length&&!db.boms.length){toast('데이터 없음','w');return;}
   const rows=['=== 장비 목록 ===','장비명,시리얼번호,설치일,위치,점검주기(일)'];
   db.eqs.forEach(e=>rows.push([e.name,e.serial||'',e.install||'',e.loc||'',e.cycle||''].join(',')));
   rows.push('');
@@ -3251,11 +3253,23 @@ function exportAllCSV(){
   rows.push('형번,부품명,메이커,타입,단가,현재수량,안전재고,재고가치');
   db.parts.forEach(p=>rows.push([p.pn,p.name,p.maker||'',p.type,p.price,p.qty,p.safe,p.price*p.qty].join(',')));
   rows.push('');
+  rows.push('=== 파트(BOM) ===');
+  rows.push('장비명,카테고리,부품명,형번,제조사,수량,비고');
+  db.boms.forEach(b=>rows.push([b.eqName,b.cat,b.name,b.pn||'',b.maker||'',b.qty,b.note||''].join(',')));
+  rows.push('');
   rows.push('=== 일정 ===');
   rows.push('날짜,종료일,구분,제목,담당자,내용,완료여부');
   db.events.forEach(ev=>rows.push([ev.date,ev.dateEnd||'',ev.cat||'',`"${ev.title}"`,ev.owner||'',`"${ev.content||''}"`,ev.done?'완료':'예정'].join(',')));
   download('설비관리_전체_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
   toast('전체 CSV 내보내기 완료');
+}
+function exportBomCSV(){
+  if(!db.boms.length){toast('등록된 파트 없음','w');return;}
+  const rows=['장비명,카테고리,부품명,형번,제조사,수량,비고'];
+  db.boms.sort((a,b)=>a.eqName.localeCompare(b.eqName)||a.cat.localeCompare(b.cat))
+    .forEach(b=>rows.push([b.eqName,b.cat,b.name,b.pn||'',b.maker||'',b.qty,b.note||''].join(',')));
+  download('파트BOM_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
+  toast('파트(BOM) CSV 저장 완료');
 }
 function exportMaintCSV(){
   const rows=['날짜,장비명,유형,작업자,시작,종료,작업시간(h),내용,원인,사용부품,부품비용'];
