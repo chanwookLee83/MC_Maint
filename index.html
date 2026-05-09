@@ -2591,7 +2591,7 @@ function renderInspLog(){
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
           ${hasChk?`<button class="btn-sm bsm-b" onclick="toggleInspDetail(${i})">📋</button>`:''}
-          <button class="btn-sm bsm-a" onclick="openInspEdit(${i})">✏️</button>
+          <button class="btn-sm bsm-a" onclick="openInspEdit(${d.id||i})">✏️</button>
           <button class="btn-sm bsm-r" onclick="deleteInsp(${i})">DEL</button>
         </div>
       </div>
@@ -3224,15 +3224,17 @@ function renderEvents(){
   }).join('');
 }
 
-function openInspEdit(i){
-  const d=db.insps[i];
+function openInspEdit(inspId){
+  // id로 찾기, 없으면 인덱스로 찾기
+  let idx=db.insps.findIndex(d=>d.id===inspId);
+  if(idx===-1) idx=inspId; // 구버전 기록(id없는경우) 인덱스로 fallback
+  const d=db.insps[idx];
   if(!d)return;
   document.getElementById('eInspDate').value=d.date||'';
   document.getElementById('eInspWorker').value=d.worker||'';
   document.getElementById('eInspNote').value=d.note||'';
-  document.getElementById('eInspIdx').value=i;
+  document.getElementById('eInspIdx').value=idx;
   document.getElementById('eInspVerdict').value=d.verdict||'';
-  // 판정 버튼 초기화
   setEVerdict(d.verdict||'');
   openModal('inspEditModal');
 }
