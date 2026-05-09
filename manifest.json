@@ -1,6 +1,6 @@
 {
-  "name": "Maintenance History",
-  "short_name": "Maintenance",
+  "name": "Maintenance",
+  "short_name": "MMS",
   "description": "설비 정비이력 / 부품재고 / MTBF·MTTR 관리",
   "start_url": "./index.html",
   "display": "standalone",
