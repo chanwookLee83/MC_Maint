@@ -472,6 +472,7 @@ body.light .grade-btn.sel-C{background:#0a916815;border-color:var(--green);color
 body.light .grade-table td{color:#111827;}
 body.light .gt-desc{color:#4b5563;}
 body.light .empty{color:#6b7280;}
+body.light canvas{background:#ffffff;border-radius:8px;}
 body.light .topbar::after{background:linear-gradient(90deg,transparent,var(--amber),transparent);}
 body.light .sec-title::after{background:#d4d9e2;}
 
@@ -766,7 +767,7 @@ body.light .sec-title::after{background:#d4d9e2;}
             <option value="예방">예방정비</option>
             <option value="고장">고장수리</option>
             <option value="수정">수정작업</option>
-            <option value="개선">개선작업</option>
+            <option value="교체">소모품교체</option>
           </select></div>
         </div>
         <div class="field"><label class="flabel">작업자</label><div class="ac-wrap"><input class="finput" id="mWorker" placeholder="이름" autocomplete="off" oninput="acShow('mWorker','workers')"><div class="ac-list" id="ac-mWorker"></div></div></div>
@@ -1641,6 +1642,8 @@ function toggleTheme(){
   document.getElementById('themeBtn').textContent=isLight?'☀️':'🌙';
   // meta theme-color 변경
   document.querySelector('meta[name="theme-color"]').content=isLight?'#ffffff':'#0a0c0f';
+  // 통계 차트 다시 그리기
+  setTimeout(()=>{drawMonthlyChart();drawTypeChart();},50);
 }
 // 저장된 테마 적용
 (function(){
@@ -2409,6 +2412,11 @@ function drawMonthlyChart(){
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  const isLight=document.body.classList.contains('light');
+  const textCol=isLight?'#374151':'#e2e8f0';
+  const mutedCol=isLight?'#6b7280':'#4b5e74';
+  const gridCol=isLight?'#d4d9e2':'#252d38';
+  const bgCol=isLight?'#ffffff':'#181c22';
   // 최근 6개월
   const months=[];
   for(let i=5;i>=0;i--){
@@ -2417,26 +2425,26 @@ function drawMonthlyChart(){
   }
   const counts=months.map(m=>db.maints.filter(mt=>mt.date&&mt.date.startsWith(m)).length);
   if(!counts.some(c=>c>0)){
-    ctx.fillStyle='#4b5e74';ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;
+    ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;
   }
   const pad={t:16,r:12,b:36,l:36};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   const mx=Math.max(...counts)||1;
   const bw=cW/months.length*0.6,gap=cW/months.length;
-  ctx.strokeStyle='#252d38';ctx.lineWidth=1;
+  ctx.strokeStyle=gridCol;ctx.lineWidth=1;
   for(let i=0;i<=4;i++){const y=pad.t+cH*(1-i/4);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();}
   counts.forEach((c,i)=>{
     const x=pad.l+i*gap+(gap-bw)/2;
-    const bh=(c/mx)*cH;
+    const bh=Math.max(c/mx*cH,c>0?2:0);
     const y=pad.t+cH-bh;
     const grad=ctx.createLinearGradient(0,y,0,y+bh);
     grad.addColorStop(0,'#f59e0b');grad.addColorStop(1,'#d97706');
     ctx.fillStyle=grad;ctx.beginPath();ctx.roundRect(x,y,bw,bh,3);ctx.fill();
-    ctx.fillStyle='#e2e8f0';ctx.textAlign='center';ctx.font='9px monospace';
+    ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='9px monospace';
     ctx.fillText(months[i].slice(5),x+bw/2,H-8);
-    if(c>0){ctx.fillStyle='#f59e0b';ctx.font='10px monospace';ctx.fillText(c,x+bw/2,y-4);}
+    if(c>0){ctx.fillStyle=isLight?'#c47f00':'#f59e0b';ctx.font='bold 10px monospace';ctx.fillText(c,x+bw/2,y-4);}
   });
-  ctx.fillStyle='#4b5e74';ctx.font='9px monospace';ctx.textAlign='right';
+  ctx.fillStyle=mutedCol;ctx.font='9px monospace';ctx.textAlign='right';
   for(let i=0;i<=4;i++){const v=Math.round(mx*i/4);const y=pad.t+cH*(1-i/4);ctx.fillText(v,pad.l-4,y+3);}
 }
 
@@ -2448,11 +2456,17 @@ function drawTypeChart(){
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  const isLight=document.body.classList.contains('light');
+  const textCol=isLight?'#111827':'#e2e8f0';
+  const mutedCol=isLight?'#6b7280':'#4b5e74';
+  const bgCol=isLight?'#ffffff':'#181c22';
+  const strokeCol=isLight?'#f0f4f8':'#0a0c0f';
+  const countCol=isLight?'#c47f00':'#ffcb2b';
   const types=['예방','고장','정기','개선'];
   const COLS=['#10b981','#ef4444','#3b82f6','#f59e0b'];
   const counts=types.map(t=>db.maints.filter(m=>m.type===t).length);
   const total=counts.reduce((a,b)=>a+b,0);
-  if(!total){ctx.fillStyle='#4b5e74';ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;}
+  if(!total){ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;}
   const cx=W*0.33,cy=H/2,R=Math.min(cx,cy)*0.85,ri=R*0.54;
   let ang=-Math.PI/2;
   counts.forEach((c,i)=>{
@@ -2460,18 +2474,18 @@ function drawTypeChart(){
     const sl=(c/total)*Math.PI*2;
     ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,R,ang,ang+sl);
     ctx.closePath();ctx.fillStyle=COLS[i];ctx.fill();
-    ctx.strokeStyle='#0a0c0f';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle=strokeCol;ctx.lineWidth=2;ctx.stroke();
     ang+=sl;
   });
-  ctx.beginPath();ctx.arc(cx,cy,ri,0,Math.PI*2);ctx.fillStyle='#181c22';ctx.fill();
-  ctx.fillStyle='#e2e8f0';ctx.textAlign='center';ctx.font='bold 18px monospace';ctx.fillText(total,cx,cy+4);
-  ctx.fillStyle='#4b5e74';ctx.font='9px monospace';ctx.fillText('TOTAL',cx,cy+16);
+  ctx.beginPath();ctx.arc(cx,cy,ri,0,Math.PI*2);ctx.fillStyle=bgCol;ctx.fill();
+  ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='bold 18px monospace';ctx.fillText(total,cx,cy+4);
+  ctx.fillStyle=mutedCol;ctx.font='9px monospace';ctx.fillText('TOTAL',cx,cy+16);
   const lx=W*0.60,lsy=H/2-(types.length*20)/2;
   types.forEach((t,i)=>{
     const y=lsy+i*21;
     ctx.fillStyle=COLS[i];ctx.fillRect(lx,y,10,10);
-    ctx.fillStyle='#e2e8f0';ctx.textAlign='left';ctx.font='11px monospace';ctx.fillText(t,lx+14,y+9);
-    ctx.fillStyle='#ffcb2b';ctx.textAlign='right';ctx.font='11px monospace';ctx.fillText(counts[i]+'건',W-4,y+9);
+    ctx.fillStyle=textCol;ctx.textAlign='left';ctx.font='11px monospace';ctx.fillText(t,lx+14,y+9);
+    ctx.fillStyle=countCol;ctx.textAlign='right';ctx.font='11px monospace';ctx.fillText(counts[i]+'건',W-4,y+9);
   });
 }
 
