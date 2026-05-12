@@ -3208,7 +3208,7 @@ function renderEvents(){
     const isPast=date<today;
     const dateLabel=isToday?`📍 오늘 · ${date}`:isPast?`· ${date}`:date;
     return `
-    <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:${isToday?'var(--amber)':isPast?'var(--muted)':'var(--blue)'};margin:10px 0 6px;display:flex;align-items:center;gap:8px;">
+    <div style="font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:3px;color:${isToday?'var(--amber)':isPast?'var(--muted)':'var(--blue)'};margin:10px 0 6px;display:flex;align-items:center;gap:8px;">
       ${dateLabel}<span style="flex:1;height:1px;background:var(--border);display:block;"></span>
     </div>
     ${evs.map(ev=>{
