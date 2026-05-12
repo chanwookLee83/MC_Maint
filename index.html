@@ -803,7 +803,7 @@ body.light .sec-title::after{background:#d4d9e2;}
       <div class="fselect-w"><select class="fselect" id="mFilterEq" onchange="renderMaintLog()"><option value="">전체 장비</option></select></div>
       <div class="fselect-w"><select class="fselect" id="mFilterType" onchange="renderMaintLog()">
         <option value="">전체 유형</option>
-        <option>예방</option><option>고장</option><option>정기</option><option>개선</option>
+        <option>예방</option><option>고장</option><option>수정</option><option>교체</option>
       </select></div>
     </div>
     <div id="maintLog"><div class="empty"><span class="empty-icon">🔧</span>정비 이력 없음</div></div>
@@ -862,13 +862,12 @@ body.light .sec-title::after{background:#d4d9e2;}
     <!-- 타입 필터 -->
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;" id="partTypeFilter">
       <button class="filter-chip active" data-type="ALL" onclick="setPartTypeFilter('ALL')">ALL</button>
-      <button class="filter-chip" data-type="베어링" onclick="setPartTypeFilter('베어링')">베어링</button>
-      <button class="filter-chip" data-type="오일/윤활" onclick="setPartTypeFilter('오일/윤활')">오일·윤활</button>
-      <button class="filter-chip" data-type="벨트" onclick="setPartTypeFilter('벨트')">벨트</button>
-      <button class="filter-chip" data-type="필터" onclick="setPartTypeFilter('필터')">필터</button>
       <button class="filter-chip" data-type="센서" onclick="setPartTypeFilter('센서')">센서</button>
+      <button class="filter-chip" data-type="스위치" onclick="setPartTypeFilter('스위치')">스위치</button>
+      <button class="filter-chip" data-type="전자코일" onclick="setPartTypeFilter('전자코일')">전자코일</button>
+      <button class="filter-chip" data-type="가공품" onclick="setPartTypeFilter('가공품')">가공품</button>
       <button class="filter-chip" data-type="모터" onclick="setPartTypeFilter('모터')">모터</button>
-      <button class="filter-chip" data-type="밸브" onclick="setPartTypeFilter('밸브')">밸브</button>
+      <button class="filter-chip" data-type="구매품" onclick="setPartTypeFilter('구매품')">구매품</button>
       <button class="filter-chip" data-type="실린더" onclick="setPartTypeFilter('실린더')">실린더</button>
       <button class="filter-chip" data-type="솔레노이드밸브" onclick="setPartTypeFilter('솔레노이드밸브')">솔레노이드</button>
       <button class="filter-chip" data-type="기타" onclick="setPartTypeFilter('기타')">기타</button>
@@ -2053,7 +2052,7 @@ function renderMaintLog(){
   if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon">🔧</span>정비 이력 없음</div>';return;}
   el.innerHTML=list.map((m,i)=>{
     const realIdx=db.maints.indexOf(m);
-    const typeColor={'예방':'g','고장':'r','정기':'b','개선':'a'}[m.type]||'';
+    const typeColor={'예방':'g','고장':'r','수정':'b','교체':'a'}[m.type]||'';
     return `
     <div class="mlog-item">
       <div class="mlog-head">
@@ -2462,7 +2461,7 @@ function drawTypeChart(){
   const bgCol=isLight?'#ffffff':'#181c22';
   const strokeCol=isLight?'#f0f4f8':'#0a0c0f';
   const countCol=isLight?'#c47f00':'#ffcb2b';
-  const types=['예방','고장','정기','개선'];
+  const types=['예방','고장','수정','교체'];
   const COLS=['#10b981','#ef4444','#3b82f6','#f59e0b'];
   const counts=types.map(t=>db.maints.filter(m=>m.type===t).length);
   const total=counts.reduce((a,b)=>a+b,0);
