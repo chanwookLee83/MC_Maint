@@ -412,9 +412,7 @@ body.light .finput::placeholder,body.light .ftextarea::placeholder{color:#9ca3af
 body.light .finput,body.light .fselect,body.light .ftextarea{background:#f9fafb;color:#111827;border-color:#b8c0cc;}
 body.light .finput:focus,body.light .fselect:focus,body.light .ftextarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px #c47f0015;}
 body.light 
-body.light .ac-item{color:#111827;border-color:#e5e7eb;}
-body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
-body.light mark{background:transparent;color:var(--amber);font-weight:700;}
+body.light body.light body.light mark{background:transparent;color:var(--amber);font-weight:700;}
 body.light .topbar{background:#fff;}
 body.light .ttitle{color:#111827;}
 body.light .topbar-date{color:#6b7280;}
@@ -536,12 +534,6 @@ body.light .sec-title::after{background:#d4d9e2;}
 .chk-edit-del{background:#ef444415;border:1px solid #ef444430;color:var(--red);border-radius:5px;padding:5px 9px;font-family:var(--cond);font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;}
 
 /* ── 자동완성 ── */
-.ac-list{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--card2);border:1px solid var(--amber);border-radius:8px;z-index:999;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px #00000060;display:none;}
-.ac-list.open{display:block;}
-.ac-item{padding:10px 13px;font-size:14px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
-.ac-item:last-child{border-bottom:none;}
-.ac-item:active,.ac-item:hover{background:var(--card);color:var(--amber);}
-.ac-item mark{background:transparent;color:var(--amber);font-weight:700;}
 .insp-cat-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
 .insp-cat-tabs::-webkit-scrollbar{display:none;}
 .insp-cat-tab{flex-shrink:0;border-radius:20px;padding:5px 13px;font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;border:1px solid var(--border2);color:var(--muted);background:var(--card);transition:all .15s;user-select:none;}
@@ -662,10 +654,25 @@ body.light .sec-title::after{background:#d4d9e2;}
   .sort-btn{font-size:13px;padding:11px 14px;}
   .share-btn{font-size:16px;padding:17px;}
   .share-note{font-size:13px;}
-  .ac-item{font-size:15px;padding:12px 15px;}
-  .lot-num{font-size:22px;}
+    .lot-num{font-size:22px;}
   .lot-count{font-size:32px;}
 }
+
+/* ── 자동완성 ── */
+.ac-wrap{position:relative;width:100%;}
+.ac-list{position:absolute;top:calc(100% + 3px);left:0;right:0;
+  background:var(--card2);border:1px solid var(--amber);
+  border-radius:8px;z-index:9999;max-height:200px;overflow-y:auto;
+  box-shadow:0 8px 30px #00000080;display:none;}
+.ac-list.open{display:block;}
+.ac-item{padding:11px 14px;font-size:14px;color:var(--text);
+  cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+.ac-item:last-child{border-bottom:none;}
+.ac-item:hover,.ac-item:active{background:var(--card);color:var(--amber);}
+.ac-item b{color:var(--amber);font-weight:700;}
+body.light .ac-list{background:#fff;box-shadow:0 8px 24px #00000025;}
+body.light .ac-item{color:#111827;border-color:#e5e7eb;}
+body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
 </style>
 </head>
 <body>
@@ -701,7 +708,7 @@ body.light .sec-title::after{background:#d4d9e2;}
     <div class="sec-title">장비 등록</div>
     <div class="card amber-t">
       <!-- 기본 정보 -->
-      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">장비명 *</label><div class="ac-wrap"><input class="finput" id="eqName" placeholder="예) 용접 로봇 #1" autocomplete="off" oninput="acShow('eqName','eqNames')"><div class="ac-list" id="ac-eqName"></div></div></div>
       <div class="frow">
         <div class="field"><label class="flabel">시리얼번호</label><div class="ac-wrap"><input class="finput" id="eqSerial" placeholder="예) WR-2024-001" autocomplete="off" oninput="acShow('eqSerial','eqSerials')"><div class="ac-list" id="ac-eqSerial"></div></div></div>
@@ -723,7 +730,7 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
 
       <!-- 장비 등급 -->
-      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
       <input type="hidden" id="eqGrade" value="">
       <div class="grade-selector">
         <div class="grade-btn" id="gbtn-S" onclick="selectGrade('eqGrade','S')">S<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">최우선</div></div>
@@ -733,7 +740,7 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
 
       <!-- 전기 사양 -->
-      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">전원 종류</label>
         <div class="fselect-w"><select class="fselect" id="eqPower">
           <option value="">미입력</option>
@@ -746,11 +753,11 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
 
       <!-- 공압 사양 -->
-      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">사용 압력 (MPa)</label><input class="finput" id="eqAirPres" type="number" placeholder="예) 0.5" step="0.01" min="0" inputmode="decimal"></div>
 
       <!-- 비고 -->
-      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">📝 비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">📝 비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">메모</label><textarea class="ftextarea" id="eqMemo" placeholder="특이사항, 주의사항 등 자유롭게 입력..."></textarea></div>
 
       <button class="btn-primary" onclick="registerEq()">🏭 장비 등록</button>
@@ -780,10 +787,10 @@ body.light .sec-title::after{background:#d4d9e2;}
       <div class="frow">
         <div class="field"><label class="flabel">정비 유형</label>
           <div class="fselect-w"><select class="fselect" id="mType">
-            <option value="예방">예방정비</option>
             <option value="고장">고장수리</option>
-            <option value="정기">정기점검</option>
-            <option value="개선">개선작업</option>
+            <option value="프로그램">프로그램 수정</option>
+            <option value="기구부">기구부 수정</option>
+            <option value="개선">개선 수정</option>
           </select></div>
         </div>
         <div class="field"><label class="flabel">작업자</label><div class="ac-wrap"><input class="finput" id="mWorker" placeholder="이름" autocomplete="off" oninput="acShow('mWorker','workers')"><div class="ac-list" id="ac-mWorker"></div></div></div>
@@ -839,9 +846,9 @@ body.light .sec-title::after{background:#d4d9e2;}
         <div class="field"><label class="flabel">메이커</label><div class="ac-wrap"><input class="finput" id="pMaker" placeholder="예) SKF" autocomplete="off" oninput="acShow('pMaker','makers')"><div class="ac-list" id="ac-pMaker"></div></div></div>
         <div class="field"><label class="flabel">타입</label>
           <div class="fselect-w"><select class="fselect" id="pType">
-            <option>베어링</option><option>오일/윤활</option><option>벨트</option><option>필터</option>
-            <option>센서</option><option>모터</option><option>밸브</option>
-            <option>실린더</option><option>솔레노이드밸브</option><option>기타</option>
+            <option>실린더</option><option>센서</option><option>스위치</option><option>버튼</option>
+            <option>솔레노이드밸브</option><option>전자코일</option><option>벨트</option>
+            <option>모터</option><option>진공이젝터</option><option>기타</option>
           </select></div>
         </div>
       </div>
@@ -1315,7 +1322,7 @@ body.light .sec-title::after{background:#d4d9e2;}
       </div>
     </div>
 
-    <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
+    <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
     <input type="hidden" id="eEqGrade" value="">
     <div class="grade-selector">
       <div class="grade-btn" id="egbtn-S" onclick="selectGrade('eEqGrade','S')">S<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">최우선</div></div>
@@ -1324,7 +1331,7 @@ body.light .sec-title::after{background:#d4d9e2;}
       <div class="grade-btn" id="egbtn-C" onclick="selectGrade('eEqGrade','C')">C<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">저우선</div></div>
     </div>
 
-    <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+    <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
     <div class="field"><label class="flabel">전원 종류</label>
       <div class="fselect-w"><select class="fselect" id="eEqPower">
         <option value="">미입력</option>
@@ -1336,10 +1343,10 @@ body.light .sec-title::after{background:#d4d9e2;}
       </select></div>
     </div>
 
-    <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+    <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
     <div class="field"><label class="flabel">사용 압력 (MPa)</label><input class="finput" id="eEqAirPres" type="number" step="0.01" min="0" inputmode="decimal"></div>
 
-    <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">📝 비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+    <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">📝 비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
     <div class="field"><label class="flabel">메모</label><textarea class="ftextarea" id="eEqMemo" autocomplete="off"></textarea></div>
 
     <button class="btn-primary" onclick="saveEqEdit()">💾 저장</button>
@@ -1457,10 +1464,10 @@ body.light .sec-title::after{background:#d4d9e2;}
     <div class="frow">
       <div class="field"><label class="flabel">정비 유형</label>
         <div class="fselect-w"><select class="fselect" id="eMType">
-          <option value="예방">예방정비</option>
           <option value="고장">고장수리</option>
-          <option value="정기">정기점검</option>
-          <option value="개선">개선작업</option>
+          <option value="프로그램">프로그램 수정</option>
+          <option value="기구부">기구부 수정</option>
+          <option value="개선">개선 수정</option>
         </select></div>
       </div>
       <div class="field"><label class="flabel">작업자</label><div class="ac-wrap"><input class="finput" id="eMWorker" autocomplete="off" oninput="acShow('eMWorker','workers')"><div class="ac-list" id="ac-eMWorker"></div></div></div>
@@ -1690,17 +1697,18 @@ function getAcSources(){
 function acShow(inputId, sourceKey){
   const inp=document.getElementById(inputId);
   const list=document.getElementById('ac-'+inputId);
-  if(!inp||!list)return;
+  if(!inp||!list) return;
   const q=inp.value.trim();
   acCloseAll(inputId);
   if(!q){list.classList.remove('open');return;}
   const src=getAcSources()[sourceKey]||[];
-  const escaped=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const matched=src.filter(v=>v&&v.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const matched=src.filter(v=>v&&v.toLowerCase().includes(q.toLowerCase())).slice(0,10);
   if(!matched.length){list.classList.remove('open');return;}
+  const esc=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   list.innerHTML=matched.map(v=>{
-    const hl=v.replace(new RegExp(escaped,'g'),`<mark>${q}</mark>`);
-    return `<div class="ac-item" onmousedown="acPick('${inputId}','${v.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">${hl}</div>`;
+    const hl=v.replace(new RegExp('('+esc+')','gi'),'<b>$1</b>');
+    const safe=v.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="ac-item" onmousedown="event.preventDefault();acPick('${inputId}','${safe}')">${hl}</div>`;
   }).join('');
   list.classList.add('open');
 }
