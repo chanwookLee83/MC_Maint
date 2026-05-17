@@ -708,11 +708,11 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
     <div class="sec-title">장비 등록</div>
     <div class="card amber-t">
       <!-- 기본 정보 -->
-      <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
-      <div class="field"><label class="flabel">장비명 *</label><div class="ac-wrap"><input class="finput" id="eqName" placeholder="예) 용접 로봇 #1" autocomplete="off" oninput="acShow('eqName','eqNames')"><div class="ac-list" id="ac-eqName"></div></div></div>
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:8px;">기본 정보<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div class="field"><label class="flabel">장비명 *</label><div class="ac-wrap"><input class="finput" id="eqName" placeholder="예) EOL #1" autocomplete="off" oninput="acShow('eqName','eqNames')"><div class="ac-list" id="ac-eqName"></div></div></div>
       <div class="frow">
         <div class="field"><label class="flabel">시리얼번호</label><div class="ac-wrap"><input class="finput" id="eqSerial" placeholder="예) WR-2024-001" autocomplete="off" oninput="acShow('eqSerial','eqSerials')"><div class="ac-list" id="ac-eqSerial"></div></div></div>
-        <div class="field"><label class="flabel">제작처 / 메이커</label><div class="ac-wrap"><input class="finput" id="eqMaker" placeholder="예) FANUC, SMC" autocomplete="off" oninput="acShow('eqMaker','makers')"><div class="ac-list" id="ac-eqMaker"></div></div></div>
+        <div class="field"><label class="flabel">제작처 / 메이커</label><div class="ac-wrap"><input class="finput" id="eqMaker" placeholder="예) KYENCE, SMC" autocomplete="off" oninput="acShow('eqMaker','makers')"><div class="ac-list" id="ac-eqMaker"></div></div></div>
       </div>
       <div class="frow">
         <div class="field"><label class="flabel">설치일</label><input class="finput" id="eqInstall" type="date"></div>
@@ -811,7 +811,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
       </div>
       <div id="usePartList"><div style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;padding:12px;">사용 부품 없음</div></div>
       <div style="background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:10px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-family:var(--cond);font-size:10px;letter-spacing:2px;color:var(--muted);">부품 비용 합계</span>
+        <span style="font-family:var(--cond);font-size:14px;letter-spacing:2px;color:var(--muted);">부품 비용 합계</span>
         <span style="font-family:var(--mono);font-size:18px;color:var(--amber);" id="partCostSum">₩ 0</span>
       </div>
     </div>
