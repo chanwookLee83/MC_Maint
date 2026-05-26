@@ -1503,6 +1503,18 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
     <div class="field"><label class="flabel">정비 내용 *</label><textarea class="ftextarea" id="eMContent" style="height:88px;"></textarea></div>
     <div class="field"><label class="flabel">시작일시</label><input class="finput" id="eMStart" type="datetime-local" style="font-size:14px;"></div>
     <div class="field"><label class="flabel">종료일시</label><input class="finput" id="eMEnd" type="datetime-local" style="font-size:14px;"></div>
+    <div class="field">
+      <label class="flabel">사용 부품</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="fselect-w" style="flex:1;"><select class="fselect" id="eMPartSel"><option value="">-- 부품 선택 --</option></select></div>
+        <button class="btn-sm bsm-b" style="height:44px;" onclick="addUsePartEdit()">＋ 추가</button>
+      </div>
+      <div id="eUsePartList" style="margin-top:8px;"><div style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;padding:12px;">사용 부품 없음</div></div>
+      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:10px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:var(--cond);font-size:14px;letter-spacing:2px;color:var(--muted);">부품 비용 합계</span>
+        <span id="ePartCostSum" style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--amber);">₩ 0</span>
+      </div>
+    </div>
     <button class="btn-primary" style="margin-top:4px;" onclick="saveMaintEdit()">💾 저장</button>
   </div>
 </div>
@@ -2112,6 +2124,7 @@ function renderMaintLog(){
     const mto=!fTo||m.date<=fTo;
     return me&&mt&&mf&&mto;
   });
+  list.sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
   if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon">🔧</span>정비 이력 없음</div>';return;}
   el.innerHTML=list.map((m,i)=>{
     const realIdx=db.maints.indexOf(m);
@@ -2271,6 +2284,37 @@ function deletePart(i){
 
 // ══════ 정비기록 수정 ══════
 let maintEditIdx = -1;
+let usePartsEdit = [];
+
+function addUsePartEdit(){
+  const sel=document.getElementById('eMPartSel');
+  const idx=parseInt(sel.value);
+  if(isNaN(idx)){toast('부품을 선택해 주세요','w');return;}
+  const p=db.parts[idx];
+  const ex=usePartsEdit.find(u=>u.pidx===idx);
+  if(ex){ex.qty++;} else usePartsEdit.push({pidx:idx,pn:p.pn,name:p.name,price:p.price,qty:1});
+  renderUsePartsEdit();
+}
+
+function renderUsePartsEdit(){
+  const el=document.getElementById('eUsePartList');
+  if(!el)return;
+  if(!usePartsEdit.length){
+    el.innerHTML='<div style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;padding:12px;">사용 부품 없음</div>';
+    const cs=document.getElementById('ePartCostSum');if(cs)cs.textContent='₩ 0';return;
+  }
+  el.innerHTML=usePartsEdit.map((u,i)=>`
+    <div class="part-use-row">
+      <div class="part-use-info">
+        <div class="part-use-name">${u.name}</div>
+        <div class="part-use-stock">[${u.pn}] 단가 ${fmtCost(u.price)}</div>
+      </div>
+      <input class="part-use-qty" type="number" value="${u.qty}" min="1" onchange="usePartsEdit[${i}].qty=Math.max(1,parseInt(this.value)||1);renderUsePartsEdit()">
+      <button class="btn-sm bsm-r" onclick="usePartsEdit.splice(${i},1);renderUsePartsEdit()">✕</button>
+    </div>`).join('');
+  const total=usePartsEdit.reduce((s,u)=>s+(u.price*u.qty),0);
+  const cs=document.getElementById('ePartCostSum');if(cs)cs.textContent=fmtCost(total);
+}
 
 function openMaintEdit(i){
   maintEditIdx = i;
@@ -2286,6 +2330,16 @@ function openMaintEdit(i){
   document.getElementById('eMEnd').value    = m.end||'';
   document.getElementById('eMContent').value= m.content||'';
   document.getElementById('eMCause').value  = m.cause||'';
+  // 부품 셀렉트 채우기
+  const pSel = document.getElementById('eMPartSel');
+  if(pSel) pSel.innerHTML = '<option value="">-- 부품 선택 --</option>' +
+    db.parts.map((p,pi)=>`<option value="${pi}">[${p.pn}] ${p.name} (재고:${p.qty})</option>`).join('');
+  // 기존 부품 로드
+  usePartsEdit = (m.parts||[]).map(p=>{
+    const pidx=db.parts.findIndex(pt=>pt.pn===p.pn);
+    return {pidx,pn:p.pn,name:p.name,price:p.price,qty:p.qty};
+  });
+  renderUsePartsEdit();
   openModal('maintEditModal');
 }
 
@@ -2298,6 +2352,20 @@ function saveMaintEdit(){
   const start = document.getElementById('eMStart').value;
   const end   = document.getElementById('eMEnd').value;
   const hours = diffHours(start, end);
+  // 기존 부품 재고 되돌리기
+  (db.maints[maintEditIdx].parts||[]).forEach(p=>{
+    const pidx=db.parts.findIndex(pt=>pt.pn===p.pn);
+    if(pidx>=0) db.parts[pidx].qty+=p.qty;
+  });
+  // 새 부품 재고 차감
+  let stockWarn=[];
+  usePartsEdit.forEach(u=>{
+    if(u.pidx>=0){
+      db.parts[u.pidx].qty=Math.max(0,db.parts[u.pidx].qty-u.qty);
+      if(db.parts[u.pidx].qty<=db.parts[u.pidx].safe) stockWarn.push(db.parts[u.pidx].name);
+    }
+  });
+  const partCost=usePartsEdit.reduce((s,u)=>s+(u.price*u.qty),0);
   db.maints[maintEditIdx] = {
     ...db.maints[maintEditIdx],
     eqId, eqName: eq ? eq.name : db.maints[maintEditIdx].eqName,
@@ -2305,12 +2373,16 @@ function saveMaintEdit(){
     worker: document.getElementById('eMWorker').value.trim(),
     start, end, hours, content,
     cause:  document.getElementById('eMCause').value.trim(),
+    parts:JSON.parse(JSON.stringify(usePartsEdit)),
+    partCost,
   };
   save();
   closeModal('maintEditModal');
   renderMaintLog();
   renderEqList();
+  renderParts();
   toast('정비 기록 수정 완료');
+  if(stockWarn.length) setTimeout(()=>toast('⚠ 안전재고 이하: '+stockWarn.join(', '),'w'),1500);
 }
 
 // ══════ 부품 입고 ══════
