@@ -2125,8 +2125,9 @@ function renderMaintLog(){
   let list=db.maints.filter(m=>{
     const me=!fEq||m.eqId==fEq;
     const mt=!fType||m.type===fType;
-    const mf=!fFrom||m.date>=fFrom;
-    const mto=!fTo||m.date<=fTo;
+    const md=(m.start?m.start.slice(0,10):null)||m.date;
+    const mf=!fFrom||md>=fFrom;
+    const mto=!fTo||md<=fTo;
     return me&&mt&&mf&&mto;
   });
   list.sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
@@ -2507,10 +2508,11 @@ function clearStatsDateFilter(){
 function renderStats(){
   const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
   const fTo=document.getElementById('sFilterDateTo')?.value||'';
-  // 날짜 필터 적용된 정비 목록
+  // 날짜 필터 적용된 정비 목록 (정비일 기준)
   const filteredMaints=db.maints.filter(m=>{
-    const mf=!fFrom||m.date>=fFrom;
-    const mt=!fTo||m.date<=fTo;
+    const md=(m.start?m.start.slice(0,10):null)||m.date;
+    const mf=!fFrom||md>=fFrom;
+    const mt=!fTo||md<=fTo;
     return mf&&mt;
   });
   document.getElementById('k-eq').textContent=db.eqs.length;
@@ -2553,12 +2555,12 @@ function renderStats(){
       </div>`}).join('');
   }
 
-  drawMonthlyChart();
-  drawTypeChart();
+  drawMonthlyChart(filteredMaints);
+  drawTypeChart(filteredMaints);
 
   // 부품 사용 TOP5
   const puMap={};
-  db.maints.forEach(m=>(m.parts||[]).forEach(p=>{
+  filteredMaints.forEach(m=>(m.parts||[]).forEach(p=>{
     const k=p.pn+':'+p.name;
     if(!puMap[k])puMap[k]={name:p.name,pn:p.pn,qty:0,cost:0};
     puMap[k].qty+=p.qty;puMap[k].cost+=p.price*p.qty;
@@ -2585,7 +2587,7 @@ function renderStats(){
   }
 }
 
-function drawMonthlyChart(){
+function drawMonthlyChart(filteredMaints){
   const canvas=document.getElementById('cvMonthly');if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
@@ -2598,13 +2600,14 @@ function drawMonthlyChart(){
   const mutedCol=isLight?'#6b7280':'#4b5e74';
   const gridCol=isLight?'#d4d9e2':'#252d38';
   const bgCol=isLight?'#ffffff':'#181c22';
+  const maints=filteredMaints||db.maints;
   // 최근 6개월
   const months=[];
   for(let i=5;i>=0;i--){
     const d=new Date();d.setMonth(d.getMonth()-i);
     months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
   }
-  const counts=months.map(m=>db.maints.filter(mt=>mt.date&&mt.date.startsWith(m)).length);
+  const counts=months.map(m=>maints.filter(mt=>{const md=(mt.start?mt.start.slice(0,10):null)||mt.date;return md&&md.startsWith(m);}).length);
   if(!counts.some(c=>c>0)){
     ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;
   }
@@ -2629,7 +2632,7 @@ function drawMonthlyChart(){
   for(let i=0;i<=4;i++){const v=Math.round(mx*i/4);const y=pad.t+cH*(1-i/4);ctx.fillText(v,pad.l-4,y+3);}
 }
 
-function drawTypeChart(){
+function drawTypeChart(filteredMaints){
   const canvas=document.getElementById('cvType');if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
@@ -2643,9 +2646,10 @@ function drawTypeChart(){
   const bgCol=isLight?'#ffffff':'#181c22';
   const strokeCol=isLight?'#f0f4f8':'#0a0c0f';
   const countCol=isLight?'#c47f00':'#ffcb2b';
+  const maints=filteredMaints||db.maints;
   const types=['예방','고장','정기','개선'];
   const COLS=['#10b981','#ef4444','#3b82f6','#f59e0b'];
-  const counts=types.map(t=>db.maints.filter(m=>m.type===t).length);
+  const counts=types.map(t=>maints.filter(m=>m.type===t).length);
   const total=counts.reduce((a,b)=>a+b,0);
   if(!total){ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;}
   const cx=W*0.33,cy=H/2,R=Math.min(cx,cy)*0.85,ri=R*0.54;
