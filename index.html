@@ -2543,9 +2543,10 @@ function renderStats(){
 
   // MTBF/MTTR 목록
   const mtEl=document.getElementById('mtbfList');
-  if(!db.eqs.length){mtEl.innerHTML='<div class="empty" style="padding:14px;">데이터 없음</div>';}
+  const activeEqs=db.eqs.filter(eq=>filteredMaints.some(m=>m.eqId===eq.id));
+  if(!activeEqs.length){mtEl.innerHTML='<div class="empty" style="padding:14px;">'+(fFrom||fTo?'해당 기간에 정비 기록이 있는 장비 없음':'데이터 없음')+'</div>';}
   else{
-    mtEl.innerHTML=db.eqs.map(eq=>{
+    mtEl.innerHTML=activeEqs.map(eq=>{
       const fails=filteredMaints.filter(m=>m.eqId===eq.id&&m.type==='고장');
       const allMaints=filteredMaints.filter(m=>m.eqId===eq.id);
       const mtbf=calcMTBF(eq.id),mttr=calcMTTR(eq.id);
