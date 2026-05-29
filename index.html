@@ -939,7 +939,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   <!-- 날짜 필터 -->
   <div class="sec" style="margin-top:4px;">
     <div class="sec-title">기간 필터</div>
-    <div class="frow" style="margin-bottom:8px;">
+    <div class="frow" style="margin-bottom:0;">
       <div class="field" style="margin-bottom:0;">
         <label class="flabel">시작일</label>
         <input class="finput" id="sFilterDateFrom" type="date" onchange="renderStats()" oninput="renderStats()" style="font-size:13px;padding:8px 10px;">
@@ -949,8 +949,8 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
         <input class="finput" id="sFilterDateTo" type="date" onchange="renderStats()" oninput="renderStats()" style="font-size:13px;padding:8px 10px;">
       </div>
       <button class="btn-sm bsm-r" style="margin-top:18px;flex-shrink:0;" onclick="clearStatsDateFilter()">↺</button>
+      <button id="btnStatsMtbfOnly" data-on="1" onclick="toggleStatsMtbfOnly()" style="margin-top:18px;flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:7px;border:1.5px solid var(--green);background:var(--green);color:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;">✅ 기록있는장비만</button>
     </div>
-    <button id="btnStatsMtbfOnly" data-on="1" onclick="toggleStatsMtbfOnly()" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;border:1.5px solid var(--green);background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;">✅ 정비기록 있는 장비만</button>
   </div>
   <div class="sec">
     <div class="sec-title">전체 KPI</div>
