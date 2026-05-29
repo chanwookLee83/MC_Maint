@@ -2658,14 +2658,14 @@ function renderStats(){
             </div>
           </div>
           <div style="text-align:center;min-width:64px;">
-            <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTBF</div>
+            <div style="font-family:var(--cond);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTBF</div>
             <div style="font-family:var(--mono);font-size:17px;font-weight:bold;color:var(--green);">${mtbf?mtbf.toFixed(0)+'h':'—'}</div>
-            ${mtbfNote?`<div style="font-family:var(--mono);font-size:9px;color:var(--muted);">${mtbfNote}</div>`:''}
+            ${mtbfNote?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">${mtbfNote}</div>`:''}
           </div>
           <div style="text-align:center;min-width:64px;">
-            <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTTR</div>
+            <div style="font-family:var(--cond);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTTR</div>
             <div style="font-family:var(--mono);font-size:17px;font-weight:bold;color:var(--amber);">${mttr?mttr.toFixed(1)+'h':'—'}</div>
-            ${mttrNote?`<div style="font-family:var(--mono);font-size:9px;color:var(--red);">${mttrNote}</div>`:''}
+            ${mttrNote?`<div style="font-family:var(--mono);font-size:11px;color:var(--red);">${mttrNote}</div>`:''}
           </div>
         </div>
       </div>`}).join('')
