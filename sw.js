@@ -35,8 +35,23 @@ self.addEventListener('notificationclick', e => {
   );
 });
 
+// 페이지에서 직접 알림 요청 처리 (클라이언트 사이드 스케줄러용)
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    event.waitUntil(
+      self.registration.showNotification(event.data.title, {
+        body: event.data.body,
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        vibrate: [200, 100, 200],
+        tag: 'mms-scheduled'
+      })
+    );
+  }
+});
+
 // ── 캐시 (버전 올림) ──
-const CACHE = 'mms-v43';
+const CACHE = 'mms-v44';
 const ASSETS = [
   './index.html',
   './manifest.json',
