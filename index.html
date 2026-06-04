@@ -170,6 +170,7 @@ window.enablePushNotifications = async function() {
     setStatus('✅ 이 기기에 알림이 활성화되었습니다', true);
     localStorage.setItem('fcm_enabled', '1');
     if (typeof toast === 'function') toast('핸드폰 알림 활성화 완료!');
+    setTimeout(() => { if (typeof window.scheduleLocalNotifications === 'function') window.scheduleLocalNotifications(); }, 500);
   } catch(err) {
     console.warn('FCM 오류:', err);
     setStatus('❌ 등록 실패: VAPID 키 설정 여부를 확인하세요', false);
@@ -200,6 +201,8 @@ window.addEventListener('load', async () => {
   } catch(e) {
     // 갱신 실패 시 조용히 무시 (다음 로드 시 재시도)
   }
+  // 로컬 알림 스케줄러 시작 (정기 알림)
+  setTimeout(() => { if (typeof window.scheduleLocalNotifications === 'function') window.scheduleLocalNotifications(); }, 1000);
 });
 </script>
 <style>
@@ -1370,8 +1373,20 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
     <div class="sec-title">핸드폰 알림</div>
     <div id="pushStatus" style="font-size:13px;color:var(--muted);padding:4px 2px 8px;min-height:20px;font-family:var(--mono);"></div>
     <button class="share-btn sb-amber" onclick="enablePushNotifications()"><span>🔔</span> 이 기기에 알림 활성화</button>
-    <div class="share-note">→ 재고 부족·점검 기한 초과 시 이 기기로 즉시 알림 전송</div>
-    <div class="share-note">※ Cloud Functions 배포 필요 — functions/ 폴더 참고</div>
+    <div class="share-note">→ 알림 권한 허용 후 매일 아래 시간에 설비 현황 알림을 받습니다</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:9px;padding:12px;margin:6px 0 10px;">
+      <div style="font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:8px;">정기 알림 시간 (매일)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span style="background:#f59e0b18;border:1px solid #f59e0b35;color:var(--amber);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:13px;">08:00</span>
+        <span style="background:#f59e0b18;border:1px solid #f59e0b35;color:var(--amber);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:13px;">10:00</span>
+        <span style="background:#f59e0b18;border:1px solid #f59e0b35;color:var(--amber);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:13px;">12:00</span>
+        <span style="background:#f59e0b18;border:1px solid #f59e0b35;color:var(--amber);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:13px;">14:00</span>
+        <span style="background:#f59e0b18;border:1px solid #f59e0b35;color:var(--amber);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:13px;">16:00</span>
+        <span style="background:#f59e0b18;border:1px solid #f59e0b35;color:var(--amber);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:13px;">18:00</span>
+      </div>
+    </div>
+    <button class="share-btn" style="background:transparent;border:1px solid var(--border2);color:var(--muted2);" onclick="testLocalNotification()"><span>🧪</span> 테스트 알림 발송</button>
+    <div class="share-note">※ 앱이 열려 있을 때 즉시 동작 · 완전한 백그라운드 알림은 functions/ 폴더 참고</div>
   </div>
   <div class="share-divider"><span>내보내기</span></div>
   <div class="sec" style="margin-top:4px;">
@@ -3731,8 +3746,76 @@ function toast(msg,type='ok'){
   clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2500);
 }
 
+// ── 정기 알림 스케줄러 (클라이언트 사이드) ──
+const NOTI_HOURS = [8, 10, 12, 14, 16, 18];
+const _notiTimers = [];
+
+window.scheduleLocalNotifications = function() {
+  if (Notification.permission !== 'granted') return;
+  _notiTimers.forEach(t => clearTimeout(t));
+  _notiTimers.length = 0;
+  NOTI_HOURS.forEach(h => _scheduleOneHour(h));
+};
+
+function _scheduleOneHour(h) {
+  const now = new Date();
+  const target = new Date();
+  target.setHours(h, 0, 0, 0);
+  let delay = target.getTime() - now.getTime();
+  if (delay <= 0) delay += 86400000;
+  const id = setTimeout(() => {
+    _fireScheduledNotification(h);
+    _scheduleOneHour(h);
+  }, delay);
+  _notiTimers.push(id);
+}
+
+function _fireScheduledNotification(hour) {
+  const issues = [];
+  if (typeof db !== 'undefined') {
+    (db.parts || []).forEach(p => {
+      if (p.qty <= p.safe) issues.push(p.name + ' 재고부족');
+    });
+    const today = localToday();
+    (db.eqs || []).forEach(eq => {
+      if (eq.status === '단종') return;
+      const cycle = parseInt(eq.cycle) || 30;
+      const eqInsps = (db.insps || []).filter(i => i.eqId === eq.id);
+      if (!eqInsps.length) { issues.push(eq.name + ' 미점검'); return; }
+      const last = eqInsps.sort((a, b) => b.date.localeCompare(a.date))[0];
+      if (last.date === today) return;
+      const days = Math.floor((new Date(today) - new Date(last.date)) / 86400000);
+      if (days >= cycle) issues.push(eq.name + ' 점검초과');
+    });
+  }
+  const title = `🔔 설비관리 ${hour}:00 알림`;
+  const body = issues.length
+    ? `조치 필요 ${issues.length}건: ${issues.slice(0, 2).join(', ')}${issues.length > 2 ? ' 외' : ''}`
+    : '설비 현황 이상 없음 ✅';
+  _showOsNotification(title, body);
+}
+
+function _showOsNotification(title, body) {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body });
+  } else if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: './icon-192.png' });
+  }
+}
+
+function testLocalNotification() {
+  if (Notification.permission !== 'granted') {
+    toast('먼저 알림을 활성화해주세요', 'w');
+    return;
+  }
+  _showOsNotification('🧪 테스트 알림', '설비관리 알림이 정상 동작 중입니다!');
+  toast('테스트 알림 발송');
+}
+
 // ── 초기화 ──
 renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();
+// 알림 활성화 상태면 로컬 스케줄러 즉시 시작
+if (localStorage.getItem('fcm_enabled') === '1') window.scheduleLocalNotifications?.();
 // 일정 등록 날짜 기본값
 const evDateEl=document.getElementById('evDate');if(evDateEl)evDateEl.value=localToday();
 document.getElementById('mStart').value=localNow();
