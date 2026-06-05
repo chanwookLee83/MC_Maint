@@ -3812,10 +3812,45 @@ function testLocalNotification() {
   toast('테스트 알림 발송');
 }
 
+// ── 앱 열릴 때 놓친 알림 즉시 발송 (하루 1회) ──
+function _fireCatchupNotification() {
+  if (Notification.permission !== 'granted') return;
+  const today = localToday();
+  if (localStorage.getItem('mms_catchup_date') === today) return; // 오늘 이미 발송
+  localStorage.setItem('mms_catchup_date', today);
+
+  const issues = [];
+  (db.parts || []).forEach(p => {
+    if (p.qty <= p.safe) issues.push(`[${p.pn}] ${p.name} 재고부족`);
+  });
+  (db.eqs || []).forEach(eq => {
+    if (eq.status === '단종') return;
+    const cycle = parseInt(eq.cycle) || 30;
+    const eqInsps = (db.insps || []).filter(i => i.eqId === eq.id);
+    if (!eqInsps.length) { issues.push(`${eq.name} 미점검`); return; }
+    const last = eqInsps.sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (last.date === today) return;
+    const days = Math.floor((new Date(today) - new Date(last.date)) / 86400000);
+    if (days >= cycle) issues.push(`${eq.name} 점검초과 (${days}일)`);
+  });
+
+  if (!issues.length) return; // 이상 없으면 알림 안 보냄
+  const body = `조치 필요 ${issues.length}건: ${issues.slice(0, 3).join(', ')}${issues.length > 3 ? ' 외' : ''}`;
+  _showOsNotification('🔔 설비관리 점검 필요', body);
+}
+
 // ── 초기화 ──
 renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();
-// 알림 활성화 상태면 로컬 스케줄러 즉시 시작
-if (localStorage.getItem('fcm_enabled') === '1') window.scheduleLocalNotifications?.();
+// 알림 활성화 상태면 로컬 스케줄러 시작 + 놓친 알림 즉시 확인
+if (localStorage.getItem('fcm_enabled') === '1') {
+  window.scheduleLocalNotifications?.();
+  // SW 준비 후 catch-up 알림 발송 (딜레이: DB 로드 완료 대기)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(() => setTimeout(_fireCatchupNotification, 1500));
+  } else {
+    setTimeout(_fireCatchupNotification, 1500);
+  }
+}
 // 일정 등록 날짜 기본값
 const evDateEl=document.getElementById('evDate');if(evDateEl)evDateEl.value=localToday();
 document.getElementById('mStart').value=localNow();
