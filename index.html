@@ -906,7 +906,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
       </div>
       <div class="field"><label class="flabel">원인</label><div class="ac-wrap"><input class="finput" id="mCause" placeholder="고장 원인 또는 정비 사유" autocomplete="off" oninput="acShow('mCause','causes')"><div class="ac-list" id="ac-mCause"></div></div></div>
       <div class="field"><label class="flabel">정비 내용 *</label><textarea class="ftextarea" id="mContent" placeholder="정비 내용을 입력하세요..." style="height:88px;"></textarea></div>
-      <div class="field"><label class="flabel">시작일시</label><input class="finput" id="mStart" type="datetime-local" style="font-size:14px;"></div>
+      <div class="field"><label class="flabel">시작일시</label><input class="finput" id="mStart" type="datetime-local" style="font-size:14px;" onchange="onMStartChange()"></div>
       <div class="field"><label class="flabel">종료일시</label><input class="finput" id="mEnd" type="datetime-local" style="font-size:14px;"></div>
     </div>
   </div>
@@ -927,7 +927,19 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   </div>
 
   <button class="btn-primary" onclick="saveMaint()">🔧 정비 저장</button>
-  <button class="btn-ghost" onclick="clearMaintForm()">↺ 초기화</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+    <button class="btn-ghost" style="margin-bottom:0;flex:1;" onclick="clearMaintForm()">↺ 초기화</button>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 11px;text-align:center;min-width:64px;">
+        <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:3px;">정비건수</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--amber);" id="maintSummaryCount">0</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 11px;text-align:center;min-width:80px;">
+        <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:3px;">부품비용</div>
+        <div style="font-family:var(--mono);font-size:13px;font-weight:bold;color:var(--green);" id="maintSummaryPartCost">₩0</div>
+      </div>
+    </div>
+  </div>
 
   <div class="sec" style="margin-top:4px;">
     <div class="sec-title">정비 이력</div>
@@ -2269,9 +2281,33 @@ function saveMaint(){
     parts:JSON.parse(JSON.stringify(useParts)),
     partCost,date:localToday()
   });
-  save();clearMaintForm();renderMaintLog();renderEqList();checkAlarms();
+  save();clearMaintForm();renderMaintLog();renderEqList();checkAlarms();updateMaintSummary();
   toast('정비 저장 완료');
   if(stockWarn.length) setTimeout(()=>toast('⚠ 안전재고 이하: '+stockWarn.join(', '),'w'),1500);
+}
+function onMStartChange(){
+  const startVal=document.getElementById('mStart').value;
+  if(!startVal) return;
+  const endEl=document.getElementById('mEnd');
+  // 종료일시가 비어있거나 날짜가 다르면 날짜만 맞춰줌 (시간은 유지 또는 시작과 동일)
+  const startDate=startVal.slice(0,10);
+  if(!endEl.value){
+    endEl.value=startVal;
+  } else {
+    const endDate=endEl.value.slice(0,10);
+    if(endDate!==startDate){
+      const endTime=endEl.value.slice(11)||startVal.slice(11);
+      endEl.value=startDate+'T'+endTime;
+    }
+  }
+}
+function updateMaintSummary(){
+  const countEl=document.getElementById('maintSummaryCount');
+  const costEl=document.getElementById('maintSummaryPartCost');
+  if(!countEl||!costEl) return;
+  countEl.textContent=db.maints.length;
+  const totalCost=db.maints.reduce((s,m)=>s+(m.partCost||0),0);
+  costEl.textContent=fmtCost(totalCost);
 }
 function clearMaintForm(){
   ['mContent','mCause','mWorker'].forEach(id=>document.getElementById(id).value='');
@@ -2310,6 +2346,7 @@ function renderMaintLog(){
     cntEl.innerHTML=isFiltered?`전체 <span>${db.maints.length}</span>건 중 <span>${list.length}</span>건 표시`:'';
   }
   if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon">🔧</span>'+(fEq||fType||fFrom||fTo?'필터 조건에 맞는 정비 이력 없음':'정비 이력 없음')+'</div>';return;}
+  updateMaintSummary();
   el.innerHTML=list.map((m,i)=>{
     const realIdx=db.maints.indexOf(m);
     const typeColor={'고장':'r','프로그램':'b','기구부':'a','개선':'g'}[m.type]||'';
@@ -3903,6 +3940,7 @@ if (localStorage.getItem('fcm_enabled') === '1') {
 // 일정 등록 날짜 기본값
 const evDateEl=document.getElementById('evDate');if(evDateEl)evDateEl.value=localToday();
 document.getElementById('mStart').value=localNow();
+updateMaintSummary();
 </script>
 </body>
 </html>
