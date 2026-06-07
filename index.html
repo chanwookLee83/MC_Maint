@@ -886,7 +886,12 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
     <div class="sec-title">정비 일지 작성</div>
     <div class="card amber-t">
       <div class="field"><label class="flabel">장비 선택 *</label>
-        <div class="fselect-w"><select class="fselect" id="mEq"><option value="">-- 장비 선택 --</option></select></div>
+        <div class="ac-wrap">
+          <input class="finput" id="mEqInput" placeholder="장비명 검색 후 선택..." autocomplete="off"
+            oninput="eqAcShow()" onfocus="eqAcShow()">
+          <input type="hidden" id="mEq">
+          <div class="ac-list" id="ac-mEqInput"></div>
+        </div>
       </div>
       <div class="frow">
         <div class="field"><label class="flabel">정비 유형</label>
@@ -1896,6 +1901,36 @@ function acCloseAll(exceptId=''){
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))acCloseAll();});
 
+// ── 장비 자동완성 (정비 탭) ──
+function eqAcShow(){
+  const inp=document.getElementById('mEqInput');
+  const list=document.getElementById('ac-mEqInput');
+  const hidden=document.getElementById('mEq');
+  if(!inp||!list) return;
+  const q=inp.value.trim().toLowerCase();
+  hidden.value='';
+  acCloseAll('mEqInput');
+  const matched=q
+    ? db.eqs.filter(eq=>eq.name.toLowerCase().includes(q)||(eq.loc||'').toLowerCase().includes(q))
+    : db.eqs.slice(0,20);
+  if(!matched.length){list.classList.remove('open');return;}
+  list.innerHTML=matched.slice(0,20).map(eq=>{
+    const nameSafe=eq.name.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const loc=eq.loc?`<span style="font-size:11px;color:var(--muted);margin-left:6px;">${eq.loc}</span>`:'';
+    const nameArg=eq.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="ac-item" onmousedown="event.preventDefault();eqAcPick(${eq.id},'${nameArg}')">${nameSafe}${loc}</div>`;
+  }).join('');
+  list.classList.add('open');
+}
+function eqAcPick(eqId, eqName){
+  const hidden=document.getElementById('mEq');
+  const inp=document.getElementById('mEqInput');
+  const list=document.getElementById('ac-mEqInput');
+  if(hidden) hidden.value=eqId;
+  if(inp) inp.value=eqName;
+  if(list) list.classList.remove('open');
+}
+
 // ══════ 장비 등급 ══════
 function selectGrade(inputId, grade, silent=false){
   const prefix = inputId==='eqGrade' ? 'gbtn-' : 'egbtn-';
@@ -2099,7 +2134,12 @@ function toggleEq(i){
 }
 function goMaintWithEq(eqId){
   gotoTab('maint');
-  setTimeout(()=>{document.getElementById('mEq').value=eqId;},100);
+  setTimeout(()=>{
+    document.getElementById('mEq').value=eqId;
+    const eq=db.eqs.find(e=>e.id===eqId);
+    const inp=document.getElementById('mEqInput');
+    if(inp&&eq) inp.value=eq.name;
+  },100);
 }
 function goInspWithEq(eqId){
   gotoTab('insp');
@@ -2156,13 +2196,20 @@ function deleteEq(i){
 }
 
 function populateEqSelects(){
-  ['mEq','mFilterEq','eEqSel'].forEach(id=>{
+  ['mFilterEq','eEqSel'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;
     el.innerHTML=(id==='mFilterEq'?'<option value="">전체 장비</option>':'<option value="">-- 장비 선택 --</option>')+
       db.eqs.map(eq=>`<option value="${eq.id}">${eq.name}</option>`).join('');
     el.value=cur;
   });
+  // mEq 자동완성: 장비 삭제 등으로 현재 선택값이 유효하지 않으면 초기화
+  const mEqHidden=document.getElementById('mEq');
+  const mEqInput=document.getElementById('mEqInput');
+  if(mEqHidden&&mEqInput&&mEqHidden.value){
+    const eq=db.eqs.find(e=>e.id===parseInt(mEqHidden.value));
+    if(!eq){mEqHidden.value='';mEqInput.value='';}
+  }
 }
 
 // ══════ 정비 ══════
@@ -2229,6 +2276,8 @@ function saveMaint(){
 function clearMaintForm(){
   ['mContent','mCause','mWorker'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('mEq').value='';
+  const mEqInput=document.getElementById('mEqInput');
+  if(mEqInput) mEqInput.value='';
   document.getElementById('mType').value='고장';
   document.getElementById('mStart').value='';
   document.getElementById('mEnd').value='';
