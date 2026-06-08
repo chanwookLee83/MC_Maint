@@ -955,15 +955,20 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
 
   <div class="sec" style="margin-top:4px;">
     <div class="sec-title">정비 이력</div>
-    <div class="frow" style="margin-bottom:10px;">
-      <div class="fselect-w"><select class="fselect" id="mFilterEq" onchange="renderMaintLog()"><option value="">전체 장비</option></select></div>
-      <div class="fselect-w"><select class="fselect" id="mFilterType" onchange="renderMaintLog()">
-        <option value="">전체 유형</option>
-        <option value="고장">고장수리</option>
-        <option value="프로그램">프로그램 수정</option>
-        <option value="기구부">기구부 수정</option>
-        <option value="개선">개선 수정</option>
-      </select></div>
+    <!-- 장비 필터 자동완성 -->
+    <div class="ac-wrap" style="margin-bottom:8px;">
+      <input class="finput" id="mFilterEqInput" placeholder="🔍 장비명 검색 (비우면 전체)..." autocomplete="off"
+        oninput="mFilterEqAcInput()" onfocus="mFilterEqAcShow()" style="font-size:13px;padding:9px 12px;">
+      <input type="hidden" id="mFilterEqId">
+      <div class="ac-list" id="ac-mFilterEqInput"></div>
+    </div>
+    <!-- 유형 필터 칩 -->
+    <div id="mTypeChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="filter-chip active" data-val="" onclick="setMTypeFilter('')">ALL</button>
+      <button class="filter-chip" data-val="고장" onclick="setMTypeFilter('고장')">고장수리</button>
+      <button class="filter-chip" data-val="프로그램" onclick="setMTypeFilter('프로그램')">프로그램</button>
+      <button class="filter-chip" data-val="기구부" onclick="setMTypeFilter('기구부')">기구부</button>
+      <button class="filter-chip" data-val="개선" onclick="setMTypeFilter('개선')">개선</button>
     </div>
     <!-- 날짜 필터 -->
     <div class="frow" style="margin-bottom:10px;">
@@ -2228,10 +2233,11 @@ function deleteEq(i){
 }
 
 function populateEqSelects(){
-  ['mFilterEq','eEqSel'].forEach(id=>{
+  // eEqSel (점검 탭 장비 선택 등 남은 select 유지)
+  ['eEqSel'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;
-    el.innerHTML=(id==='mFilterEq'?'<option value="">전체 장비</option>':'<option value="">-- 장비 선택 --</option>')+
+    el.innerHTML='<option value="">-- 장비 선택 --</option>'+
       db.eqs.map(eq=>`<option value="${eq.id}">${eq.name}</option>`).join('');
     el.value=cur;
   });
@@ -2241,6 +2247,13 @@ function populateEqSelects(){
   if(mEqHidden&&mEqInput&&mEqHidden.value){
     const eq=db.eqs.find(e=>e.id===parseInt(mEqHidden.value));
     if(!eq){mEqHidden.value='';mEqInput.value='';}
+  }
+  // mFilterEq 자동완성: 삭제된 장비 선택 중이면 초기화
+  const fEqId=document.getElementById('mFilterEqId');
+  const fEqInput=document.getElementById('mFilterEqInput');
+  if(fEqId&&fEqInput&&fEqId.value){
+    const eq=db.eqs.find(e=>e.id===parseInt(fEqId.value));
+    if(!eq){fEqId.value='';fEqInput.value='';renderMaintLog();}
   }
 }
 
@@ -2383,12 +2396,17 @@ function clearMaintDateFilter(){
   const f=document.getElementById('mFilterDateFrom');
   const t=document.getElementById('mFilterDateTo');
   if(f)f.value=''; if(t)t.value='';
-  renderMaintLog();
+  // 장비·유형 필터도 함께 초기화
+  const fEqIn=document.getElementById('mFilterEqInput');
+  const fEqId=document.getElementById('mFilterEqId');
+  if(fEqIn) fEqIn.value='';
+  if(fEqId) fEqId.value='';
+  setMTypeFilter('');
 }
 function renderMaintLog(){
   const el=document.getElementById('maintLog');
-  const fEq=document.getElementById('mFilterEq')?.value||'';
-  const fType=document.getElementById('mFilterType')?.value||'';
+  const fEq=document.getElementById('mFilterEqId')?.value||'';
+  const fType=_mTypeFilter||'';
   const fFrom=document.getElementById('mFilterDateFrom')?.value||'';
   const fTo=document.getElementById('mFilterDateTo')?.value||'';
   let list=db.maints.filter(m=>{
