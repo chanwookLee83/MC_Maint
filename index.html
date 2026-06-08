@@ -888,7 +888,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
       <div class="field"><label class="flabel">장비 선택 *</label>
         <div class="ac-wrap">
           <input class="finput" id="mEqInput" placeholder="장비명 검색 후 선택..." autocomplete="off"
-            oninput="eqAcShow()" onfocus="eqAcShow()">
+            oninput="eqAcInput()" onfocus="eqAcShow()">
           <input type="hidden" id="mEq">
           <div class="ac-list" id="ac-mEqInput"></div>
         </div>
@@ -1916,13 +1916,16 @@ function acCloseAll(exceptId=''){
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))acCloseAll();});
 
 // ── 장비 자동완성 (정비 탭) ──
+function eqAcInput(){
+  // 타이핑 시에만 hidden 초기화 (onfocus는 초기화하지 않음)
+  document.getElementById('mEq').value='';
+  eqAcShow();
+}
 function eqAcShow(){
   const inp=document.getElementById('mEqInput');
   const list=document.getElementById('ac-mEqInput');
-  const hidden=document.getElementById('mEq');
   if(!inp||!list) return;
   const q=inp.value.trim().toLowerCase();
-  hidden.value='';
   acCloseAll('mEqInput');
   const matched=q
     ? db.eqs.filter(eq=>eq.name.toLowerCase().includes(q)||(eq.loc||'').toLowerCase().includes(q))
