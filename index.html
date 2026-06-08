@@ -36,7 +36,6 @@ const app = initializeApp(firebaseConfig);
 const fdb = getFirestore(app);
 const DOC_REF = doc(fdb, 'mms', 'maindb');
 
-let lastSaveAt = 0;
 let saveTimer = null;
 let lastServerAt = 0;
 
@@ -50,9 +49,7 @@ async function pollFirestore() {
 
     const serverAt = data.updatedAt || 0;
 
-    // 내가 방금 저장한 거면 무시
-    if (serverAt <= lastSaveAt + 1000) return;
-    // 이미 반영한 데이터면 무시
+    // 이미 반영한 데이터면 무시 (내 저장 포함)
     if (serverAt <= lastServerAt) return;
 
     lastServerAt = serverAt;
@@ -65,6 +62,7 @@ async function pollFirestore() {
       db.insps    = serverDb.insps    || [];
       db.inbounds = serverDb.inbounds || [];
       db.events   = serverDb.events   || [];
+      db.boms     = serverDb.boms     || [];
       localStorage.setItem('mms_v1', data.db);
 
       if (typeof renderEqList === 'function') {
@@ -78,7 +76,8 @@ async function pollFirestore() {
       }
     }
   } catch(e) {
-    // 오프라인 등 오류 무시
+    console.error('Firestore poll error:', e);
+    showSyncBadge('⚠️ 동기화 오류');
   }
 }
 
@@ -93,7 +92,6 @@ window.saveToFirestore = function(dbData) {
   saveTimer = setTimeout(async () => {
     try {
       const now = Date.now();
-      lastSaveAt = now;
       lastServerAt = now;
       await setDoc(DOC_REF, {
         db: JSON.stringify(dbData),
@@ -102,7 +100,7 @@ window.saveToFirestore = function(dbData) {
       showSyncBadge('☁️ 저장됨');
     } catch(e) {
       showSyncBadge('⚠️ 오프라인');
-      console.warn('Firestore save failed:', e);
+      console.error('Firestore save error:', e);
     }
   }, 500);
 };
@@ -141,22 +139,29 @@ window.enablePushNotifications = async function() {
   const setStatus = (msg, ok) => {
     if (!statusEl) return;
     statusEl.textContent = msg;
-    statusEl.style.color = ok ? 'var(--green)' : 'var(--red)';
+    statusEl.style.color = ok ? 'var(--green)' : ok === null ? 'var(--amber)' : 'var(--red)';
   };
 
-  if (!_messaging) { setStatus('❌ FCM 초기화 실패. VAPID 키를 확인하세요.', false); return; }
   if (!('Notification' in window)) { setStatus('❌ 이 브라우저는 알림을 지원하지 않습니다', false); return; }
   if (!('serviceWorker' in navigator)) { setStatus('❌ Service Worker를 지원하지 않는 환경입니다', false); return; }
 
-  setStatus('⏳ 권한 요청 중...', true);
+  setStatus('⏳ 권한 요청 중...', null);
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     setStatus('❌ 알림 권한이 거부되었습니다. 브라우저 설정에서 허용하세요.', false);
     return;
   }
 
+  // ── 1단계: 로컬 알림 즉시 활성화 (FCM 불필요) ──
+  localStorage.setItem('fcm_enabled', '1');
+  setStatus('✅ 이 기기에 알림이 활성화되었습니다 (로컬)', true);
+  if (typeof toast === 'function') toast('알림 활성화 완료!');
+  setTimeout(() => { if (typeof window.scheduleLocalNotifications === 'function') window.scheduleLocalNotifications(); }, 300);
+
+  // ── 2단계: FCM 서버 푸시 등록 시도 (선택적, 실패해도 로컬 알림은 유지) ──
+  if (!_messaging) return;
   try {
-    setStatus('⏳ FCM 토큰 발급 중...', true);
+    setStatus('⏳ FCM 서버 푸시 등록 중...', null);
     const swReg = await navigator.serviceWorker.ready;
     const token = await getToken(_messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
     if (!token) throw new Error('토큰 발급 실패');
@@ -167,13 +172,11 @@ window.enablePushNotifications = async function() {
       ts: Date.now()
     });
 
-    setStatus('✅ 이 기기에 알림이 활성화되었습니다', true);
-    localStorage.setItem('fcm_enabled', '1');
-    if (typeof toast === 'function') toast('핸드폰 알림 활성화 완료!');
-    setTimeout(() => { if (typeof window.scheduleLocalNotifications === 'function') window.scheduleLocalNotifications(); }, 500);
+    setStatus('✅ 알림 활성화 완료 (로컬 + 서버 푸시)', true);
   } catch(err) {
-    console.warn('FCM 오류:', err);
-    setStatus('❌ 등록 실패: VAPID 키 설정 여부를 확인하세요', false);
+    console.error('FCM 등록 오류:', err);
+    // FCM 실패해도 로컬 알림은 이미 활성화 상태 — 경고만 표시
+    setStatus('✅ 알림 활성화됨 (로컬만 · 서버 푸시 오류: ' + (err.message || err.code || '알 수 없음') + ')', null);
   }
 };
 
@@ -187,7 +190,10 @@ window.addEventListener('load', async () => {
     statusEl.style.color = 'var(--green)';
   }
 
-  // 토큰이 만료/갱신되었을 수 있으므로 자동으로 재등록
+  // 로컬 알림 스케줄러 시작 (FCM 불필요)
+  setTimeout(() => { if (typeof window.scheduleLocalNotifications === 'function') window.scheduleLocalNotifications(); }, 1000);
+
+  // FCM 토큰 갱신 시도 (선택적, 실패해도 로컬 알림은 유지)
   if (!_messaging || Notification.permission !== 'granted') return;
   try {
     const swReg = await navigator.serviceWorker.ready;
@@ -199,10 +205,9 @@ window.addEventListener('load', async () => {
       ts: Date.now()
     });
   } catch(e) {
-    // 갱신 실패 시 조용히 무시 (다음 로드 시 재시도)
+    console.error('FCM 토큰 갱신 오류:', e);
+    // 갱신 실패해도 로컬 알림은 이미 시작됨 — 무시
   }
-  // 로컬 알림 스케줄러 시작 (정기 알림)
-  setTimeout(() => { if (typeof window.scheduleLocalNotifications === 'function') window.scheduleLocalNotifications(); }, 1000);
 });
 </script>
 <style>
@@ -1024,15 +1029,15 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
     <!-- 타입 필터 -->
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;" id="partTypeFilter">
       <button class="filter-chip active" data-type="ALL" onclick="setPartTypeFilter('ALL')">ALL</button>
-      <button class="filter-chip" data-type="실린더" onclick="setPartTypeFilter('실린더')">실린더</button>
-      <button class="filter-chip" data-type="센서" onclick="setPartTypeFilter('센서')">센서</button>
-      <button class="filter-chip" data-type="스위치" onclick="setPartTypeFilter('스위치')">스위치</button>
-      <button class="filter-chip" data-type="버튼" onclick="setPartTypeFilter('버튼')">버튼</button>
-      <button class="filter-chip" data-type="솔레노이드밸브" onclick="setPartTypeFilter('솔레노이드밸브')">솔레노이드밸브</button>
-      <button class="filter-chip" data-type="전자코일" onclick="setPartTypeFilter('전자코일')">전자코일</button>
+      <button class="filter-chip" data-type="베어링" onclick="setPartTypeFilter('베어링')">베어링</button>
+      <button class="filter-chip" data-type="오일/윤활" onclick="setPartTypeFilter('오일/윤활')">오일·윤활</button>
       <button class="filter-chip" data-type="벨트" onclick="setPartTypeFilter('벨트')">벨트</button>
+      <button class="filter-chip" data-type="필터" onclick="setPartTypeFilter('필터')">필터</button>
+      <button class="filter-chip" data-type="센서" onclick="setPartTypeFilter('센서')">센서</button>
       <button class="filter-chip" data-type="모터" onclick="setPartTypeFilter('모터')">모터</button>
-      <button class="filter-chip" data-type="진공이젝터" onclick="setPartTypeFilter('진공이젝터')">진공이젝터</button>
+      <button class="filter-chip" data-type="밸브" onclick="setPartTypeFilter('밸브')">밸브</button>
+      <button class="filter-chip" data-type="실린더" onclick="setPartTypeFilter('실린더')">실린더</button>
+      <button class="filter-chip" data-type="솔레노이드밸브" onclick="setPartTypeFilter('솔레노이드밸브')">솔레노이드</button>
       <button class="filter-chip" data-type="기타" onclick="setPartTypeFilter('기타')">기타</button>
     </div>
     <div class="search-result-count" id="partSearchCount"></div>
