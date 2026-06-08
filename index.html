@@ -927,16 +927,18 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   </div>
 
   <button class="btn-primary" onclick="saveMaint()">🔧 정비 저장</button>
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-    <button class="btn-ghost" style="margin-bottom:0;flex:1;" onclick="clearMaintForm()">↺ 초기화</button>
-    <div style="display:flex;gap:6px;flex-shrink:0;">
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 11px;text-align:center;min-width:64px;">
-        <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:3px;">정비건수</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--amber);" id="maintSummaryCount">0</div>
+  <div style="display:flex;align-items:stretch;gap:8px;margin-bottom:8px;">
+    <button class="btn-ghost" style="margin-bottom:0;width:80px;flex-shrink:0;padding:0;" onclick="clearMaintForm()">↺ 초기화</button>
+    <div style="display:flex;gap:6px;flex:1;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;text-align:center;flex:1;">
+        <div style="font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:4px;">정비건수</div>
+        <div style="font-family:var(--mono);font-size:26px;font-weight:bold;color:var(--amber);line-height:1;" id="maintSummaryCount">0</div>
+        <div style="font-family:var(--cond);font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px;">건</div>
       </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 11px;text-align:center;min-width:80px;">
-        <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:3px;">부품비용</div>
-        <div style="font-family:var(--mono);font-size:13px;font-weight:bold;color:var(--green);" id="maintSummaryPartCost">₩0</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;text-align:center;flex:2;">
+        <div style="font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:4px;">총 부품비용</div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:bold;color:var(--green);line-height:1;" id="maintSummaryPartCost">₩0</div>
+        <div style="font-family:var(--cond);font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px;">누적합계</div>
       </div>
     </div>
   </div>
@@ -2317,6 +2319,7 @@ function clearMaintForm(){
   document.getElementById('mType').value='고장';
   document.getElementById('mStart').value='';
   document.getElementById('mEnd').value='';
+  document.getElementById('mPartSel').value='';
   useParts=[];renderUseParts();
 }
 function clearMaintDateFilter(){
