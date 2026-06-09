@@ -269,8 +269,8 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 
 /* SEC */
 .sec{margin-bottom:20px;}
-.sec-title{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:12px;display:flex;align-items:center;gap:10px;text-transform:uppercase;}
-.sec-title::before{content:'';width:3px;height:14px;background:var(--amber);border-radius:2px;flex-shrink:0;}
+.sec-title{font-family:var(--cond);font-size:15px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.sec-title::before{content:'';width:3px;height:16px;background:var(--amber);border-radius:2px;flex-shrink:0;}
 .sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* CARD */
@@ -284,7 +284,7 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 /* FIELD */
 .field{margin-bottom:14px;}
 .field:last-child{margin-bottom:0;}
-.flabel{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin-bottom:6px;display:block;text-transform:uppercase;}
+.flabel{font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin-bottom:6px;display:block;}
 .finput,.fselect,.ftextarea{width:100%;background:var(--card2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:15px;padding:11px 13px;outline:none;appearance:none;-webkit-appearance:none;transition:border-color .2s,box-shadow .2s,background .2s;}
 .finput:hover,.fselect:hover,.ftextarea:hover{border-color:var(--muted);}
 .finput:focus,.fselect:focus,.ftextarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px #f59e0b16,0 1px 5px #f59e0b10;background:var(--card);}
@@ -329,7 +329,7 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
 .kpi-box{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px;position:relative;overflow:hidden;}
 .kpi-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--amber),transparent);opacity:.5;}
-.kpi-label{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;}
+.kpi-label{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:6px;}
 .kpi-val{font-family:var(--mono);font-size:28px;font-weight:bold;line-height:1.1;}
 .kpi-sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;}
 
@@ -346,7 +346,7 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .eq-body.open{display:block;}
 .eq-stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
 .eq-stat{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center;}
-.eq-stat-label{font-family:var(--cond);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;font-weight:700;text-transform:uppercase;}
+.eq-stat-label{font-family:var(--cond);font-size:13px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;font-weight:700;}
 .eq-stat-val{font-family:var(--mono);font-size:20px;font-weight:bold;}
 .eq-actions{display:flex;gap:7px;}
 
@@ -375,16 +375,16 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .gt-criteria{color:var(--text);font-size:13px;}
 .eq-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;}
 .eq-info-cell{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:9px 11px;}
-.eq-info-cell-label{font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;font-weight:700;text-transform:uppercase;}
+.eq-info-cell-label{font-family:var(--cond);font-size:12px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;font-weight:700;}
 .eq-info-cell-val{font-family:var(--mono);font-size:13px;color:var(--text);word-break:break-all;}
 .eq-info-cell.full{grid-column:1/-1;}
 .eq-memo-box{background:var(--bg);border:1px solid #f59e0b20;border-left:3px solid var(--amber);border-radius:0 9px 9px 0;padding:9px 12px;margin-bottom:12px;}
-.eq-memo-label{font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--amber);margin-bottom:4px;font-weight:700;text-transform:uppercase;}
+.eq-memo-label{font-family:var(--cond);font-size:12px;letter-spacing:2px;color:var(--amber);margin-bottom:4px;font-weight:700;}
 .eq-memo-text{font-size:13px;color:var(--muted2);line-height:1.6;}
 .eq-last-insp{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:9px 11px;margin-bottom:12px;display:flex;align-items:center;gap:9px;}
 .eq-last-insp-icon{font-size:17px;}
 .eq-last-insp-info{flex:1;min-width:0;}
-.eq-last-insp-label{font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:2px;}
+.eq-last-insp-label{font-family:var(--cond);font-size:12px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:2px;}
 .eq-last-insp-val{font-family:var(--mono);font-size:12px;color:var(--text);}
 .eq-head-chevron{font-size:12px;color:var(--muted);transition:transform .2s;flex-shrink:0;}
 .eq-body.open~* .eq-head-chevron,.eq-card.open .eq-head-chevron{transform:rotate(180deg);}
@@ -405,7 +405,7 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .mchip.a{border-color:#f59e0b28;color:var(--amber);}
 .mchip.b{border-color:#3b82f628;color:var(--blue);}
 .mlog-parts{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:9px;margin-top:7px;}
-.mlog-parts-title{font-family:var(--cond);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:7px;font-weight:700;text-transform:uppercase;}
+.mlog-parts-title{font-family:var(--cond);font-size:13px;letter-spacing:2px;color:var(--muted);margin-bottom:7px;font-weight:700;}
 .mlog-part-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .mlog-part-row:last-child{border-bottom:none;}
 .mlog-part-pn{font-family:var(--mono);font-size:11px;color:var(--blue);}
@@ -421,7 +421,7 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .part-name{font-size:15px;font-weight:500;margin-top:2px;}
 .part-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px;}
 .part-stock{display:flex;align-items:center;gap:11px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;}
-.stock-label{font-family:var(--cond);font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700;}
+.stock-label{font-family:var(--cond);font-size:13px;letter-spacing:2px;color:var(--muted);font-weight:700;}
 .stock-val{font-family:var(--mono);font-size:21px;font-weight:bold;}
 .stock-bar-bg{flex:1;background:var(--border);border-radius:3px;height:5px;overflow:hidden;}
 .stock-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
@@ -637,7 +637,7 @@ body.light .sec-title::after{background:#d4d9e2;}
 .bom-eq-count{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:2px 9px;}
 .bom-eq-body{display:none;border-top:1px solid var(--border);padding:11px 13px;}
 .bom-eq-body.open{display:block;}
-.bom-cat-title{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:8px 0 5px;display:flex;align-items:center;gap:6px;text-transform:uppercase;}
+.bom-cat-title{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:8px 0 5px;display:flex;align-items:center;gap:6px;}
 .bom-cat-title::after{content:'';flex:1;height:1px;background:var(--border);}
 .bom-part-row{display:flex;align-items:flex-start;gap:8px;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:9px;margin-bottom:5px;}
 .bom-part-info{flex:1;min-width:0;}
@@ -661,7 +661,7 @@ body.light .sec-title::after{background:#d4d9e2;}
 .chk-panel{display:none;}
 .chk-panel.active{display:block;}
 
-.chk-section-title{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:10px 0 6px;display:flex;align-items:center;gap:8px;}
+.chk-section-title{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:10px 0 6px;display:flex;align-items:center;gap:8px;}
 .chk-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
 
 .chk-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 12px;margin-bottom:6px;transition:border-color .2s,background .2s;cursor:pointer;user-select:none;}
@@ -685,7 +685,7 @@ body.light .sec-title::after{background:#d4d9e2;}
 .chk-item.ng .chk-ng{background:var(--red);color:#fff;}
 
 .insp-summary-bar{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:13px;}
-.insp-summary-title{font-family:var(--cond);font-size:10px;letter-spacing:3px;color:var(--muted);margin-bottom:8px;font-weight:700;}
+.insp-summary-title{font-family:var(--cond);font-size:13px;letter-spacing:3px;color:var(--muted);margin-bottom:8px;font-weight:700;}
 .insp-summary-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .insp-summary-label{font-family:var(--cond);font-size:12px;font-weight:700;min-width:70px;color:var(--text);}
 .insp-summary-prog{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
@@ -700,7 +700,7 @@ body.light .sec-title::after{background:#d4d9e2;}
 
 .insp-log-detail{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px;display:none;}
 .insp-log-detail.open{display:block;}
-.insp-log-cat{font-family:var(--cond);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:4px;font-weight:700;}
+.insp-log-cat{font-family:var(--cond);font-size:13px;letter-spacing:2px;color:var(--muted);margin-bottom:4px;font-weight:700;}
 .insp-log-chk-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:var(--text);}
 .insp-log-chk-row span:last-child{font-family:var(--mono);}
 
@@ -717,14 +717,14 @@ body.light .sec-title::after{background:#d4d9e2;}
   .sync-badge{font-size:13px;padding:7px 18px;bottom:calc(var(--sb)+80px);}
   .tab{font-size:13px;padding:9px 16px;min-width:70px;}
   .tab-icon{font-size:20px;margin-bottom:4px;}
-  .sec-title{font-size:12px;letter-spacing:4px;margin-bottom:14px;}
+  .sec-title{font-size:14px;letter-spacing:4px;margin-bottom:14px;}
   .sec{margin-bottom:26px;}
   .card{padding:22px;border-radius:16px;}
-  .kpi-label{font-size:12px;}
+  .kpi-label{font-size:15px;}
   .kpi-val{font-size:32px;}
   .kpi-sub{font-size:13px;}
   .kpi-box{padding:16px;border-radius:14px;}
-  .flabel{font-size:12px;margin-bottom:7px;}
+  .flabel{font-size:15px;margin-bottom:7px;}
   .finput,.fselect{font-size:16px;padding:13px 15px;}
   .ftextarea{font-size:15px;padding:13px 15px;height:104px;}
   .frow{gap:14px;}
@@ -738,9 +738,9 @@ body.light .sec-title::after{background:#d4d9e2;}
   .eq-name{font-size:18px;}
   .eq-serial{font-size:14px;}
   .eq-body{padding:18px;}
-  .eq-stat-label{font-size:11px;}
+  .eq-stat-label{font-size:14px;}
   .eq-stat-val{font-size:22px;}
-  .eq-info-cell-label{font-size:11px;}
+  .eq-info-cell-label{font-size:14px;}
   .eq-info-cell-val{font-size:15px;}
   .grade-btn{padding:14px 8px;font-size:18px;}
   .grade-badge{width:30px;height:30px;font-size:16px;}
@@ -866,29 +866,30 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
         <div class="grade-btn" id="gbtn-C" onclick="selectGrade('eqGrade','C')">C<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">저우선</div></div>
       </div>
 
-      <!-- 전기 사양 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
-      <div class="field"><label class="flabel">전원 종류</label>
-        <div class="fselect-w"><select class="fselect" id="eqPower">
-          <option value="">미입력</option>
-          <option value="단상 220V">단상 220V</option>
-          <option value="삼상 220V">삼상 220V</option>
-          <option value="삼상 380V">삼상 380V</option>
-          <option value="DC 24V">DC 24V</option>
-          <option value="기타">기타</option>
-        </select></div>
+      <!-- 전기 / 공압 사양 -->
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 · 🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+      <div class="frow">
+        <div class="field"><label class="flabel">전원 종류</label>
+          <div class="fselect-w"><select class="fselect" id="eqPower">
+            <option value="">미입력</option>
+            <option value="단상 220V">단상 220V</option>
+            <option value="삼상 220V">삼상 220V</option>
+            <option value="삼상 380V">삼상 380V</option>
+            <option value="DC 24V">DC 24V</option>
+            <option value="기타">기타</option>
+          </select></div>
+        </div>
+        <div class="field"><label class="flabel">사용 압력 (MPa)</label><input class="finput" id="eqAirPres" type="number" placeholder="예) 0.5" step="0.01" min="0" inputmode="decimal"></div>
       </div>
-
-      <!-- 공압 사양 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🔵 공압 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
-      <div class="field"><label class="flabel">사용 압력 (MPa)</label><input class="finput" id="eqAirPres" type="number" placeholder="예) 0.5" step="0.01" min="0" inputmode="decimal"></div>
 
       <!-- 비고 -->
       <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">📝 비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">메모</label><textarea class="ftextarea" id="eqMemo" placeholder="특이사항, 주의사항 등 자유롭게 입력..."></textarea></div>
 
-      <button class="btn-primary" onclick="registerEq()">🏭 장비 등록</button>
-      <button class="btn-ghost" onclick="clearEqForm()">↺ 초기화</button>
+      <div class="frow" style="margin-top:4px;">
+        <button class="btn-ghost" onclick="clearEqForm()">↺ 초기화</button>
+        <button class="btn-primary" style="margin-bottom:0;" onclick="registerEq()">🏭 장비 등록</button>
+      </div>
     </div>
   </div>
   <div class="sec">
@@ -929,8 +930,10 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
       </div>
       <div class="field"><label class="flabel">원인</label><div class="ac-wrap"><input class="finput" id="mCause" placeholder="고장 원인 또는 정비 사유" autocomplete="off" oninput="acShow('mCause','causes')"><div class="ac-list" id="ac-mCause"></div></div></div>
       <div class="field"><label class="flabel">정비 내용 *</label><textarea class="ftextarea" id="mContent" placeholder="정비 내용을 입력하세요..." style="height:88px;"></textarea></div>
-      <div class="field"><label class="flabel">시작일시</label><input class="finput" id="mStart" type="datetime-local" style="font-size:14px;" onchange="onMStartChange()"></div>
-      <div class="field"><label class="flabel">종료일시</label><input class="finput" id="mEnd" type="datetime-local" style="font-size:14px;"></div>
+      <div class="frow">
+        <div class="field"><label class="flabel">시작일시</label><input class="finput" id="mStart" type="datetime-local" style="font-size:14px;" onchange="onMStartChange()"></div>
+        <div class="field"><label class="flabel">종료일시</label><input class="finput" id="mEnd" type="datetime-local" style="font-size:14px;"></div>
+      </div>
     </div>
   </div>
 
@@ -1682,8 +1685,10 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
     </div>
     <div class="field"><label class="flabel">원인</label><div class="ac-wrap"><input class="finput" id="eMCause" autocomplete="off" oninput="acShow('eMCause','causes')"><div class="ac-list" id="ac-eMCause"></div></div></div>
     <div class="field"><label class="flabel">정비 내용 *</label><textarea class="ftextarea" id="eMContent" style="height:88px;"></textarea></div>
-    <div class="field"><label class="flabel">시작일시</label><input class="finput" id="eMStart" type="datetime-local" style="font-size:14px;"></div>
-    <div class="field"><label class="flabel">종료일시</label><input class="finput" id="eMEnd" type="datetime-local" style="font-size:14px;"></div>
+    <div class="frow">
+      <div class="field"><label class="flabel">시작일시</label><input class="finput" id="eMStart" type="datetime-local" style="font-size:14px;"></div>
+      <div class="field"><label class="flabel">종료일시</label><input class="finput" id="eMEnd" type="datetime-local" style="font-size:14px;"></div>
+    </div>
     <div class="field">
       <label class="flabel">사용 부품</label>
       <div style="display:flex;align-items:center;gap:8px;">
