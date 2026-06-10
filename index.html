@@ -820,6 +820,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
 
 <!-- TABBAR -->
 <div class="tabbar">
+  <div class="tab" onclick="gotoTab('req')"   id="tab-req">  <span class="tab-icon">🆘</span>의뢰</div>
   <div class="tab active" onclick="gotoTab('eq')"    id="tab-eq">   <span class="tab-icon">🏭</span>장비</div>
   <div class="tab" onclick="gotoTab('maint')"  id="tab-maint"> <span class="tab-icon">🔧</span>정비</div>
   <div class="tab" onclick="gotoTab('parts')"  id="tab-parts"> <span class="tab-icon">📦</span>부품</div>
@@ -828,7 +829,6 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   <div class="tab" onclick="gotoTab('bom')"    id="tab-bom">   <span class="tab-icon">🔩</span>파트</div>
   <div class="tab" onclick="gotoTab('event')"  id="tab-event"> <span class="tab-icon">📅</span>일정<div class="tbadge" id="evBadge"></div></div>
   <div class="tab" onclick="gotoTab('share')"  id="tab-share"> <span class="tab-icon">📤</span>공유</div>
-  <div class="tab" onclick="gotoTab('req')"   id="tab-req">  <span class="tab-icon">🆘</span>의뢰</div>
 </div>
 
 <!-- ══════ 장비 ══════ -->
@@ -4185,22 +4185,108 @@ async function submitMaintenanceRequest() {
   toast('정비 의뢰 전송 완료');
 }
 
+// ── 정비 의뢰 완료 처리 ──
+let _completingReqId = null;
+
+function completeReq(reqId, ev) {
+  if (ev) ev.stopPropagation();
+  _completingReqId = (_completingReqId === reqId) ? null : reqId;
+  renderReqLog();
+}
+
+function saveReqDone(reqId) {
+  const msgEl = document.getElementById('reqDoneMsg_' + reqId);
+  const req = (db.reqs || []).find(r => r.id === reqId);
+  if (!req) return;
+  req.done = true;
+  req.doneMsg = msgEl ? msgEl.value.trim() : '';
+  req.doneAt = localToday() + ' ' + new Date().toTimeString().slice(0,5);
+  _completingReqId = null;
+  save();
+  renderReqLog();
+  toast('수리 완료 처리됨');
+}
+
+function deleteReq(reqId, ev) {
+  if (ev) ev.stopPropagation();
+  if (!confirm('이 의뢰 내역을 삭제할까요?')) return;
+  db.reqs = (db.reqs || []).filter(r => r.id !== reqId);
+  save();
+  renderReqLog();
+  toast('삭제됐습니다');
+}
+
+function openReqInMaint(reqId) {
+  const req = (db.reqs || []).find(r => r.id === reqId);
+  if (!req) return;
+  gotoTab('maint');
+  setTimeout(() => {
+    const eq = db.eqs.find(e => e.name === req.eqName);
+    const mEqInput = document.getElementById('mEqInput');
+    const mEqHidden = document.getElementById('mEq');
+    if (mEqInput) mEqInput.value = req.eqName;
+    if (mEqHidden) mEqHidden.value = eq ? eq.id : '';
+    const mContent = document.getElementById('mContent');
+    if (mContent) mContent.value = '[정비의뢰] ' + req.content;
+    const mStart = document.getElementById('mStart');
+    if (mStart && req.reqDate && req.reqTime) mStart.value = req.reqDate + 'T' + req.reqTime;
+  }, 150);
+}
+
 function renderReqLog() {
   const el = document.getElementById('reqLog');
   if (!el) return;
-  const reqs = (db.reqs || []).slice(0, 30);
+  const reqs = (db.reqs || []).slice(0, 50);
   if (!reqs.length) {
     el.innerHTML = '<div class="empty" style="padding:20px;">의뢰 내역 없음</div>';
     return;
   }
-  el.innerHTML = reqs.map(r => `
-    <div style="background:var(--card);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;margin-bottom:8px;position:relative;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-weight:700;color:#ef4444;font-size:15px;">🚨 ${r.eqName.replace(/</g,'&lt;')}</span>
-        <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">${r.reqDate} ${r.reqTime}</span>
+  el.innerHTML = reqs.map(r => {
+    const isDone = !!r.done;
+    const isCompleting = _completingReqId === r.id;
+    const borderCol = isDone ? '#22c55e' : '#ef4444';
+    const bg = isDone ? 'linear-gradient(135deg,#22c55e0a,#16a34a05)' : 'var(--card)';
+    const emoji = isDone ? '✅' : '🚨';
+    const nameCol = isDone ? '#22c55e' : '#ef4444';
+
+    const doneSection = isDone ? `
+      <div style="margin-top:8px;padding:8px 10px;background:#22c55e18;border:1px solid #22c55e40;border-radius:8px;">
+        <div style="font-size:11px;color:#22c55e;font-family:var(--cond);letter-spacing:1px;margin-bottom:3px;">✔ 수리 완료 — ${r.doneAt||''}</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5;">${(r.doneMsg||'내용 없음').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+      </div>` : '';
+
+    const completingForm = isCompleting ? `
+      <div style="margin-top:8px;" onclick="event.stopPropagation()">
+        <textarea id="reqDoneMsg_${r.id}" class="ftextarea" placeholder="수리 내용을 입력하세요..." style="height:80px;margin-bottom:6px;"></textarea>
+        <button class="btn-primary" onclick="saveReqDone(${r.id})"
+          style="background:linear-gradient(135deg,#22c55e,#16a34a);width:100%;padding:10px;font-weight:700;">✅ 완료 저장</button>
+      </div>` : '';
+
+    const actionBtn = !isDone ? `
+      <button onclick="completeReq(${r.id},event)"
+        style="background:${isCompleting?'var(--card2)':'transparent'};border:1px solid ${isCompleting?'var(--border2)':'#22c55e'};
+               color:${isCompleting?'var(--muted)':'#22c55e'};border-radius:7px;padding:4px 10px;
+               font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">
+        ${isCompleting ? '취소' : '✓ 완료'}
+      </button>` : '';
+
+    return `
+    <div style="background:${bg};border:1px solid ${borderCol}40;border-radius:11px;padding:12px 14px;margin-bottom:8px;cursor:pointer;"
+         onclick="openReqInMaint(${r.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;">
+        <span style="font-weight:700;color:${nameCol};font-size:15px;">${emoji} ${r.eqName.replace(/</g,'&lt;')}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">${r.reqDate} ${r.reqTime}</span>
+          ${actionBtn}
+          <button onclick="deleteReq(${r.id},event)"
+            style="background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:7px;
+                   padding:4px 8px;font-size:12px;cursor:pointer;flex-shrink:0;">🗑</button>
+        </div>
       </div>
       <div style="font-size:13px;color:var(--text);line-height:1.6;">${r.content.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
-    </div>`).join('');
+      ${doneSection}${completingForm}
+    </div>`;
+  }).join('');
 }
 
 // ── 앱 열릴 때 놓친 알림 즉시 발송 (하루 1회) ──
