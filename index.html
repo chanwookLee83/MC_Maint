@@ -63,6 +63,7 @@ async function pollFirestore() {
       db.inbounds = serverDb.inbounds || [];
       db.events   = serverDb.events   || [];
       db.boms     = serverDb.boms     || [];
+      db.reqs     = serverDb.reqs     || [];
       localStorage.setItem('mms_v1', data.db);
 
       if (typeof renderEqList === 'function') {
@@ -827,6 +828,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   <div class="tab" onclick="gotoTab('bom')"    id="tab-bom">   <span class="tab-icon">🔩</span>파트</div>
   <div class="tab" onclick="gotoTab('event')"  id="tab-event"> <span class="tab-icon">📅</span>일정<div class="tbadge" id="evBadge"></div></div>
   <div class="tab" onclick="gotoTab('share')"  id="tab-share"> <span class="tab-icon">📤</span>공유</div>
+  <div class="tab" onclick="gotoTab('req')"   id="tab-req">  <span class="tab-icon">🆘</span>의뢰</div>
 </div>
 
 <!-- ══════ 장비 ══════ -->
@@ -1474,6 +1476,44 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   </div>
 </div>
 
+<!-- ══════ 정비 의뢰 ══════ -->
+<div class="page" id="page-req">
+  <div class="sec" style="margin-top:4px;">
+    <div class="sec-title">정비 의뢰 접수</div>
+    <div class="card" style="border:1px solid #ef444440;background:linear-gradient(135deg,#ef444408,#dc262608);">
+      <div class="field"><label class="flabel">장비명 *</label>
+        <div class="ac-wrap">
+          <input class="finput" id="reqEqInput" placeholder="장비명 입력 후 선택..." autocomplete="off"
+            oninput="reqEqAcInput()" onfocus="reqEqAcShow()">
+          <div class="ac-list" id="ac-reqEqInput"></div>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">의뢰일 *</label>
+          <input class="finput" id="reqDate" type="date">
+        </div>
+        <div class="field"><label class="flabel">의뢰 시간 *</label>
+          <input class="finput" id="reqTime" type="time">
+        </div>
+      </div>
+      <div class="field">
+        <label class="flabel">고장 내용 *</label>
+        <textarea class="ftextarea" id="reqContent" placeholder="고장 증상을 자세히 입력하세요..." style="height:110px;"></textarea>
+      </div>
+      <button class="btn-primary" onclick="submitMaintenanceRequest()"
+        style="background:linear-gradient(135deg,#ef4444,#dc2626);width:100%;padding:14px;font-size:16px;font-weight:700;letter-spacing:1px;margin-top:4px;">
+        📱 정비 의뢰 전송
+      </button>
+      <div id="reqStatus" style="font-size:13px;color:var(--muted);min-height:20px;margin-top:8px;text-align:center;font-family:var(--mono);"></div>
+    </div>
+  </div>
+
+  <div class="sec" style="margin-top:4px;">
+    <div class="sec-title">의뢰 이력</div>
+    <div id="reqLog"><div class="empty" style="padding:20px;">의뢰 내역 없음</div></div>
+  </div>
+</div>
+
 <!-- 알람 패널 -->
 <div class="alarm-panel" id="alarmPanel">
   <div class="alarm-panel-title">🔔 알림 <button style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;" onclick="toggleAlarm()">✕</button></div>
@@ -1765,6 +1805,7 @@ if(!db.events)db.events=[];
 if(!db.boms)db.boms=[];
 if(!db.customChk)db.customChk={};  // 기존 데이터 호환
 if(!db.inbounds) db.inbounds=[];
+if(!db.reqs) db.reqs=[];
 function save(){
   localStorage.setItem('mms_v1',JSON.stringify(db));
   // Firestore 동기화 (Firebase 준비됐을 때만)
@@ -1773,7 +1814,7 @@ function save(){
 
 // ── 탭 ──
 function gotoTab(n){
-  ['eq','maint','parts','stats','insp','bom','event','share'].forEach(t=>{
+  ['eq','maint','parts','stats','insp','bom','event','share','req'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active',t===n);
     document.getElementById('tab-'+t).classList.toggle('active',t===n);
   });
@@ -1783,6 +1824,7 @@ function gotoTab(n){
   if(n==='parts') renderParts();
   if(n==='bom')   {populateBomEqSel();renderBomTree();}
   if(n==='event') renderEvents();
+  if(n==='req')   {initReqForm();renderReqLog();}
   checkAlarms();
 }
 
@@ -4052,6 +4094,113 @@ function testLocalNotification() {
   }
   _showOsNotification('🧪 테스트 알림', '설비관리 알림이 정상 동작 중입니다!');
   toast('테스트 알림 발송');
+}
+
+// ══════ 정비 의뢰 탭 ══════
+
+const MAINT_REQ_FUNC_URL = 'https://asia-northeast3-maintenance-app-3632e.cloudfunctions.net/sendMaintenanceRequest';
+
+function initReqForm() {
+  const dateEl = document.getElementById('reqDate');
+  const timeEl = document.getElementById('reqTime');
+  if (!dateEl || !timeEl) return;
+  if (!dateEl.value) dateEl.value = localToday();
+  if (!timeEl.value) {
+    const now = new Date();
+    timeEl.value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  }
+}
+
+function reqEqAcInput() {
+  reqEqAcShow();
+}
+function reqEqAcShow() {
+  const inp  = document.getElementById('reqEqInput');
+  const list = document.getElementById('ac-reqEqInput');
+  if (!inp || !list) return;
+  const q = inp.value.trim().toLowerCase();
+  acCloseAll('reqEqInput');
+  const matched = q
+    ? db.eqs.filter(eq => eq.status !== '단종' && (eq.name.toLowerCase().includes(q) || (eq.loc||'').toLowerCase().includes(q)))
+    : db.eqs.filter(eq => eq.status !== '단종').slice(0, 20);
+  if (!matched.length) { list.classList.remove('open'); return; }
+  list.innerHTML = matched.slice(0, 20).map(eq => {
+    const nm      = eq.name.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const loc     = eq.loc ? `<span style="font-size:11px;color:var(--muted);margin-left:6px;">${eq.loc}</span>` : '';
+    const nameArg = eq.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="ac-item" onmousedown="event.preventDefault();reqEqAcPick('${nameArg}')">${nm}${loc}</div>`;
+  }).join('');
+  list.classList.add('open');
+}
+function reqEqAcPick(eqName) {
+  document.getElementById('reqEqInput').value = eqName;
+  document.getElementById('ac-reqEqInput').classList.remove('open');
+}
+
+async function submitMaintenanceRequest() {
+  const eqName  = document.getElementById('reqEqInput').value.trim();
+  const reqDate = document.getElementById('reqDate').value;
+  const reqTime = document.getElementById('reqTime').value;
+  const content = document.getElementById('reqContent').value.trim();
+
+  if (!eqName)  { toast('장비명을 입력해주세요', 'w'); return; }
+  if (!reqDate) { toast('의뢰일을 입력해주세요', 'w'); return; }
+  if (!reqTime) { toast('의뢰 시간을 입력해주세요', 'w'); return; }
+  if (!content) { toast('고장 내용을 입력해주세요', 'w'); return; }
+
+  const statusEl = document.getElementById('reqStatus');
+  statusEl.textContent = '⏳ 전송 중...';
+
+  if (!db.reqs) db.reqs = [];
+  db.reqs.unshift({ id: Date.now(), eqName, reqDate, reqTime, content });
+  save();
+
+  _showOsNotification(`🚨 정비 의뢰: ${eqName}`, `[${reqDate} ${reqTime}] ${content.slice(0,80)}`);
+
+  let fcmSent = false;
+  try {
+    const resp = await fetch(MAINT_REQ_FUNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eqName, reqDate, reqTime, content })
+    });
+    const data = await resp.json();
+    fcmSent = !!data.ok;
+  } catch(e) {
+    console.warn('FCM 전송 실패:', e);
+  }
+
+  document.getElementById('reqEqInput').value = '';
+  document.getElementById('reqContent').value = '';
+  document.getElementById('reqDate').value  = '';
+  document.getElementById('reqTime').value  = '';
+  initReqForm();
+
+  statusEl.textContent = fcmSent
+    ? '✅ 전송 완료 — 등록된 모든 기기에 알림 발송됨'
+    : '✅ 전송 완료 (로컬 알림만 — 앱을 열어두면 알림 수신)';
+  setTimeout(() => { statusEl.textContent = ''; }, 6000);
+
+  renderReqLog();
+  toast('정비 의뢰 전송 완료');
+}
+
+function renderReqLog() {
+  const el = document.getElementById('reqLog');
+  if (!el) return;
+  const reqs = (db.reqs || []).slice(0, 30);
+  if (!reqs.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px;">의뢰 내역 없음</div>';
+    return;
+  }
+  el.innerHTML = reqs.map(r => `
+    <div style="background:var(--card);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;margin-bottom:8px;position:relative;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-weight:700;color:#ef4444;font-size:15px;">🚨 ${r.eqName.replace(/</g,'&lt;')}</span>
+        <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">${r.reqDate} ${r.reqTime}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;">${r.content.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+    </div>`).join('');
 }
 
 // ── 앱 열릴 때 놓친 알림 즉시 발송 (하루 1회) ──
