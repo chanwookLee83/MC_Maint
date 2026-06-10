@@ -16,21 +16,31 @@ const messaging = firebase.messaging();
 // 앱이 백그라운드일 때 FCM 메시지 수신 → OS 알림 표시
 messaging.onBackgroundMessage(payload => {
   const { title, body } = payload.notification || {};
+  const data = payload.data || {};
   return self.registration.showNotification(title || '설비 알림', {
     body: body || '',
     icon: './icon-192.png',
     badge: './icon-192.png',
-    data: payload.data || {}
+    data: data
   });
 });
 
-// 알림 클릭 → 앱 포커스 또는 열기
+// 알림 클릭 → 의뢰 알림이면 의뢰 탭으로 이동
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const tab = (e.notification.data && e.notification.data.tab) || null;
+  const targetUrl = tab ? './?tab=' + tab : './';
+
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      if (list.length > 0) return list[0].focus();
-      return clients.openWindow('./');
+      if (list.length > 0) {
+        const client = list[0];
+        // 앱이 이미 열려 있으면 메시지로 탭 이동 지시
+        if (tab) client.postMessage({ type: 'GOTO_TAB', tab });
+        return client.focus();
+      }
+      // 앱이 닫혀 있으면 URL 파라미터로 열기
+      return clients.openWindow(targetUrl);
     })
   );
 });
@@ -44,14 +54,15 @@ self.addEventListener('message', event => {
         icon: './icon-192.png',
         badge: './icon-192.png',
         vibrate: [200, 100, 200],
-        tag: 'mms-scheduled'
+        tag: event.data.tag || 'mms-scheduled',
+        data: event.data.notifData || {}
       })
     );
   }
 });
 
 // ── 캐시 (버전 올림) ──
-const CACHE = 'mms-v44';
+const CACHE = 'mms-v45';
 const ASSETS = [
   './index.html',
   './manifest.json',
