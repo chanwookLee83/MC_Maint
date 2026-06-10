@@ -4226,8 +4226,8 @@ function openReqInMaint(reqId) {
     const mEqHidden = document.getElementById('mEq');
     if (mEqInput) mEqInput.value = req.eqName;
     if (mEqHidden) mEqHidden.value = eq ? eq.id : '';
-    const mContent = document.getElementById('mContent');
-    if (mContent) mContent.value = '[정비의뢰] ' + req.content;
+    const mCause = document.getElementById('mCause');
+    if (mCause) mCause.value = req.content;
     const mStart = document.getElementById('mStart');
     if (mStart && req.reqDate && req.reqTime) mStart.value = req.reqDate + 'T' + req.reqTime;
   }, 150);
