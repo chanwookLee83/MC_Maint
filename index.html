@@ -1500,6 +1500,10 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
         <label class="flabel">고장 내용 *</label>
         <textarea class="ftextarea" id="reqContent" placeholder="고장 증상을 자세히 입력하세요..." style="height:110px;"></textarea>
       </div>
+      <div class="field">
+        <label class="flabel">정비 의뢰자</label>
+        <input class="finput" id="reqRequester" placeholder="의뢰자 이름을 입력하세요..." autocomplete="off">
+      </div>
       <button class="btn-primary" onclick="submitMaintenanceRequest()"
         style="background:linear-gradient(135deg,#ef4444,#dc2626);width:100%;padding:14px;font-size:16px;font-weight:700;letter-spacing:1px;margin-top:4px;">
         📱 정비 의뢰 전송
@@ -4138,10 +4142,11 @@ function reqEqAcPick(eqName) {
 }
 
 async function submitMaintenanceRequest() {
-  const eqName  = document.getElementById('reqEqInput').value.trim();
-  const reqDate = document.getElementById('reqDate').value;
-  const reqTime = document.getElementById('reqTime').value;
-  const content = document.getElementById('reqContent').value.trim();
+  const eqName    = document.getElementById('reqEqInput').value.trim();
+  const reqDate   = document.getElementById('reqDate').value;
+  const reqTime   = document.getElementById('reqTime').value;
+  const content   = document.getElementById('reqContent').value.trim();
+  const requester = document.getElementById('reqRequester').value.trim();
 
   if (!eqName)  { toast('장비명을 입력해주세요', 'w'); return; }
   if (!reqDate) { toast('의뢰일을 입력해주세요', 'w'); return; }
@@ -4152,7 +4157,7 @@ async function submitMaintenanceRequest() {
   statusEl.textContent = '⏳ 전송 중...';
 
   if (!db.reqs) db.reqs = [];
-  db.reqs.unshift({ id: Date.now(), eqName, reqDate, reqTime, content });
+  db.reqs.unshift({ id: Date.now(), eqName, reqDate, reqTime, content, requester });
   save();
 
   _showOsNotification(`🚨 정비 의뢰: ${eqName}`, `[${reqDate} ${reqTime}] ${content.slice(0,80)}`);
@@ -4162,7 +4167,7 @@ async function submitMaintenanceRequest() {
     const resp = await fetch(MAINT_REQ_FUNC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eqName, reqDate, reqTime, content })
+      body: JSON.stringify({ eqName, reqDate, reqTime, content, requester })
     });
     const data = await resp.json();
     fcmSent = !!data.ok;
@@ -4170,10 +4175,11 @@ async function submitMaintenanceRequest() {
     console.warn('FCM 전송 실패:', e);
   }
 
-  document.getElementById('reqEqInput').value = '';
-  document.getElementById('reqContent').value = '';
-  document.getElementById('reqDate').value  = '';
-  document.getElementById('reqTime').value  = '';
+  document.getElementById('reqEqInput').value    = '';
+  document.getElementById('reqContent').value    = '';
+  document.getElementById('reqDate').value       = '';
+  document.getElementById('reqTime').value       = '';
+  document.getElementById('reqRequester').value  = '';
   initReqForm();
 
   statusEl.textContent = fcmSent
@@ -4283,6 +4289,7 @@ function renderReqLog() {
                    padding:4px 8px;font-size:12px;cursor:pointer;flex-shrink:0;">🗑</button>
         </div>
       </div>
+      ${r.requester ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">👤 의뢰자: <strong style="color:var(--text);">${r.requester.replace(/</g,'&lt;')}</strong></div>` : ''}
       <div style="font-size:13px;color:var(--text);line-height:1.6;">${r.content.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
       ${doneSection}${completingForm}
     </div>`;
