@@ -96,6 +96,7 @@ async function pollFirestore() {
         renderInsp();
         checkAlarms();
         updateEvBadge();
+        if (typeof renderReqLog === 'function') renderReqLog();
         showSyncBadge('🔄 동기화됨');
       }
     }
@@ -4118,11 +4119,11 @@ function _fireScheduledNotification(hour) {
   _showOsNotification(title, body);
 }
 
-function _showOsNotification(title, body) {
+function _showOsNotification(title, body, notifData) {
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body });
+    navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body, notifData: notifData || {} });
   } else if (Notification.permission === 'granted') {
-    new Notification(title, { body, icon: './icon-192.png' });
+    new Notification(title, { body, icon: './icon-192.png', data: notifData || {} });
   }
 }
 
@@ -4242,7 +4243,7 @@ async function submitMaintenanceRequest() {
   db.reqs.unshift({ id: reqId, eqName, reqDate, reqTime, content, requester, photos });
   save();
 
-  _showOsNotification(`🚨 정비 의뢰: ${eqName}`, `[${reqDate} ${reqTime}] ${content.slice(0,80)}`);
+  _showOsNotification(`🚨 정비 의뢰: ${eqName}`, `[${reqDate} ${reqTime}] ${content.slice(0,80)}`, { tab: 'req' });
 
   let fcmSent = false;
   try {
