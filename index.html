@@ -21,6 +21,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-messaging.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAaqbae8isyjMsCbO7mhPjQSI0DlBwJ_Sk",
@@ -35,6 +36,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const fdb = getFirestore(app);
 const DOC_REF = doc(fdb, 'mms', 'maindb');
+const fStorage = getStorage(app);
+
+window._uploadReqPhoto = async function(reqId, file, index) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `req-photos/${reqId}/${index}_${safeName}`;
+  const sRef = storageRef(fStorage, path);
+  await uploadBytes(sRef, file);
+  const url = await getDownloadURL(sRef);
+  return { path, url };
+};
+
+window._deleteReqPhotos = async function(photos) {
+  if (!photos || !photos.length) return;
+  for (const photo of photos) {
+    try {
+      const sRef = storageRef(fStorage, photo.path);
+      await deleteObject(sRef);
+    } catch(e) {
+      console.warn('스토리지 사진 삭제 실패:', photo.path, e);
+    }
+  }
+};
 
 let saveTimer = null;
 let lastServerAt = 0;
@@ -290,6 +313,12 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 .finput:hover,.fselect:hover,.ftextarea:hover{border-color:var(--muted);}
 .finput:focus,.fselect:focus,.ftextarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px #f59e0b16,0 1px 5px #f59e0b10;background:var(--card);}
 .finput::placeholder,.ftextarea::placeholder{color:var(--muted);}
+/* 의뢰 사진 첨부 */
+.req-photo-label{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1.5px solid var(--border2);border-radius:10px;color:var(--muted2);font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:1px;padding:10px 16px;cursor:pointer;transition:border-color .2s,color .2s;}
+.req-photo-label:hover{border-color:var(--amber);color:var(--amber);}
+.req-photo-thumb{position:relative;width:72px;height:72px;border-radius:9px;overflow:hidden;border:1.5px solid var(--border2);flex-shrink:0;}
+.req-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.req-photo-thumb .rm{position:absolute;top:3px;right:3px;background:#ef444490;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.5;cursor:pointer;}
 body.light input[type="date"]::-webkit-calendar-picker-indicator,
@@ -1503,6 +1532,12 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
       <div class="field">
         <label class="flabel">정비 의뢰자</label>
         <input class="finput" id="reqRequester" placeholder="의뢰자 이름을 입력하세요..." autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="flabel">고장 증상 사진 <span style="font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0;">선택 · 최대 3장</span></label>
+        <div id="reqPhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
+        <label for="reqPhotoInput" class="req-photo-label">📷 사진 선택</label>
+        <input type="file" id="reqPhotoInput" accept="image/*" multiple style="display:none;" onchange="reqPhotoSelect(event)">
       </div>
       <button class="btn-primary" onclick="submitMaintenanceRequest()"
         style="background:linear-gradient(135deg,#ef4444,#dc2626);width:100%;padding:14px;font-size:16px;font-weight:700;letter-spacing:1px;margin-top:4px;">
@@ -4104,6 +4139,36 @@ function testLocalNotification() {
 
 const MAINT_REQ_FUNC_URL = 'https://asia-northeast3-maintenance-app-3632e.cloudfunctions.net/sendMaintenanceRequest';
 
+let _reqPhotoFiles = [];
+
+function reqPhotoSelect(e) {
+  const files = Array.from(e.target.files);
+  const remaining = 3 - _reqPhotoFiles.length;
+  if (!remaining) { toast('사진은 최대 3장까지 첨부 가능합니다', 'w'); e.target.value = ''; return; }
+  const toAdd = files.slice(0, remaining);
+  if (files.length > remaining) toast(`${remaining}장까지만 추가됩니다`, 'w');
+  _reqPhotoFiles = _reqPhotoFiles.concat(toAdd);
+  _renderReqPhotoPreview();
+  e.target.value = '';
+}
+
+function _renderReqPhotoPreview() {
+  const el = document.getElementById('reqPhotoPreview');
+  if (!el) return;
+  el.innerHTML = _reqPhotoFiles.map((f, i) => {
+    const url = URL.createObjectURL(f);
+    return `<div class="req-photo-thumb">
+      <img src="${url}" alt="사진 ${i+1}">
+      <button class="rm" onclick="removeReqPhoto(${i})" title="삭제">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function removeReqPhoto(idx) {
+  _reqPhotoFiles.splice(idx, 1);
+  _renderReqPhotoPreview();
+}
+
 function initReqForm() {
   const dateEl = document.getElementById('reqDate');
   const timeEl = document.getElementById('reqTime');
@@ -4156,8 +4221,25 @@ async function submitMaintenanceRequest() {
   const statusEl = document.getElementById('reqStatus');
   statusEl.textContent = '⏳ 전송 중...';
 
+  const reqId = Date.now();
+  let photos = [];
+  if (_reqPhotoFiles.length > 0 && typeof window._uploadReqPhoto === 'function') {
+    statusEl.textContent = '⏳ 사진 업로드 중...';
+    try {
+      for (let i = 0; i < _reqPhotoFiles.length; i++) {
+        const result = await window._uploadReqPhoto(reqId, _reqPhotoFiles[i], i);
+        photos.push(result);
+      }
+    } catch(e) {
+      console.warn('사진 업로드 실패:', e);
+      toast('사진 업로드 실패 — 텍스트만 전송됩니다', 'w');
+      photos = [];
+    }
+    statusEl.textContent = '⏳ 전송 중...';
+  }
+
   if (!db.reqs) db.reqs = [];
-  db.reqs.unshift({ id: Date.now(), eqName, reqDate, reqTime, content, requester });
+  db.reqs.unshift({ id: reqId, eqName, reqDate, reqTime, content, requester, photos });
   save();
 
   _showOsNotification(`🚨 정비 의뢰: ${eqName}`, `[${reqDate} ${reqTime}] ${content.slice(0,80)}`);
@@ -4180,6 +4262,8 @@ async function submitMaintenanceRequest() {
   document.getElementById('reqDate').value       = '';
   document.getElementById('reqTime').value       = '';
   document.getElementById('reqRequester').value  = '';
+  _reqPhotoFiles = [];
+  _renderReqPhotoPreview();
   initReqForm();
 
   statusEl.textContent = fcmSent
@@ -4216,10 +4300,14 @@ function saveReqDone(reqId) {
 function deleteReq(reqId, ev) {
   if (ev) ev.stopPropagation();
   if (!confirm('이 의뢰 내역을 삭제할까요?')) return;
+  const req = (db.reqs || []).find(r => r.id === reqId);
   db.reqs = (db.reqs || []).filter(r => r.id !== reqId);
   save();
   renderReqLog();
   toast('삭제됐습니다');
+  if (req && req.photos && req.photos.length && typeof window._deleteReqPhotos === 'function') {
+    window._deleteReqPhotos(req.photos);
+  }
 }
 
 function openReqInMaint(reqId) {
@@ -4291,6 +4379,7 @@ function renderReqLog() {
       </div>
       ${r.requester ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">👤 의뢰자: <strong style="color:var(--text);">${r.requester.replace(/</g,'&lt;')}</strong></div>` : ''}
       <div style="font-size:13px;color:var(--text);line-height:1.6;">${r.content.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+      ${(r.photos && r.photos.length) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;" onclick="event.stopPropagation()">${r.photos.map((p,i)=>`<a href="${p.url}" target="_blank" rel="noopener"><img src="${p.url}" alt="사진${i+1}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border2);display:block;"></a>`).join('')}</div>` : ''}
       ${doneSection}${completingForm}
     </div>`;
   }).join('');
