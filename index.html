@@ -87,6 +87,7 @@ async function pollFirestore() {
       db.events   = serverDb.events   || [];
       db.boms     = serverDb.boms     || [];
       db.reqs     = serverDb.reqs     || [];
+      db.calibs   = serverDb.calibs   || [];
       localStorage.setItem('mms_v1', data.db);
 
       if (typeof renderEqList === 'function') {
@@ -854,6 +855,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   <div class="tab active" onclick="gotoTab('eq')"    id="tab-eq">   <span class="tab-icon">🏭</span>장비</div>
   <div class="tab" onclick="gotoTab('maint')"  id="tab-maint"> <span class="tab-icon">🔧</span>정비</div>
   <div class="tab" onclick="gotoTab('parts')"  id="tab-parts"> <span class="tab-icon">📦</span>부품</div>
+  <div class="tab" onclick="gotoTab('calib')"  id="tab-calib"> <span class="tab-icon">📐</span>검교정<div class="tbadge" id="calibBadge"></div></div>
   <div class="tab" onclick="gotoTab('stats')"  id="tab-stats"> <span class="tab-icon">📊</span>통계</div>
   <div class="tab" onclick="gotoTab('insp')"   id="tab-insp">  <span class="tab-icon">📋</span>점검</div>
   <div class="tab" onclick="gotoTab('bom')"    id="tab-bom">   <span class="tab-icon">🔩</span>파트</div>
@@ -1108,6 +1110,72 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   </div>
 </div>
 
+<!-- ══════ 검교정 ══════ -->
+<div class="page" id="page-calib">
+  <div class="sec" style="margin-top:4px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="sec-title" style="margin-bottom:0;">검교정 관리</div>
+      <button class="btn-sm" style="background:var(--blue);color:#fff;border-color:var(--blue);" onclick="openCalibForm()">+ 추가</button>
+    </div>
+    <div id="calibSummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;border:1px solid var(--border);">
+      <table id="calibTable" style="width:100%;border-collapse:collapse;min-width:900px;font-size:12px;">
+        <thead>
+          <tr style="background:var(--bg2);border-bottom:2px solid var(--border);">
+            <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);width:32px;">No</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">설비명</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">관리번호</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">검교정 항목</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">Maker/Model</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">설치위치</th>
+            <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">주기(개월)</th>
+            <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">최종 검교정일</th>
+            <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">차기 검교정일</th>
+            <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">잔여일수</th>
+            <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">상태</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">담당자</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">검교정 기관</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--muted);">비고</th>
+            <th style="padding:8px 6px;width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody id="calibBody">
+          <tr><td colspan="15" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 검교정 등록/수정 모달 -->
+<div class="modal-bg" id="calibModal" onclick="closeModal('calibModal',event)">
+  <div class="modal">
+    <div class="modal-title">📐 검교정 등록/수정 <button class="modal-close" onclick="closeModal('calibModal')">✕</button></div>
+    <div class="frow">
+      <div class="field"><label class="flabel">설비명 *</label><input class="finput" id="cName" placeholder="설비명"></div>
+      <div class="field"><label class="flabel">관리번호</label><input class="finput" id="cMgmtNo" placeholder="YURA-0001"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">검교정 항목 *</label><input class="finput" id="cItem" placeholder="Leak Test"></div>
+      <div class="field"><label class="flabel">Maker/Model</label><input class="finput" id="cMaker" placeholder="FUKUDA/F611"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">설치위치</label><input class="finput" id="cLocation" placeholder="미래 1층 조립"></div>
+      <div class="field"><label class="flabel">검교정 주기(개월) *</label><input class="finput" id="cCycle" type="number" min="1" max="120" value="12"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">최종 검교정일 *</label><input class="finput" id="cLastDate" type="date"></div>
+      <div class="field"><label class="flabel">담당자</label><input class="finput" id="cManager" placeholder="이름"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">검교정 기관</label><input class="finput" id="cAgency" placeholder="주식회사 키스트"></div>
+      <div class="field"><label class="flabel">비고</label><input class="finput" id="cNote" placeholder=""></div>
+    </div>
+    <input type="hidden" id="cId">
+    <button class="btn-primary" onclick="saveCalib()">💾 저장</button>
+  </div>
+</div>
+
 <!-- ══════ 통계 ══════ -->
 <div class="page" id="page-stats">
   <!-- 날짜 필터 -->
@@ -1125,6 +1193,7 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
       <button class="btn-sm bsm-r" style="margin-top:18px;flex-shrink:0;" onclick="clearStatsDateFilter()">↺</button>
       <button id="btnStatsMtbfOnly" data-on="1" onclick="toggleStatsMtbfOnly()" style="margin-top:18px;flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:7px;border:1.5px solid var(--green);background:var(--green);color:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;">✅ 기록있는장비만</button>
     </div>
+    <div id="sYearBtns" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);align-items:center;"></div>
   </div>
   <div class="sec">
     <div class="sec-title">전체 KPI</div>
@@ -1138,6 +1207,10 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   <div class="sec">
     <div class="sec-title">장비별 MTBF / MTTR</div>
     <div class="card amber-t" id="mtbfList"><div class="empty" style="padding:14px;">데이터 없음</div></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">월별 MTBF / MTTR 내역</div>
+    <div class="card blue-t" id="monthlyMtbrList"><div class="empty" style="padding:14px;">데이터 없음</div></div>
   </div>
   <div class="sec">
     <div class="sec-title">월별 정비 건수</div>
@@ -1846,6 +1919,7 @@ if(!db.boms)db.boms=[];
 if(!db.customChk)db.customChk={};  // 기존 데이터 호환
 if(!db.inbounds) db.inbounds=[];
 if(!db.reqs) db.reqs=[];
+if(!db.calibs) db.calibs=[];
 function save(){
   localStorage.setItem('mms_v1',JSON.stringify(db));
   // Firestore 동기화 (Firebase 준비됐을 때만)
@@ -1854,7 +1928,7 @@ function save(){
 
 // ── 탭 ──
 function gotoTab(n){
-  ['eq','maint','parts','stats','insp','bom','event','share','req'].forEach(t=>{
+  ['eq','maint','parts','calib','stats','insp','bom','event','share','req'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active',t===n);
     document.getElementById('tab-'+t).classList.toggle('active',t===n);
   });
@@ -1862,6 +1936,7 @@ function gotoTab(n){
   if(n==='stats') renderStats();
   if(n==='insp')  renderInsp();
   if(n==='parts') renderParts();
+  if(n==='calib') renderCalib();
   if(n==='bom')   {populateBomEqSel();renderBomTree();}
   if(n==='event') renderEvents();
   if(n==='req')   {initReqForm();renderReqLog();}
@@ -1871,6 +1946,110 @@ function gotoTab(n){
 // ── 모달 ──
 function openModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id,e){if(e&&e.target!==document.getElementById(id))return;document.getElementById(id).classList.remove('show');}
+
+// ══════ 검교정 ══════
+function addCalibMonths(dateStr,months){
+  const d=new Date(dateStr);
+  d.setMonth(d.getMonth()+parseInt(months));
+  return d.toLocaleDateString('sv-SE');
+}
+function renderCalib(){
+  const tbody=document.getElementById('calibBody');
+  const summary=document.getElementById('calibSummary');
+  if(!tbody) return;
+  const today=localToday();
+  if(!db.calibs.length){
+    tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음 — + 추가 버튼으로 등록하세요</td></tr>';
+    if(summary) summary.innerHTML='';
+    return;
+  }
+  let overCnt=0,warnCnt=0,okCnt=0;
+  tbody.innerHTML=db.calibs.map((c,i)=>{
+    const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
+    const remain=next?Math.ceil((new Date(next)-new Date(today))/86400000):null;
+    let statusTxt='—',statusCol='var(--muted)',rowBg='';
+    if(remain!==null){
+      if(remain<=0){statusTxt='초과';statusCol='var(--red)';rowBg='background:#ef444410;';overCnt++;}
+      else if(remain<=10){statusTxt=`D-${remain}`;statusCol='var(--amber)';rowBg='background:#f59e0b10;';warnCnt++;}
+      else{statusTxt='정상';statusCol='var(--green)';okCnt++;}
+    }
+    const isLight=document.body.classList.contains('light');
+    const borderCol=isLight?'#e5e7eb':'#1e2530';
+    const td=`padding:7px 6px;border-bottom:1px solid ${borderCol};white-space:nowrap;`;
+    return `<tr style="${rowBg}cursor:pointer;" onclick="openCalibForm('${c.id}')">
+      <td style="${td}text-align:center;color:var(--muted);">${i+1}</td>
+      <td style="${td}font-weight:600;color:var(--text);">${c.name||'—'}</td>
+      <td style="${td}font-family:var(--mono);font-size:11px;color:var(--blue);">${c.mgmtNo||'—'}</td>
+      <td style="${td}color:var(--text);">${c.item||'—'}</td>
+      <td style="${td}color:var(--muted);">${c.maker||'—'}</td>
+      <td style="${td}color:var(--muted);">${c.location||'—'}</td>
+      <td style="${td}text-align:center;font-family:var(--mono);">${c.cycleMon||'—'}</td>
+      <td style="${td}text-align:center;font-family:var(--mono);">${c.lastDate||'—'}</td>
+      <td style="${td}text-align:center;font-family:var(--mono);font-weight:600;color:${statusCol};">${next||'—'}</td>
+      <td style="${td}text-align:center;font-family:var(--mono);font-weight:bold;color:${statusCol};">${remain!==null?remain+'일':'—'}</td>
+      <td style="${td}text-align:center;"><span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${statusCol};">${statusTxt}</span></td>
+      <td style="${td}color:var(--muted);">${c.manager||'—'}</td>
+      <td style="${td}color:var(--muted);">${c.agency||'—'}</td>
+      <td style="${td}color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;">${c.note||''}</td>
+      <td style="${td}text-align:center;" onclick="event.stopPropagation();deleteCalib('${c.id}')"><span style="color:var(--red);cursor:pointer;font-size:14px;">✕</span></td>
+    </tr>`;
+  }).join('');
+  if(summary){
+    summary.innerHTML=[
+      `<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#ef444420;color:var(--red);">초과 ${overCnt}건</span>`,
+      `<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#f59e0b20;color:var(--amber);">임박(10일) ${warnCnt}건</span>`,
+      `<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#10b98120;color:var(--green);">정상 ${okCnt}건</span>`,
+    ].join('');
+  }
+}
+function openCalibForm(id){
+  const c=id?db.calibs.find(x=>x.id===id):null;
+  document.getElementById('cId').value=c?c.id:'';
+  document.getElementById('cName').value=c?c.name:'';
+  document.getElementById('cMgmtNo').value=c?c.mgmtNo:'';
+  document.getElementById('cItem').value=c?c.item:'';
+  document.getElementById('cMaker').value=c?c.maker:'';
+  document.getElementById('cLocation').value=c?c.location:'';
+  document.getElementById('cCycle').value=c?c.cycleMon:12;
+  document.getElementById('cLastDate').value=c?c.lastDate:'';
+  document.getElementById('cManager').value=c?c.manager:'';
+  document.getElementById('cAgency').value=c?c.agency:'';
+  document.getElementById('cNote').value=c?c.note:'';
+  openModal('calibModal');
+}
+function saveCalib(){
+  const name=document.getElementById('cName').value.trim();
+  const item=document.getElementById('cItem').value.trim();
+  const lastDate=document.getElementById('cLastDate').value;
+  const cycle=parseInt(document.getElementById('cCycle').value)||12;
+  if(!name||!item||!lastDate){toast('설비명, 검교정 항목, 최종 검교정일은 필수입니다','e');return;}
+  const id=document.getElementById('cId').value;
+  const data={
+    id:id||('c'+Date.now()),
+    name,item,lastDate,cycleMon:cycle,
+    mgmtNo:document.getElementById('cMgmtNo').value.trim(),
+    maker:document.getElementById('cMaker').value.trim(),
+    location:document.getElementById('cLocation').value.trim(),
+    manager:document.getElementById('cManager').value.trim(),
+    agency:document.getElementById('cAgency').value.trim(),
+    note:document.getElementById('cNote').value.trim(),
+  };
+  if(id){const idx=db.calibs.findIndex(x=>x.id===id);if(idx>=0)db.calibs[idx]=data;}
+  else db.calibs.push(data);
+  save();
+  closeModal('calibModal');
+  renderCalib();
+  checkAlarms();
+  toast(id?'검교정 정보 수정됨':'검교정 항목 추가됨','s');
+}
+function deleteCalib(id){
+  if(!confirm('검교정 항목을 삭제할까요?')) return;
+  db.calibs=db.calibs.filter(x=>x.id!==id);
+  save();
+  renderCalib();
+  checkAlarms();
+  toast('삭제됨','w');
+}
 
 // ── 알람 ──
 function toggleAlarm(){document.getElementById('alarmPanel').classList.toggle('open');}
@@ -1908,6 +2087,23 @@ function checkAlarms(){
       alarms.push({type:'warning',icon:'📅',text:`[${eq.name}] 점검 D-${remain}`,sub:`${lastInsp.date} 점검 후 ${days}일 경과`});
     }
   });
+
+  // ── 검교정 만료 알람 ──
+  let calibWarnCount=0;
+  (db.calibs||[]).forEach(c=>{
+    if(!c.lastDate||!c.cycleMon) return;
+    const next=addCalibMonths(c.lastDate,c.cycleMon);
+    const remain=Math.ceil((new Date(next)-new Date(today))/86400000);
+    if(remain<=0){
+      alarms.push({type:'critical',icon:'📐',text:`[${c.name}] 검교정 기한 초과`,sub:`차기 검교정일: ${next} (${Math.abs(remain)}일 초과)`});
+      calibWarnCount++;
+    } else if(remain<=10){
+      alarms.push({type:'warning',icon:'📐',text:`[${c.name}] 검교정 D-${remain}`,sub:`차기 검교정일: ${next}`});
+      calibWarnCount++;
+    }
+  });
+  const calibBadge=document.getElementById('calibBadge');
+  if(calibBadge){if(calibWarnCount){calibBadge.textContent=calibWarnCount;calibBadge.classList.add('show');}else calibBadge.classList.remove('show');}
 
   const badge=document.getElementById('alarmBadge');
   if(alarms.length){badge.textContent=alarms.length;badge.classList.add('show');}
@@ -2934,6 +3130,125 @@ function calcMTTR(eqId){
   if(!count) return null;
   return total/count;
 }
+function calcMTBFFiltered(eqId,maints){
+  const fails=maints.filter(m=>m.eqId===eqId&&m.type==='고장').sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(fails.length<2) return null;
+  let totalGap=0;
+  for(let i=1;i<fails.length;i++){
+    const prev=fails[i-1].end||fails[i-1].date;
+    const cur=fails[i].date;
+    totalGap+=(new Date(cur)-new Date(prev));
+  }
+  return totalGap/(fails.length-1)/3600000;
+}
+function calcMTTRFiltered(eqId,maints){
+  const fails=maints.filter(m=>m.eqId===eqId&&m.type==='고장');
+  if(!fails.length) return null;
+  let total=0,count=0;
+  fails.forEach(m=>{
+    if(m.start&&m.end){
+      const diff=(new Date(m.end)-new Date(m.start))/3600000;
+      if(diff>0){total+=diff;count++;}
+    } else if(m.hours>0){
+      total+=m.hours;count++;
+    }
+  });
+  if(!count) return null;
+  return total/count;
+}
+function renderYearButtons(){
+  const el=document.getElementById('sYearBtns');
+  if(!el) return;
+  const years=[...new Set(db.maints.map(m=>{
+    const d=(m.start?m.start.slice(0,10):null)||m.date;
+    return d?d.slice(0,4):null;
+  }).filter(Boolean))].sort().reverse();
+  if(!years.length){el.innerHTML='';return;}
+  const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
+  const fTo=document.getElementById('sFilterDateTo')?.value||'';
+  el.innerHTML=`<span style="font-size:10px;color:var(--muted);align-self:center;white-space:nowrap;">연도 선택:</span>`+
+    ['전체',...years].map(y=>{
+      const isActive=y==='전체'?(!fFrom&&!fTo):(fFrom===y+'-01-01'&&fTo===y+'-12-31');
+      return `<button onclick="${y==='전체'?'clearStatsDateFilter()':(`setYearFilter('${y}')`)}" style="padding:4px 10px;border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer;border:1.5px solid ${isActive?'var(--blue)':'var(--border2)'};background:${isActive?'var(--blue)':'transparent'};color:${isActive?'#fff':'var(--muted)'};">${y==='전체'?'전체':y+'년'}</button>`;
+    }).join('');
+}
+function setYearFilter(year){
+  const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
+  const currentYear=today.slice(0,4);
+  document.getElementById('sFilterDateFrom').value=year+'-01-01';
+  document.getElementById('sFilterDateTo').value=year===currentYear?today:year+'-12-31';
+  renderStats();
+}
+function renderMonthlyMtbr(filteredMaints){
+  const el=document.getElementById('monthlyMtbrList');
+  if(!el) return;
+  const monthSet=new Set();
+  filteredMaints.forEach(m=>{
+    const d=(m.start?m.start.slice(0,10):null)||m.date;
+    if(d) monthSet.add(d.slice(0,7));
+  });
+  const months=[...monthSet].sort();
+  if(!months.length){el.innerHTML='<div class="empty" style="padding:14px;">데이터 없음</div>';return;}
+  // 연도별 그룹
+  const byYear={};
+  months.forEach(m=>{const y=m.slice(0,4);if(!byYear[y])byYear[y]=[];byYear[y].push(m);});
+  el.innerHTML=Object.entries(byYear).sort((a,b)=>b[0].localeCompare(a[0])).map(([year,ms])=>{
+    const rows=ms.map(ym=>{
+      const mFails=filteredMaints.filter(m=>{
+        const d=(m.start?m.start.slice(0,10):null)||m.date;
+        return d&&d.startsWith(ym)&&m.type==='고장';
+      });
+      const mAll=filteredMaints.filter(m=>{
+        const d=(m.start?m.start.slice(0,10):null)||m.date;
+        return d&&d.startsWith(ym);
+      });
+      const failCount=mFails.length;
+      const totalCount=mAll.length;
+      // MTTR
+      let total=0,count=0;
+      mFails.forEach(m=>{
+        if(m.start&&m.end){const diff=(new Date(m.end)-new Date(m.start))/3600000;if(diff>0){total+=diff;count++;}}
+        else if(m.hours>0){total+=m.hours;count++;}
+      });
+      const mttr=count>0?total/count:null;
+      // MTBF: 해당 월 내 연속 고장 간격 평균 (start 기준으로 일관성 유지)
+      const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
+      let mtbf=null;
+      if(failCount>=2){
+        const sorted=mFails.slice().sort((a,b)=>new Date(getD(a))-new Date(getD(b)));
+        let gap=0;
+        for(let i=1;i<sorted.length;i++){
+          const prev=sorted[i-1].end||getD(sorted[i-1]);
+          gap+=(new Date(getD(sorted[i]))-new Date(prev));
+        }
+        mtbf=gap/(sorted.length-1)/3600000;
+      }
+      const mtbfDays=mtbf!==null?Math.round(mtbf/24):null;
+      const mttrMin=mttr!==null&&mttr<1?Math.round(mttr*60):null;
+      return `<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
+        <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);width:44px;">${ym.slice(5)}월</div>
+        <div style="flex:1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">정비 ${totalCount}건</span>
+          <span style="font-family:var(--mono);font-size:11px;color:${failCount>0?'var(--red)':'var(--muted)'};">고장 ${failCount}회</span>
+        </div>
+        <div style="text-align:center;min-width:62px;">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;">MTBF</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:bold;color:var(--green);">${mtbf!==null?mtbf.toFixed(0)+'h':'—'}</div>
+          ${mtbfDays!==null?`<div style="font-size:9px;color:var(--muted);">~${mtbfDays}일</div>`:''}
+        </div>
+        <div style="text-align:center;min-width:62px;">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;">MTTR</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:bold;color:var(--amber);">${mttr!==null?(mttrMin!==null?mttrMin+'min':mttr.toFixed(1)+'h'):'—'}</div>
+          ${mttr!==null&&mttrMin===null?`<div style="font-size:9px;color:var(--muted);">~${Math.round(mttr*60)}min</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:3px;padding:6px 0 4px;border-bottom:2px solid var(--blue)20;">${year}년</div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
 
 // ══════ 통계 ══════
 function clearStatsDateFilter(){
@@ -2983,12 +3298,21 @@ function renderStats(){
     mtEl.innerHTML=activeEqs.map(eq=>{
       const fails=filteredMaints.filter(m=>m.eqId===eq.id&&m.type==='고장');
       const allMaints=filteredMaints.filter(m=>m.eqId===eq.id);
-      const mtbf=calcMTBF(eq.id),mttr=calcMTTR(eq.id);
+      const mtbf=calcMTBFFiltered(eq.id,filteredMaints),mttr=calcMTTRFiltered(eq.id,filteredMaints);
       const failCount=fails.length;
       const totalMaints=allMaints.length;
       const hasHours=fails.some(m=>m.hours>0||(m.start&&m.end));
-      const mtbfNote=failCount===1?'설치일 기준':'';
       const mttrNote=!hasHours&&failCount>0?'시간미입력':'';
+      const mtbfDays=mtbf?Math.round(mtbf/24):null;
+      // 고장 날짜 정렬
+      const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
+      const failDates=fails.map(getD).filter(Boolean).sort();
+      const firstFail=failDates[0]||'';
+      const lastFail=failDates[failDates.length-1]||'';
+      const failDateStr=failCount===0?''
+        :failCount===1?firstFail
+        :`${firstFail} ~ ${lastFail}`;
+      const mtbfNote=failCount===1?'설치일 기준':'';
       return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px;margin-bottom:7px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="flex:1;min-width:0;">
@@ -2996,22 +3320,27 @@ function renderStats(){
             <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;">
               정비 ${totalMaints}건 | 고장 ${failCount}회
             </div>
+            ${failDateStr?`<div style="font-family:var(--mono);font-size:10px;color:var(--red);opacity:.8;margin-top:2px;">🔴 ${failDateStr}</div>`:''}
           </div>
-          <div style="text-align:center;min-width:64px;">
+          <div style="text-align:center;min-width:68px;">
             <div style="font-family:var(--cond);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTBF</div>
             <div style="font-family:var(--mono);font-size:17px;font-weight:bold;color:var(--green);">${mtbf?mtbf.toFixed(0)+'h':'—'}</div>
-            ${mtbfNote?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">${mtbfNote}</div>`:''}
+            ${mtbfDays?`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);">~${mtbfDays}일</div>`:''}
+            ${mtbfNote?`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);">${mtbfNote}</div>`:''}
           </div>
-          <div style="text-align:center;min-width:64px;">
+          <div style="text-align:center;min-width:68px;">
             <div style="font-family:var(--cond);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTTR</div>
             <div style="font-family:var(--mono);font-size:17px;font-weight:bold;color:var(--amber);">${mttr?mttr.toFixed(1)+'h':'—'}</div>
-            ${mttrNote?`<div style="font-family:var(--mono);font-size:11px;color:var(--red);">${mttrNote}</div>`:''}
+            ${mttr?`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);">~${Math.round(mttr*60)}min</div>`:''}
+            ${mttrNote?`<div style="font-family:var(--mono);font-size:10px;color:var(--red);">${mttrNote}</div>`:''}
           </div>
         </div>
       </div>`}).join('')
       +(onlyWithRecords&&hiddenCount>0?`<div style="text-align:center;padding:8px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">정비 기록 없는 장비 ${hiddenCount}대 숨김</div>`:'');
   }
 
+  renderYearButtons();
+  renderMonthlyMtbr(filteredMaints);
   drawMonthlyChart(filteredMaints);
   drawTypeChart(filteredMaints);
 
@@ -3058,11 +3387,21 @@ function drawMonthlyChart(filteredMaints){
   const gridCol=isLight?'#d4d9e2':'#252d38';
   const bgCol=isLight?'#ffffff':'#181c22';
   const maints=filteredMaints||db.maints;
-  // 최근 6개월
+  const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
+  const fTo=document.getElementById('sFilterDateTo')?.value||'';
   const months=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date();d.setMonth(d.getMonth()-i);
-    months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  if(fFrom&&fTo){
+    let cur=new Date(fFrom.slice(0,7)+'-01');
+    const end=new Date(fTo.slice(0,7)+'-01');
+    while(cur<=end){
+      months.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0'));
+      cur.setMonth(cur.getMonth()+1);
+    }
+  } else {
+    for(let i=5;i>=0;i--){
+      const d=new Date();d.setMonth(d.getMonth()-i);
+      months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+    }
   }
   const counts=months.map(m=>maints.filter(mt=>{const md=(mt.start?mt.start.slice(0,10):null)||mt.date;return md&&md.startsWith(m);}).length);
   if(!counts.some(c=>c>0)){
@@ -3082,7 +3421,8 @@ function drawMonthlyChart(filteredMaints){
     grad.addColorStop(0,'#f59e0b');grad.addColorStop(1,'#d97706');
     ctx.fillStyle=grad;ctx.beginPath();ctx.roundRect(x,y,bw,bh,3);ctx.fill();
     ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='9px monospace';
-    ctx.fillText(months[i].slice(5),x+bw/2,H-8);
+    const lbl=months.length>8?months[i].slice(5):months[i].slice(2);
+    ctx.fillText(lbl,x+bw/2,H-8);
     if(c>0){ctx.fillStyle=isLight?'#c47f00':'#f59e0b';ctx.font='bold 10px monospace';ctx.fillText(c,x+bw/2,y-4);}
   });
   ctx.fillStyle=mutedCol;ctx.font='9px monospace';ctx.textAlign='right';
