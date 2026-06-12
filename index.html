@@ -111,6 +111,8 @@ async function pollFirestore() {
 setInterval(pollFirestore, 5000);
 // 앱 시작 시 즉시 한 번
 setTimeout(pollFirestore, 2000);
+// 알림 클릭 탭 이동 시 즉시 새 데이터 반영을 위해 외부 노출
+window.pollFirestore = pollFirestore;
 
 // ── 앱 → Firestore 저장 (디바운스 500ms) ──
 window.saveToFirestore = function(dbData) {
@@ -154,7 +156,14 @@ try { _messaging = getMessaging(app); } catch(e) { console.warn('Messaging init 
 if (_messaging) {
   onMessage(_messaging, payload => {
     const { title, body } = payload.notification || {};
-    if (title && Notification.permission === 'granted') {
+    const data = payload.data || {};
+    if (!title || Notification.permission !== 'granted') return;
+    // SW 알림으로 표시해야 클릭 시 탭 이동(data.tab)이 동작함
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION', title, body: body || '', notifData: data
+      });
+    } else {
       new Notification(title, { body: body || '', icon: './icon-192.png' });
     }
   });
@@ -4604,8 +4613,6 @@ async function submitMaintenanceRequest() {
   db.reqs.unshift({ id: reqId, eqName, reqDate, reqTime, content, requester, photos });
   save();
 
-  _showOsNotification(`🚨 정비 의뢰: ${eqName}`, `[${reqDate} ${reqTime}] ${content.slice(0,80)}`, { tab: 'req' });
-
   let fcmSent = false;
   try {
     const resp = await fetch(MAINT_REQ_FUNC_URL, {
@@ -4630,7 +4637,7 @@ async function submitMaintenanceRequest() {
 
   statusEl.textContent = fcmSent
     ? '✅ 전송 완료 — 등록된 모든 기기에 알림 발송됨'
-    : '✅ 전송 완료 (로컬 알림만 — 앱을 열어두면 알림 수신)';
+    : '✅ 전송 완료 (알림 발송 실패 — 앱을 열어두면 자동 동기화)';
   setTimeout(() => { statusEl.textContent = ''; }, 6000);
 
   renderReqLog();
@@ -4802,7 +4809,13 @@ updateMaintSummary();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data && e.data.type === 'GOTO_TAB' && e.data.tab) {
-      gotoTab(e.data.tab);
+      const tab = e.data.tab;
+      // 백그라운드에서 복귀 시 Firestore 최신 데이터 먼저 반영 후 탭 이동
+      if (window.pollFirestore) {
+        window.pollFirestore().then(() => gotoTab(tab)).catch(() => gotoTab(tab));
+      } else {
+        gotoTab(tab);
+      }
     }
   });
 }
