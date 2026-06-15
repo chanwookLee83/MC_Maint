@@ -4546,11 +4546,9 @@ function initReqForm() {
   const dateEl = document.getElementById('reqDate');
   const timeEl = document.getElementById('reqTime');
   if (!dateEl || !timeEl) return;
-  if (!dateEl.value) dateEl.value = localToday();
-  if (!timeEl.value) {
-    const now = new Date();
-    timeEl.value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-  }
+  const now = new Date();
+  dateEl.value = localToday();
+  timeEl.value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 }
 
 function reqEqAcInput() {
