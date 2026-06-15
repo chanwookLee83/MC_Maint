@@ -4458,6 +4458,8 @@ function _scheduleOneHour(h) {
   let delay = target.getTime() - now.getTime();
   if (delay <= 0) delay += 86400000;
   const id = setTimeout(() => {
+    const idx = _notiTimers.indexOf(id);
+    if (idx !== -1) _notiTimers.splice(idx, 1);
     _fireScheduledNotification(h);
     _scheduleOneHour(h);
   }, delay);
@@ -4468,7 +4470,7 @@ function _fireScheduledNotification(hour) {
   const issues = [];
   if (typeof db !== 'undefined') {
     (db.parts || []).forEach(p => {
-      if (p.qty <= p.safe) issues.push(p.name + ' 재고부족');
+      if ((p.qty ?? 0) <= (p.safe ?? 0)) issues.push(p.name + ' 재고부족');
     });
     const today = localToday();
     (db.eqs || []).forEach(eq => {
@@ -4763,7 +4765,7 @@ function _fireCatchupNotification() {
 
   const issues = [];
   (db.parts || []).forEach(p => {
-    if (p.qty <= p.safe) issues.push(`[${p.pn}] ${p.name} 재고부족`);
+    if ((p.qty ?? 0) <= (p.safe ?? 0)) issues.push(`[${p.pn}] ${p.name} 재고부족`);
   });
   (db.eqs || []).forEach(eq => {
     if (eq.status === '단종') return;
@@ -4819,6 +4821,14 @@ if ('serviceWorker' in navigator) {
     }
   });
 }
+
+// 모바일 백그라운드 복귀 시 setTimeout 타이머 재계산
+// (모바일 브라우저는 백그라운드에서 타이머를 멈추거나 지연시킴)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && localStorage.getItem('fcm_enabled') === '1') {
+    window.scheduleLocalNotifications?.();
+  }
+});
 </script>
 </body>
 </html>
