@@ -4782,7 +4782,7 @@ function _fireCatchupNotification() {
 }
 
 // ── 초기화 ──
-renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();
+renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();initReqForm();
 // 알림 활성화 상태면 로컬 스케줄러 시작 + 놓친 알림 즉시 확인
 if (localStorage.getItem('fcm_enabled') === '1') {
   window.scheduleLocalNotifications?.();
