@@ -841,6 +841,25 @@ body.light .sec-title::after{background:#d4d9e2;}
 body.light .ac-list{background:#fff;box-shadow:0 8px 28px #00000025;}
 body.light .ac-item{color:#111827;border-color:#e5e7eb;}
 body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
+
+/* ── 월별 MTBF/MTTR 콜랩시블 ── */
+.mtbr-year-group{margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+.mtbr-year-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card2);cursor:pointer;user-select:none;transition:background .15s;}
+.mtbr-year-hd:hover{background:var(--border);}
+.mtbr-year-hd .y-label{font-family:var(--cond);font-size:17px;font-weight:900;letter-spacing:3px;color:var(--blue);}
+.mtbr-year-hd .y-arr{font-size:14px;color:var(--blue);transition:transform .2s;}
+.mtbr-year-hd.open .y-arr{transform:rotate(0deg);}
+.mtbr-year-body{display:none;padding:0 14px;}
+.mtbr-year-body.open{display:block;}
+.mtbr-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.mtbr-row:last-child{border-bottom:none;}
+.mtbr-mon{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);width:48px;flex-shrink:0;}
+.mtbr-info{flex:1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.mtbr-info span{font-family:var(--mono);font-size:13px;}
+.mtbr-cell{text-align:center;min-width:70px;flex-shrink:0;}
+.mtbr-cell .lbl{font-family:var(--cond);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;}
+.mtbr-cell .val{font-family:var(--mono);font-size:16px;font-weight:bold;line-height:1.2;}
+.mtbr-cell .sub{font-family:var(--mono);font-size:11px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -3198,11 +3217,12 @@ function renderMonthlyMtbr(filteredMaints){
   });
   const months=[...monthSet].sort();
   if(!months.length){el.innerHTML='<div class="empty" style="padding:14px;">데이터 없음</div>';return;}
-  // 연도별 그룹
   const byYear={};
   months.forEach(m=>{const y=m.slice(0,4);if(!byYear[y])byYear[y]=[];byYear[y].push(m);});
-  el.innerHTML=Object.entries(byYear).sort((a,b)=>b[0].localeCompare(a[0])).map(([year,ms])=>{
-    const rows=ms.map(ym=>{
+  const yearEntries=Object.entries(byYear).sort((a,b)=>b[0].localeCompare(a[0]));
+  el.innerHTML=yearEntries.map(([year,ms],yi)=>{
+    const isOpen=yi===0;
+    const rows=ms.slice().sort((a,b)=>b.localeCompare(a)).map(ym=>{
       const mFails=filteredMaints.filter(m=>{
         const d=(m.start?m.start.slice(0,10):null)||m.date;
         return d&&d.startsWith(ym)&&m.type==='고장';
@@ -3213,14 +3233,12 @@ function renderMonthlyMtbr(filteredMaints){
       });
       const failCount=mFails.length;
       const totalCount=mAll.length;
-      // MTTR
       let total=0,count=0;
       mFails.forEach(m=>{
         if(m.start&&m.end){const diff=(new Date(m.end)-new Date(m.start))/3600000;if(diff>0){total+=diff;count++;}}
         else if(m.hours>0){total+=m.hours;count++;}
       });
       const mttr=count>0?total/count:null;
-      // MTBF: 해당 월 내 연속 고장 간격 평균 (start 기준으로 일관성 유지)
       const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
       let mtbf=null;
       if(failCount>=2){
@@ -3234,27 +3252,30 @@ function renderMonthlyMtbr(filteredMaints){
       }
       const mtbfDays=mtbf!==null?Math.round(mtbf/24):null;
       const mttrMin=mttr!==null&&mttr<1?Math.round(mttr*60):null;
-      return `<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
-        <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);width:44px;">${ym.slice(5)}월</div>
-        <div style="flex:1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">정비 ${totalCount}건</span>
-          <span style="font-family:var(--mono);font-size:11px;color:${failCount>0?'var(--red)':'var(--muted)'};">고장 ${failCount}회</span>
+      return `<div class="mtbr-row">
+        <div class="mtbr-mon">${ym.slice(5)}월</div>
+        <div class="mtbr-info">
+          <span style="color:var(--muted);">정비 ${totalCount}건</span>
+          <span style="color:${failCount>0?'var(--red)':'var(--muted)'};">고장 ${failCount}회</span>
         </div>
-        <div style="text-align:center;min-width:62px;">
-          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;">MTBF</div>
-          <div style="font-family:var(--mono);font-size:13px;font-weight:bold;color:var(--green);">${mtbf!==null?mtbf.toFixed(0)+'h':'—'}</div>
-          ${mtbfDays!==null?`<div style="font-size:9px;color:var(--muted);">~${mtbfDays}일</div>`:''}
+        <div class="mtbr-cell">
+          <div class="lbl">MTBF</div>
+          <div class="val" style="color:var(--green);">${mtbf!==null?mtbf.toFixed(0)+'h':'—'}</div>
+          ${mtbfDays!==null?`<div class="sub">~${mtbfDays}일</div>`:''}
         </div>
-        <div style="text-align:center;min-width:62px;">
-          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;">MTTR</div>
-          <div style="font-family:var(--mono);font-size:13px;font-weight:bold;color:var(--amber);">${mttr!==null?(mttrMin!==null?mttrMin+'min':mttr.toFixed(1)+'h'):'—'}</div>
-          ${mttr!==null&&mttrMin===null?`<div style="font-size:9px;color:var(--muted);">~${Math.round(mttr*60)}min</div>`:''}
+        <div class="mtbr-cell">
+          <div class="lbl">MTTR</div>
+          <div class="val" style="color:var(--amber);">${mttr!==null?(mttrMin!==null?mttrMin+'min':mttr.toFixed(1)+'h'):'—'}</div>
+          ${mttr!==null&&mttrMin===null?`<div class="sub">~${Math.round(mttr*60)}min</div>`:''}
         </div>
       </div>`;
     }).join('');
-    return `<div style="margin-bottom:8px;">
-      <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:3px;padding:6px 0 4px;border-bottom:2px solid var(--blue)20;">${year}년</div>
-      ${rows}
+    return `<div class="mtbr-year-group">
+      <div class="mtbr-year-hd${isOpen?' open':''}" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');this.querySelector('.y-arr').textContent=this.classList.contains('open')?'▾':'▸';">
+        <span class="y-label">${year}년</span>
+        <span class="y-arr">${isOpen?'▾':'▸'}</span>
+      </div>
+      <div class="mtbr-year-body${isOpen?' open':''}">${rows}</div>
     </div>`;
   }).join('');
 }
@@ -3386,7 +3407,7 @@ function drawMonthlyChart(filteredMaints){
   const canvas=document.getElementById('cvMonthly');if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
-  const W=canvas.parentElement.clientWidth||300,H=160;
+  const W=canvas.parentElement.clientWidth||300,H=190;
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
@@ -3414,9 +3435,9 @@ function drawMonthlyChart(filteredMaints){
   }
   const counts=months.map(m=>maints.filter(mt=>{const md=(mt.start?mt.start.slice(0,10):null)||mt.date;return md&&md.startsWith(m);}).length);
   if(!counts.some(c=>c>0)){
-    ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;
+    ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='14px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;
   }
-  const pad={t:16,r:12,b:36,l:36};
+  const pad={t:20,r:12,b:48,l:42};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   const mx=Math.max(...counts)||1;
   const bw=cW/months.length*0.6,gap=cW/months.length;
@@ -3429,20 +3450,20 @@ function drawMonthlyChart(filteredMaints){
     const grad=ctx.createLinearGradient(0,y,0,y+bh);
     grad.addColorStop(0,'#f59e0b');grad.addColorStop(1,'#d97706');
     ctx.fillStyle=grad;ctx.beginPath();ctx.roundRect(x,y,bw,bh,3);ctx.fill();
-    ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='9px monospace';
+    ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='13px monospace';
     const lbl=months.length>8?months[i].slice(5):months[i].slice(2);
-    ctx.fillText(lbl,x+bw/2,H-8);
-    if(c>0){ctx.fillStyle=isLight?'#c47f00':'#f59e0b';ctx.font='bold 10px monospace';ctx.fillText(c,x+bw/2,y-4);}
+    ctx.fillText(lbl,x+bw/2,H-10);
+    if(c>0){ctx.fillStyle=isLight?'#c47f00':'#f59e0b';ctx.font='bold 12px monospace';ctx.fillText(c,x+bw/2,y-5);}
   });
-  ctx.fillStyle=mutedCol;ctx.font='9px monospace';ctx.textAlign='right';
-  for(let i=0;i<=4;i++){const v=Math.round(mx*i/4);const y=pad.t+cH*(1-i/4);ctx.fillText(v,pad.l-4,y+3);}
+  ctx.fillStyle=mutedCol;ctx.font='11px monospace';ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const v=Math.round(mx*i/4);const y=pad.t+cH*(1-i/4);ctx.fillText(v,pad.l-4,y+4);}
 }
 
 function drawTypeChart(filteredMaints){
   const canvas=document.getElementById('cvType');if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
-  const W=canvas.parentElement.clientWidth||300,H=180;
+  const W=canvas.parentElement.clientWidth||300,H=210;
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
@@ -3457,7 +3478,7 @@ function drawTypeChart(filteredMaints){
   const COLS=['#ef4444','#3b82f6','#f59e0b','#10b981'];
   const counts=types.map(t=>maints.filter(m=>m.type===t).length);
   const total=counts.reduce((a,b)=>a+b,0);
-  if(!total){ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='12px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;}
+  if(!total){ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='14px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;}
   const cx=W*0.33,cy=H/2,R=Math.min(cx,cy)*0.85,ri=R*0.54;
   let ang=-Math.PI/2;
   counts.forEach((c,i)=>{
@@ -3469,14 +3490,14 @@ function drawTypeChart(filteredMaints){
     ang+=sl;
   });
   ctx.beginPath();ctx.arc(cx,cy,ri,0,Math.PI*2);ctx.fillStyle=bgCol;ctx.fill();
-  ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='bold 18px monospace';ctx.fillText(total,cx,cy+4);
-  ctx.fillStyle=mutedCol;ctx.font='9px monospace';ctx.fillText('TOTAL',cx,cy+16);
-  const lx=W*0.60,lsy=H/2-(types.length*20)/2;
+  ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='bold 20px monospace';ctx.fillText(total,cx,cy+6);
+  ctx.fillStyle=mutedCol;ctx.font='11px monospace';ctx.fillText('TOTAL',cx,cy+20);
+  const lx=W*0.60,lsy=H/2-(types.length*26)/2;
   types.forEach((t,i)=>{
-    const y=lsy+i*21;
-    ctx.fillStyle=COLS[i];ctx.fillRect(lx,y,10,10);
-    ctx.fillStyle=textCol;ctx.textAlign='left';ctx.font='11px monospace';ctx.fillText(t,lx+14,y+9);
-    ctx.fillStyle=countCol;ctx.textAlign='right';ctx.font='11px monospace';ctx.fillText(counts[i]+'건',W-4,y+9);
+    const y=lsy+i*26;
+    ctx.fillStyle=COLS[i];ctx.fillRect(lx,y,12,12);
+    ctx.fillStyle=textCol;ctx.textAlign='left';ctx.font='13px monospace';ctx.fillText(t,lx+18,y+11);
+    ctx.fillStyle=countCol;ctx.textAlign='right';ctx.font='13px monospace';ctx.fillText(counts[i]+'건',W-4,y+11);
   });
 }
 
