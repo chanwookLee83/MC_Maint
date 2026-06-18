@@ -680,6 +680,15 @@ body.light .sec-title::after{background:#d4d9e2;}
 .bom-eq-body.open{display:block;}
 .bom-cat-title{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin:8px 0 5px;display:flex;align-items:center;gap:6px;}
 .bom-cat-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.bom-cat-group{border:1px solid var(--border);border-radius:9px;margin-bottom:7px;overflow:hidden;}
+.bom-cat-group:last-child{margin-bottom:0;}
+.bom-cat-head{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;background:var(--card2);transition:background .15s;user-select:none;}
+.bom-cat-head:hover{background:var(--border);}
+.bom-cat-label{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--muted2);flex:1;}
+.bom-cat-cnt{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:2px 8px;flex-shrink:0;}
+.bom-cat-chev{color:var(--muted);font-size:12px;transition:transform .2s;flex-shrink:0;}
+.bom-cat-body{display:none;padding:8px 10px;}
+.bom-cat-body.open{display:block;}
 .bom-part-row{display:flex;align-items:flex-start;gap:8px;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:9px;margin-bottom:5px;}
 .bom-part-info{flex:1;min-width:0;}
 .bom-part-name{font-size:13px;font-weight:600;color:var(--text);}
@@ -4047,43 +4056,73 @@ function renderBomTree(){
     byEq[b.eqId].parts.push(b);
   });
 
+  const bomState=getBomPanelState();
+
   el.innerHTML=Object.entries(byEq).map(([eqId,{eqName,parts}])=>{
     // 카테고리별 그룹
     const byCat={};
     parts.forEach(p=>{if(!byCat[p.cat])byCat[p.cat]=[];byCat[p.cat].push(p);});
     const totalVal=parts.reduce((s,p)=>s+(p.price||0)*(p.qty||1),0);
 
-    const catHtml=Object.entries(byCat).map(([cat,catParts])=>`
-      <div class="bom-cat-title">${CAT_ICON[cat]||'📦'} ${cat}</div>
-      ${catParts.map(p=>`
-      <div class="bom-part-row">
-        <div class="bom-part-info">
-          <div class="bom-part-name">${p.name}</div>
-          <div class="bom-part-detail">${p.pn?'형번: '+p.pn+' &nbsp;':''} ${p.maker?'제조: '+p.maker:''} ${p.note?'| '+p.note:''}</div>
+    const catHtml=Object.entries(byCat).map(([cat,catParts])=>{
+      const ck=`${eqId}_${cat.replace(/\s/g,'')}`;
+      const catOpen=bomState['cat_'+ck]!==false; // 기본 펼침, 명시적 false면 접힘
+      return `<div class="bom-cat-group">
+        <div class="bom-cat-head" onclick="toggleBomCat('${ck}')">
+          <span>${CAT_ICON[cat]||'📦'}</span>
+          <span class="bom-cat-label">${cat}</span>
+          <span class="bom-cat-cnt">${catParts.length}개</span>
+          <span class="bom-cat-chev" id="bom-cat-chev-${ck}" style="${catOpen?'':'transform:rotate(-90deg)'}">▾</span>
         </div>
-        <div class="bom-part-qty">×${p.qty}</div>
-        <button class="btn-sm bsm-a" style="padding:4px 8px;font-size:10px;" onclick="openBomEdit(${p.id})">✏️</button>
-        <button class="btn-sm bsm-r" style="padding:4px 8px;font-size:10px;" onclick="deleteBom(${p.id})">🗑</button>
-      </div>`).join('')}
-    `).join('');
+        <div class="bom-cat-body${catOpen?' open':''}" id="bom-cat-body-${ck}">
+          ${catParts.map(p=>`
+          <div class="bom-part-row">
+            <div class="bom-part-info">
+              <div class="bom-part-name">${p.name}</div>
+              <div class="bom-part-detail">${p.pn?'형번: '+p.pn+' &nbsp;':''} ${p.maker?'제조: '+p.maker:''} ${p.note?'| '+p.note:''}</div>
+            </div>
+            <div class="bom-part-qty">×${p.qty}</div>
+            <button class="btn-sm bsm-a" style="padding:4px 8px;font-size:10px;" onclick="openBomEdit(${p.id})">✏️</button>
+            <button class="btn-sm bsm-r" style="padding:4px 8px;font-size:10px;" onclick="deleteBom(${p.id})">🗑</button>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
 
+    const eqOpen=bomState['eq_'+eqId]===true; // 기본 접힘, 명시적 true면 펼침
     return `<div class="bom-eq-group">
       <div class="bom-eq-head" onclick="toggleBomEq(${eqId})">
         <span style="font-size:18px;">🏭</span>
         <div class="bom-eq-name">${eqName}</div>
         <span class="bom-eq-count">${parts.length}개 파트</span>
-        <span style="color:var(--muted);font-size:12px;" id="bom-chev-${eqId}">▾</span>
+        <span style="color:var(--muted);font-size:12px;${eqOpen?'transform:rotate(180deg);display:inline-block;':''}" id="bom-chev-${eqId}">▾</span>
       </div>
-      <div class="bom-eq-body" id="bom-body-${eqId}">${catHtml}</div>
+      <div class="bom-eq-body${eqOpen?' open':''}" id="bom-body-${eqId}">${catHtml}</div>
     </div>`;
   }).join('');
 }
 
+function getBomPanelState(){
+  try{return JSON.parse(localStorage.getItem('mms_bom_panel')||'{}');}catch{return {};}
+}
+function saveBomPanelState(key,isOpen){
+  const s=getBomPanelState();
+  s[key]=isOpen;
+  localStorage.setItem('mms_bom_panel',JSON.stringify(s));
+}
 function toggleBomEq(eqId){
   const body=document.getElementById('bom-body-'+eqId);
   const chev=document.getElementById('bom-chev-'+eqId);
   const isOpen=body.classList.toggle('open');
   if(chev)chev.style.transform=isOpen?'rotate(180deg)':'';
+  saveBomPanelState('eq_'+eqId,isOpen);
+}
+function toggleBomCat(ck){
+  const body=document.getElementById('bom-cat-body-'+ck);
+  const chev=document.getElementById('bom-cat-chev-'+ck);
+  const isOpen=body.classList.toggle('open');
+  if(chev)chev.style.transform=isOpen?'':'rotate(-90deg)';
+  saveBomPanelState('cat_'+ck,isOpen);
 }
 
 let bomEditId=null;
