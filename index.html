@@ -2269,8 +2269,8 @@ function getAcSources(){
     locs:      uniq(db.eqs.map(e=>e.loc)),
     workers:   uniq([...db.maints.map(m=>m.worker),...db.insps.map(i=>i.worker)]),
     causes:    uniq(db.maints.map(m=>m.cause)),
-    partPNs:   uniq(db.parts.map(p=>p.pn)),
-    partNames: uniq(db.parts.map(p=>p.name)),
+    partPNs:   uniq([...db.parts.map(p=>p.pn),...db.boms.map(b=>b.pn)]),
+    partNames: uniq([...db.parts.map(p=>p.name),...db.boms.map(b=>b.name)]),
     evTitles:  uniq(db.events.map(e=>e.title)),
   };
 }
