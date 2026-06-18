@@ -2254,7 +2254,7 @@ function getAcSources(){
   return {
     eqNames:   uniq(db.eqs.map(e=>e.name)),
     eqSerials: uniq(db.eqs.map(e=>e.serial)),
-    makers:    uniq([...db.eqs.map(e=>e.maker),...db.parts.map(p=>p.maker)]),
+    makers:    uniq([...db.eqs.map(e=>e.maker),...db.parts.map(p=>p.maker),...db.boms.map(b=>b.maker)]),
     locs:      uniq(db.eqs.map(e=>e.loc)),
     workers:   uniq([...db.maints.map(m=>m.worker),...db.insps.map(i=>i.worker)]),
     causes:    uniq(db.maints.map(m=>m.cause)),
