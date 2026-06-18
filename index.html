@@ -1844,7 +1844,46 @@ body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
   </div>
 </div>
 
-
+<!-- BOM 파트 수정 모달 -->
+<div class="modal-bg" id="bomEditModal" onclick="closeModal('bomEditModal',event)">
+  <div class="modal">
+    <div class="modal-title">🔩 파트 수정 <button class="modal-close" onclick="closeModal('bomEditModal')">✕</button></div>
+    <div class="field"><label class="flabel">장비 선택</label>
+      <div class="fselect-w"><select class="fselect" id="eBomEq"></select></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">카테고리</label>
+        <div class="fselect-w"><select class="fselect" id="eBomCat">
+          <option value="구동부">⚙️ 구동부</option>
+          <option value="공압부">🔵 공압부</option>
+          <option value="전장부">⚡ 전장부</option>
+          <option value="센서부">📡 센서부</option>
+          <option value="소모품">🔄 소모품</option>
+          <option value="구조물">🏗 구조물</option>
+          <option value="기타">📦 기타</option>
+        </select></div>
+      </div>
+      <div class="field"><label class="flabel">수량</label>
+        <input class="finput" id="eBomQty" type="number" min="1" inputmode="numeric">
+      </div>
+    </div>
+    <div class="field"><label class="flabel">부품명 *</label>
+      <input class="finput" id="eBomName" autocomplete="off">
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">형번</label>
+        <input class="finput" id="eBomPN" autocomplete="off">
+      </div>
+      <div class="field"><label class="flabel">제조사</label>
+        <input class="finput" id="eBomMaker" autocomplete="off">
+      </div>
+    </div>
+    <div class="field"><label class="flabel">비고</label>
+      <input class="finput" id="eBomNote" placeholder="위치, 규격 등" autocomplete="off">
+    </div>
+    <button class="btn-primary" onclick="saveBomEdit()">💾 저장</button>
+  </div>
+</div>
 
 <!-- 정비기록 수정 모달 -->
 <div class="modal-bg" id="maintEditModal" onclick="closeModal('maintEditModal',event)">
@@ -3993,6 +4032,7 @@ function renderBomTree(){
           <div class="bom-part-detail">${p.pn?'형번: '+p.pn+' &nbsp;':''} ${p.maker?'제조: '+p.maker:''} ${p.note?'| '+p.note:''}</div>
         </div>
         <div class="bom-part-qty">×${p.qty}</div>
+        <button class="btn-sm bsm-a" style="padding:4px 8px;font-size:10px;" onclick="openBomEdit(${p.id})">✏️</button>
         <button class="btn-sm bsm-r" style="padding:4px 8px;font-size:10px;" onclick="deleteBom(${p.id})">🗑</button>
       </div>`).join('')}
     `).join('');
@@ -4014,6 +4054,43 @@ function toggleBomEq(eqId){
   const chev=document.getElementById('bom-chev-'+eqId);
   const isOpen=body.classList.toggle('open');
   if(chev)chev.style.transform=isOpen?'rotate(180deg)':'';
+}
+
+let bomEditId=null;
+function openBomEdit(id){
+  const b=db.boms.find(x=>x.id===id);
+  if(!b)return;
+  bomEditId=id;
+  // 장비 드롭다운 채우기
+  const sel=document.getElementById('eBomEq');
+  sel.innerHTML=db.eqs.map(e=>`<option value="${e.id}"${e.id===b.eqId?' selected':''}>${e.name}</option>`).join('');
+  document.getElementById('eBomCat').value=b.cat||'구동부';
+  document.getElementById('eBomName').value=b.name||'';
+  document.getElementById('eBomPN').value=b.pn||'';
+  document.getElementById('eBomQty').value=b.qty||1;
+  document.getElementById('eBomMaker').value=b.maker||'';
+  document.getElementById('eBomNote').value=b.note||'';
+  openModal('bomEditModal');
+}
+function saveBomEdit(){
+  if(!bomEditId)return;
+  const name=document.getElementById('eBomName').value.trim();
+  if(!name){toast('부품명을 입력해 주세요','w');return;}
+  const eqId=parseInt(document.getElementById('eBomEq').value);
+  const eq=db.eqs.find(e=>e.id===eqId);
+  const idx=db.boms.findIndex(x=>x.id===bomEditId);
+  if(idx<0)return;
+  db.boms[idx]={...db.boms[idx],
+    eqId,
+    eqName:eq?eq.name:db.boms[idx].eqName,
+    cat:document.getElementById('eBomCat').value,
+    name,
+    pn:document.getElementById('eBomPN').value.trim(),
+    qty:parseInt(document.getElementById('eBomQty').value)||1,
+    maker:document.getElementById('eBomMaker').value.trim(),
+    note:document.getElementById('eBomNote').value.trim(),
+  };
+  save();closeModal('bomEditModal');renderBomTree();toast('파트 수정 완료');
 }
 
 function deleteBom(id){
