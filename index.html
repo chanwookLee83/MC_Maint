@@ -4590,10 +4590,23 @@ function _fireScheduledNotification(hour) {
 }
 
 function _showOsNotification(title, body, notifData) {
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body, notifData: notifData || {} });
-  } else if (Notification.permission === 'granted') {
-    new Notification(title, { body, icon: './icon-192.png', data: notifData || {} });
+  if (Notification.permission !== 'granted') return;
+  if ('serviceWorker' in navigator) {
+    // reg.showNotification()은 controller null 여부와 무관하게 동작
+    navigator.serviceWorker.ready.then(reg => {
+      reg.showNotification(title, {
+        body: body || '',
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        vibrate: [200, 100, 200],
+        tag: (notifData && notifData.tag) || 'mms-scheduled',
+        data: notifData || {}
+      });
+    }).catch(() => {
+      new Notification(title, { body: body || '', icon: './icon-192.png' });
+    });
+  } else {
+    new Notification(title, { body: body || '', icon: './icon-192.png' });
   }
 }
 
@@ -4930,11 +4943,33 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// 백그라운드에서 지나간 알람 확인 후 즉시 발송
+function _checkMissedHours() {
+  if (Notification.permission !== 'granted') return;
+  const now = new Date();
+  const lastMs = parseInt(localStorage.getItem('mms_last_active_ms') || '0');
+  if (!lastMs) return;
+  NOTI_HOURS.forEach(h => {
+    const fireTime = new Date(now);
+    fireTime.setHours(h, 0, 0, 0);
+    // 백그라운드로 간 이후 & 현재 시각 이전 → 놓친 알람
+    if (fireTime.getTime() > lastMs && fireTime.getTime() <= now.getTime()) {
+      _fireScheduledNotification(h);
+    }
+  });
+}
+
 // 모바일 백그라운드 복귀 시 setTimeout 타이머 재계산
 // (모바일 브라우저는 백그라운드에서 타이머를 멈추거나 지연시킴)
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    // 백그라운드 진입 시각 저장
+    localStorage.setItem('mms_last_active_ms', String(Date.now()));
+  }
   if (document.visibilityState === 'visible' && localStorage.getItem('fcm_enabled') === '1') {
-    window.scheduleLocalNotifications?.();
+    _checkMissedHours();       // 지나간 알람 즉시 발송
+    window.scheduleLocalNotifications?.();  // 타이머 재설정
+    localStorage.setItem('mms_last_active_ms', String(Date.now()));
   }
 });
 </script>
