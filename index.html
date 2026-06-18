@@ -2299,6 +2299,12 @@ function acCloseAll(exceptId=''){
   });
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))acCloseAll();});
+document.addEventListener('focusin',e=>{
+  const openList=document.querySelector('.ac-list.open');
+  if(!openList) return;
+  const wrap=openList.closest('.ac-wrap');
+  if(wrap&&!wrap.contains(e.target)) acCloseAll();
+});
 document.addEventListener('keydown',function(e){
   const openList=document.querySelector('.ac-list.open');
   if(!openList) return;
