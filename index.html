@@ -837,10 +837,12 @@ body.light .sec-title::after{background:#d4d9e2;}
   cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
 .ac-item:last-child{border-bottom:none;}
 .ac-item:hover,.ac-item:active{background:var(--card);color:var(--amber);}
+.ac-item.ac-active{background:var(--card);color:var(--amber);}
 .ac-item b{color:var(--amber);font-weight:700;}
 body.light .ac-list{background:#fff;box-shadow:0 8px 28px #00000025;}
 body.light .ac-item{color:#111827;border-color:#e5e7eb;}
 body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
+body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
 /* ── 월별 MTBF/MTTR 콜랩시블 ── */
 .mtbr-year-group{margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid var(--border);}
@@ -2297,6 +2299,33 @@ function acCloseAll(exceptId=''){
   });
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))acCloseAll();});
+document.addEventListener('keydown',function(e){
+  const openList=document.querySelector('.ac-list.open');
+  if(!openList) return;
+  const items=[...openList.querySelectorAll('.ac-item')];
+  if(!items.length) return;
+  let idx=items.findIndex(el=>el.classList.contains('ac-active'));
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    const next=idx<items.length-1?idx+1:0;
+    items.forEach(el=>el.classList.remove('ac-active'));
+    items[next].classList.add('ac-active');
+    items[next].scrollIntoView({block:'nearest'});
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    const prev=idx<=0?items.length-1:idx-1;
+    items.forEach(el=>el.classList.remove('ac-active'));
+    items[prev].classList.add('ac-active');
+    items[prev].scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    if(idx>=0){
+      e.preventDefault();
+      items[idx].dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));
+    }
+  } else if(e.key==='Escape'){
+    acCloseAll();
+  }
+});
 
 // ── 장비 자동완성 (정비 탭) ──
 function eqAcInput(){
