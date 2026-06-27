@@ -1338,7 +1338,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
   <!-- 점검 완료 기록 -->
   <div class="sec">
-    <div class="sec-title">점검 완료 기록</div>
+    <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>점검 완료 기록</span>
+      <button onclick="exportInspCSV()" style="background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);border-radius:8px;padding:6px 12px;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:5px;"><span>⬇</span> CSV</button>
+    </div>
 
     <!-- 월별/장비별 필터 -->
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
@@ -1535,7 +1538,16 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 <div id="chkEditModal" class="modal-bg" onclick="closeModal('chkEditModal',event)">
   <div class="modal">
     <div class="modal-title">📋 점검 목록 수정 <button class="modal-close" onclick="closeModal('chkEditModal')">✕</button></div>
-    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px;">항목을 수정하거나 추가/삭제할 수 있습니다.</div>
+
+    <div class="frow" style="margin-bottom:10px;">
+      <div class="field">
+        <label class="flabel">장비 선택</label>
+        <div class="fselect-w"><select class="fselect" id="chkEditEq" onchange="onChkEditEqChange()">
+          <option value="">🌐 기본값 (전체 장비 공통)</option>
+        </select></div>
+        <div id="chkEditEqNote" style="font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+    </div>
 
     <div class="frow" style="margin-bottom:10px;">
       <div class="field"><label class="flabel">카테고리</label>
@@ -1589,6 +1601,8 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div class="share-note">→ 장비 / 정비이력 / 부품재고 / 점검기록 / 일정 / 파트(BOM) 전체 포함</div>
     <button class="share-btn sb-green" onclick="exportMaintCSV()"><span>🔧</span> 정비이력 CSV</button>
     <div class="share-note">→ 장비별 정비일지 + 부품사용 내역</div>
+    <button class="share-btn" style="background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);" onclick="exportInspCSV()"><span>✅</span> 점검이력 CSV</button>
+    <div class="share-note">→ 설비별 점검기록 (판정 / 체크항목 OK·NG 수 / 특이사항 / NG목록)</div>
     <button class="share-btn sb-blue" onclick="exportPartsCSV()"><span>📦</span> 부품재고 CSV</button>
     <div class="share-note">→ 현재 재고 현황 + 안전재고 기준</div>
     <button class="share-btn sb-green" onclick="exportInboundCSV()"><span>📥</span> 입고이력 CSV</button>
@@ -1990,6 +2004,7 @@ let db=JSON.parse(localStorage.getItem('mms_v1')||'{"eqs":[],"maints":[],"parts"
 if(!db.events)db.events=[];
 if(!db.boms)db.boms=[];
 if(!db.customChk)db.customChk={};  // 기존 데이터 호환
+if(!db.eqChk)db.eqChk={};        // 장비별 전용 점검항목
 if(!db.inbounds) db.inbounds=[];
 if(!db.reqs) db.reqs=[];
 if(!db.calibs) db.calibs=[];
@@ -3649,12 +3664,6 @@ function renderInspLog(){
   const logEl=document.getElementById('inspLog');
   const catNames={pn:'공압',el:'전기',vs:'외관',fp:'F/Proof'};
   const catColors={pn:'var(--blue)',el:'var(--amber)',vs:'var(--green)',fp:'var(--purple)'};
-  const itemLabels={
-    pn:['공압 공급 압력','에어 필터/드레인','레귤레이터 설정값','배관/피팅 누기','실린더 동작/쿠션','솔레노이드밸브','루브리케이터 오일','진공발생기/패드'],
-    el:['전원 전압','NFB/차단기','제어반 청결/발열','단자대/커넥터','접지 저항','센서 신호','인버터/서보 알람','케이블 덕트'],
-    vs:['프레임/볼트','커버/가드','이물질/칩','오일/그리스 누유','표시등/HMI','벨트/체인','LM가이드/볼스크류','방진/방음재'],
-    fp:['비상정지(EMO)','안전도어 인터락','광전센서(라이트커튼)','과부하/과전류 보호','치구/지그 형상감지','클램프 미착감지','이중화센서 정합','알람/에러 이력']
-  };
 
   logEl.innerHTML=list.length?list.map((d,i)=>{
     const hasChk=!!d.chk;
@@ -3667,9 +3676,10 @@ function renderInspLog(){
     const daysToNext=Math.ceil((nextDate-new Date())/(86400000));
     const nextColor=daysToNext<0?'var(--red)':daysToNext<=7?'var(--amber)':'var(--green)';
     const chkDetail=hasChk?Object.entries(d.chk).map(([cat,vals])=>{
+      const catLabels=getChkData(cat, d.eqId).labels;
       const rows=Object.entries(vals).map(([idx,v])=>`
         <div class="insp-log-chk-row">
-          <span>${itemLabels[cat]?.[idx]||idx}</span>
+          <span>${catLabels[parseInt(idx)]||idx}</span>
           <span style="color:${v==='ok'?'var(--green)':v==='ng'?'var(--red)':'var(--muted)'};">${v==='ok'?'✓ OK':v==='ng'?'✕ NG':'—'}</span>
         </div>`).join('');
       return `<div class="insp-log-cat" style="color:${catColors[cat]};">${catNames[cat]}</div>${rows}`;
@@ -3714,13 +3724,14 @@ let CHK_COUNTS={pn:8,el:8,vs:8,fp:8};
 const CHK_CATS=['pn','el','vs','fp'];
 
 function renderChkPanels(){
+  const eqId = document.getElementById('inspChkEq')?.value || '';
   const catMap={pn:'pneumatic',el:'electric',vs:'visual',fp:'fproof'};
   const catLabel={pn:'🔧 공압',el:'⚡ 전기',vs:'🔩 외관',fp:'🛠 F/Proof'};
   const container=document.getElementById('chk-panels-container');
   if(!container)return;
 
   container.innerHTML=CHK_CATS.map((cat,ci)=>{
-    const data=getChkData(cat);
+    const data=getChkData(cat, eqId||undefined);
     CHK_COUNTS[cat]=data.labels.length;
     const allBtns=`
       <div style="display:flex;gap:6px;margin-bottom:8px;">
@@ -3747,7 +3758,10 @@ function renderChkPanels(){
 let chkState={pn:{},el:{},vs:{},fp:{}};
 let _autoVerdictSet=false;
 
-function onInspEqChange(){resetChkList();}
+function onInspEqChange(){
+  renderChkPanels(); // 장비별 항목으로 패널 재구성
+  resetChkList();
+}
 
 function switchChkTab(catId, btn){
   document.querySelectorAll('.insp-cat-tab').forEach(b=>b.classList.remove('active'));
@@ -4188,25 +4202,65 @@ const DEFAULT_CHK={
   }
 };
 
-function openChkEdit(){openModal('chkEditModal');renderChkEditList();}
+function openChkEdit(){
+  // 점검화면에서 선택 중인 장비를 모달 기본값으로 설정
+  const inspEqId = document.getElementById('inspChkEq')?.value || '';
+  const eqSel = document.getElementById('chkEditEq');
+  if(eqSel){
+    eqSel.innerHTML = '<option value="">🌐 기본값 (전체 장비 공통)</option>';
+    db.eqs.filter(e=>e.status!=='단종').forEach(eq=>{
+      const hasOwn = db.eqChk[eq.id] && Object.keys(db.eqChk[eq.id]).length > 0;
+      eqSel.innerHTML += `<option value="${eq.id}">${eq.name}${hasOwn?' ✏️':''}</option>`;
+    });
+    if(inspEqId) eqSel.value = inspEqId;
+  }
+  openModal('chkEditModal');
+  onChkEditEqChange();
+}
 
-function getChkData(cat){
+function onChkEditEqChange(){
+  const eqId = document.getElementById('chkEditEq')?.value || '';
+  const noteEl = document.getElementById('chkEditEqNote');
+  if(noteEl){
+    if(eqId){
+      const hasOwn = db.eqChk[eqId] && Object.keys(db.eqChk[eqId]).length > 0;
+      noteEl.textContent = hasOwn ? '✏️ 이 장비 전용 항목이 설정되어 있습니다' : '⬇ 기본값을 상속합니다. 수정 시 이 장비 전용으로 저장됩니다';
+      noteEl.style.color = hasOwn ? 'var(--amber)' : 'var(--muted)';
+    } else {
+      noteEl.textContent = '모든 장비에 공통으로 적용되는 기본 점검항목입니다';
+      noteEl.style.color = 'var(--muted)';
+    }
+  }
+  renderChkEditList();
+}
+
+function getChkData(cat, eqId){
+  // 우선순위: 장비별 전용 → 전체 커스텀 → 기본값
+  if(eqId && db.eqChk[eqId] && db.eqChk[eqId][cat])
+    return {labels:[...db.eqChk[eqId][cat].labels], subs:[...db.eqChk[eqId][cat].subs]};
   const custom=db.customChk[cat];
   if(custom) return {labels:[...custom.labels],subs:[...custom.subs]};
   return {labels:[...DEFAULT_CHK[cat].labels],subs:[...DEFAULT_CHK[cat].subs]};
 }
 
-function saveChkData(cat, data){
-  db.customChk[cat]={labels:[...data.labels],subs:[...data.subs]};
+function saveChkData(cat, data, eqId){
+  if(eqId){
+    if(!db.eqChk[eqId]) db.eqChk[eqId]={};
+    db.eqChk[eqId][cat]={labels:[...data.labels],subs:[...data.subs]};
+  } else {
+    db.customChk[cat]={labels:[...data.labels],subs:[...data.subs]};
+  }
   CHK_COUNTS[cat]=data.labels.length;
   save();
-  renderChkPanels(); // ← 메인 체크리스트 즉시 반영
+  renderChkPanels();
   renderChkEditList();
+  onChkEditEqChange(); // 상태 메시지 갱신
 }
 
 function renderChkEditList(){
   const cat=document.getElementById('chkEditCat').value;
-  const data=getChkData(cat);
+  const eqId=document.getElementById('chkEditEq')?.value||'';
+  const data=getChkData(cat, eqId||undefined);
   const el=document.getElementById('chkEditList');
   el.innerHTML=data.labels.map((label,i)=>`
     <div class="chk-edit-item" id="chk-edit-row-${cat}-${i}">
@@ -4241,17 +4295,19 @@ function saveChkItem(cat,i){
   const label=document.getElementById('chk-inp-label-'+cat+'-'+i).value.trim();
   const sub=document.getElementById('chk-inp-sub-'+cat+'-'+i).value.trim();
   if(!label){toast('항목명을 입력해 주세요','w');return;}
-  const data=getChkData(cat);
+  const eqId=document.getElementById('chkEditEq')?.value||'';
+  const data=getChkData(cat, eqId||undefined);
   data.labels[i]=label;
   data.subs[i]=sub;
-  saveChkData(cat,data);
+  saveChkData(cat,data,eqId||undefined);
   toast('✅ 수정 완료');
 }
 function deleteChkItem(cat,idx){
-  const data=getChkData(cat);
+  const eqId=document.getElementById('chkEditEq')?.value||'';
+  const data=getChkData(cat, eqId||undefined);
   data.labels.splice(idx,1);
   data.subs.splice(idx,1);
-  saveChkData(cat,data);
+  saveChkData(cat,data,eqId||undefined);
   toast('삭제됨');
 }
 
@@ -4260,23 +4316,34 @@ function addChkItem(){
   const label=document.getElementById('chkNewLabel').value.trim();
   const sub=document.getElementById('chkNewSub').value.trim();
   if(!label){toast('항목명을 입력해 주세요','w');return;}
-  const data=getChkData(cat);
+  const eqId=document.getElementById('chkEditEq')?.value||'';
+  const data=getChkData(cat, eqId||undefined);
   data.labels.push(label);
   data.subs.push(sub);
-  saveChkData(cat,data);
+  saveChkData(cat,data,eqId||undefined);
   document.getElementById('chkNewLabel').value='';
   document.getElementById('chkNewSub').value='';
   toast('✅ 항목 추가됨: '+label);
 }
 
 function resetChkToDefault(){
-  if(!confirm('기본값으로 초기화할까요?'))return;
   const cat=document.getElementById('chkEditCat').value;
-  delete db.customChk[cat];
-  CHK_COUNTS[cat]=8;
+  const eqId=document.getElementById('chkEditEq')?.value||'';
+  const target=eqId?(db.eqs.find(e=>e.id==eqId)?.name||'이 장비'):'기본값';
+  if(!confirm(`"${target}"의 ${cat==='pn'?'공압':cat==='el'?'전기':cat==='vs'?'외관':'F/Proof'} 항목을 기본값으로 초기화할까요?`))return;
+  if(eqId){
+    if(db.eqChk[eqId]){
+      delete db.eqChk[eqId][cat];
+      if(Object.keys(db.eqChk[eqId]).length===0) delete db.eqChk[eqId];
+    }
+  } else {
+    delete db.customChk[cat];
+  }
+  CHK_COUNTS[cat]=DEFAULT_CHK[cat].labels.length;
   save();
   renderChkPanels();
   renderChkEditList();
+  onChkEditEqChange();
   toast('↺ 기본값으로 초기화됨');
 }
 
@@ -4565,6 +4632,84 @@ function exportInboundCSV(){
   download('입고이력_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
   toast('입고이력 CSV 내보내기 완료');
 }
+function exportInspCSV(){
+  if(!db.insps.length){toast('점검 이력 없음','w');return;}
+  const filterMonth=document.getElementById('inspFilterMonth')?.value||'';
+  const filterEq=document.getElementById('inspFilterEq')?.value||'';
+  const filterVerdict=document.getElementById('inspFilterVerdict')?.value||'';
+  let list=[...db.insps].sort((a,b)=>b.date.localeCompare(a.date));
+  if(filterMonth) list=list.filter(d=>d.date.startsWith(filterMonth));
+  if(filterEq)    list=list.filter(d=>d.eqName===filterEq);
+  if(filterVerdict) list=list.filter(d=>d.verdict===filterVerdict);
+  if(!list.length){toast('해당 조건의 이력 없음','w');return;}
+
+  const catOrder=['pn','el','vs','fp'];
+  const catPrefix={pn:'[공압]',el:'[전기]',vs:'[외관]',fp:'[F/Proof]'};
+  const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const COL_HDR=['장비명','날짜','점검자','점검 항목','점검 기준','결과','특이사항','최종 판정'].map(esc).join(',');
+
+  // 월별 그룹화 (최신 월 먼저)
+  const byMonth={};
+  list.forEach(d=>{
+    const m=d.date.slice(0,7);
+    if(!byMonth[m]) byMonth[m]=[];
+    byMonth[m].push(d);
+  });
+
+  const rows=[];
+
+  Object.keys(byMonth).sort().reverse().forEach((month,mi)=>{
+    const [y,mo]=month.split('-');
+    // 월 헤더 (두 번째 월부터 앞에 빈 행 추가)
+    if(mi>0) rows.push('');
+    rows.push(esc(`━━━ ${y}년 ${mo}월 ━━━`));
+    rows.push(COL_HDR);  // 컬럼 헤더를 월마다 반복
+
+    byMonth[month].forEach(d=>{
+      const hasChk=d.chk&&Object.keys(d.chk).length>0;
+      const items=[];
+
+      if(hasChk){
+        catOrder.forEach(cat=>{
+          if(!d.chk[cat]) return;
+          const def=getChkData(cat, d.eqId);
+          Object.entries(d.chk[cat])
+            .sort((a,b)=>parseInt(a[0])-parseInt(b[0]))
+            .forEach(([idx,val])=>{
+              const i=parseInt(idx);
+              items.push({
+                label:catPrefix[cat]+' '+(def.labels[i]||'항목'+(i+1)),
+                sub:  def.subs[i]||'',
+                result:val==='ok'?'OK':val==='ng'?'NG':'-'
+              });
+            });
+        });
+      }
+
+      if(items.length===0){
+        rows.push(['▶ '+d.eqName,d.date,d.worker||'','(체크리스트 없음)','',d.verdict||'',d.note||'',d.verdict||''].map(esc).join(','));
+      } else {
+        items.forEach((it,idx)=>{
+          rows.push([
+            idx===0?'▶ '+d.eqName:'',
+            idx===0?d.date:'',
+            d.worker||'',
+            it.label,
+            it.sub,
+            it.result,
+            idx===0?(d.note||''):'',
+            idx===0?(d.verdict||''):''
+          ].map(esc).join(','));
+        });
+      }
+      rows.push(''); // 점검 간 빈 행
+    });
+  });
+
+  const suffix=(filterMonth||filterEq||filterVerdict)?'_필터적용':'';
+  download('점검이력'+suffix+'_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
+  toast('점검이력 CSV 내보내기 완료');
+}
 
 function download(name,content,type){
   const a=document.createElement('a');
@@ -4608,29 +4753,29 @@ function toast(msg,type='ok'){
 }
 
 // ── 정기 알림 스케줄러 (클라이언트 사이드) ──
+// setInterval(60초)로 매분 현재 시각 체크 → 모바일 백그라운드 throttle 문제 해결
 const NOTI_HOURS = [8, 10, 12, 14, 16, 18];
-const _notiTimers = [];
+let _notiInterval = null;
 
 window.scheduleLocalNotifications = function() {
   if (Notification.permission !== 'granted') return;
-  _notiTimers.forEach(t => clearTimeout(t));
-  _notiTimers.length = 0;
-  NOTI_HOURS.forEach(h => _scheduleOneHour(h));
+  if (_notiInterval) clearInterval(_notiInterval);
+  _checkLocalNotiTime(); // 앱 재실행 시 놓친 알림 즉시 체크
+  _notiInterval = setInterval(_checkLocalNotiTime, 60000);
 };
 
-function _scheduleOneHour(h) {
+function _checkLocalNotiTime() {
+  if (Notification.permission !== 'granted') return;
   const now = new Date();
-  const target = new Date();
-  target.setHours(h, 0, 0, 0);
-  let delay = target.getTime() - now.getTime();
-  if (delay <= 0) delay += 86400000;
-  const id = setTimeout(() => {
-    const idx = _notiTimers.indexOf(id);
-    if (idx !== -1) _notiTimers.splice(idx, 1);
-    _fireScheduledNotification(h);
-    _scheduleOneHour(h);
-  }, delay);
-  _notiTimers.push(id);
+  const h = now.getHours();
+  const m = now.getMinutes();
+  // 정각 기준 5분 이내에만 발송 (중복 방지)
+  if (!NOTI_HOURS.includes(h) || m > 4) return;
+  const today = localToday();
+  const key = 'noti_sent_' + today + '_' + h;
+  if (localStorage.getItem(key)) return; // 오늘 이 시간 이미 발송함
+  localStorage.setItem(key, '1');
+  _fireScheduledNotification(h);
 }
 
 function _fireScheduledNotification(hour) {
