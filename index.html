@@ -873,12 +873,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 .mtbr-cell .sub{font-family:var(--mono);font-size:11px;color:var(--muted);}
 /* ── 연간 점검 계획표 ── */
 .annual-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border);}
-.annual-table{border-collapse:collapse;min-width:700px;width:100%;font-size:12px;}
+.annual-table{border-collapse:collapse;min-width:600px;width:100%;font-size:12px;}
 .annual-table th{background:var(--card2);border:1px solid var(--border2);padding:7px 4px;text-align:center;font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--muted2);white-space:nowrap;}
-.annual-table th.eq-col{text-align:left;padding-left:10px;min-width:130px;position:sticky;left:0;z-index:2;}
+.annual-table th.eq-col{text-align:left;padding-left:10px;min-width:100px;position:sticky;left:0;z-index:2;background:var(--card2);box-shadow:2px 0 5px rgba(0,0,0,.08);}
 .annual-table th.cur-month{background:#f59e0b18;color:var(--amber);}
 .annual-table td{border:1px solid var(--border);padding:6px 4px;text-align:center;font-family:var(--mono);font-size:11px;white-space:nowrap;}
-.annual-table td.eq-name{text-align:left;padding:7px 10px;font-size:12px;font-weight:600;background:var(--card);position:sticky;left:0;z-index:1;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
+.annual-table td.eq-name{text-align:left;padding:7px 10px;font-size:12px;font-weight:600;background:var(--card);position:sticky;left:0;z-index:1;white-space:nowrap;box-shadow:2px 0 5px rgba(0,0,0,.08);}
 .annual-table td.cycle-col{color:var(--muted);font-size:11px;background:var(--card);}
 .ac-done{background:#10b98115;color:var(--green);}
 .ac-partial{background:#f59e0b18;color:var(--amber);}
@@ -887,6 +887,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 .ac-none{color:var(--border2);}
 .annual-stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;}
 .annual-stat{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:12px;}
+@media(max-width:640px){
+  .annual-table th{padding:5px 3px;font-size:10px;}
+  .annual-table td{padding:5px 3px;font-size:10px;}
+  .annual-table td.eq-name{font-size:11px;padding:6px 8px;}
+  .annual-table th.cycle-col,.annual-table td.cycle-col{display:none;}
+}
 </style>
 </head>
 <body>
@@ -4805,15 +4811,19 @@ function renderAnnualPlan(){
 
   const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
   let cntDone=0,cntPartial=0,cntMiss=0;
+  const isMobile=window.innerWidth<640;
+  const MON_LABEL=isMobile
+    ?['1','2','3','4','5','6','7','8','9','10','11','12']
+    :['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
   // 헤더
   let html='<table class="annual-table"><thead><tr>';
-  html+=`<th class="eq-col">장비명</th><th>주기</th>`;
+  html+=`<th class="eq-col">장비명</th><th class="cycle-col">주기</th>`;
   for(let m=0;m<12;m++){
     const isCur=today.getFullYear()===year&&today.getMonth()===m;
-    html+=`<th${isCur?' class="cur-month"':''}>${MON[m]}</th>`;
+    html+=`<th${isCur?' class="cur-month"':''}>${MON_LABEL[m]}</th>`;
   }
-  html+='<th>연간합계</th></tr></thead><tbody>';
+  html+='<th>합계</th></tr></thead><tbody>';
 
   eqs.forEach(eq=>{
     const cycle=parseInt(eq.cycle)||30;
