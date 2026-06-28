@@ -1357,7 +1357,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="sec">
     <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>점검 완료 기록</span>
-      <button onclick="exportInspReport()" style="background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);border-radius:8px;padding:6px 12px;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:5px;"><span>⬇</span> 보고서</button>
+      <div style="display:flex;gap:6px;">
+        <button onclick="exportInspReport()" style="background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);border-radius:8px;padding:6px 12px;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:5px;"><span>⬇</span> HTML</button>
+        <button onclick="exportInspCSV()" style="background:linear-gradient(135deg,#3b82f620,#3b82f608);border:1px solid #3b82f640;color:var(--blue);border-radius:8px;padding:6px 12px;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:5px;"><span>⬇</span> CSV</button>
+      </div>
     </div>
 
     <!-- 월별/장비별 필터 -->
@@ -1620,6 +1623,8 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div class="share-note">→ 장비별 정비일지 + 부품사용 내역</div>
     <button class="share-btn" style="background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);" onclick="exportInspReport()"><span>✅</span> 점검이력 보고서 (HTML)</button>
     <div class="share-note">→ 공압·전기·외관·F/Proof 색상 구분 보고서 (Excel·인쇄 가능)</div>
+    <button class="share-btn" style="background:linear-gradient(135deg,#3b82f620,#3b82f608);border:1px solid #3b82f640;color:var(--blue);" onclick="exportInspCSV()"><span>📋</span> 점검이력 CSV</button>
+    <div class="share-note">→ 장비별 점검 항목·결과·판정 데이터 (Excel 편집 가능)</div>
     <button class="share-btn sb-blue" onclick="exportPartsCSV()"><span>📦</span> 부품재고 CSV</button>
     <div class="share-note">→ 현재 재고 현황 + 안전재고 기준</div>
     <button class="share-btn sb-green" onclick="exportInboundCSV()"><span>📥</span> 입고이력 CSV</button>
@@ -1670,6 +1675,8 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="sec">
     <button class="share-btn sb-green" onclick="exportAnnualPlan()"><span>📥</span> 고객용 연간 계획표 다운로드</button>
     <div class="share-note">→ 색상 구분 HTML 파일 (인쇄·이메일 첨부 가능)</div>
+    <button class="share-btn" style="margin-top:8px;background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);" onclick="exportAnnualPlanCSV()"><span>📊</span> 연간계획 점검이력 CSV</button>
+    <div class="share-note">→ 장비별 월간 점검 실적 CSV (Excel 편집 가능)</div>
   </div>
 </div>
 
@@ -2059,6 +2066,7 @@ function save(){
 }
 
 // ── 탭 ──
+let _gotoTabFromPop=false;
 function gotoTab(n){
   ['eq','maint','parts','calib','stats','insp','annual','bom','event','share','req'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active',t===n);
@@ -2074,7 +2082,14 @@ function gotoTab(n){
   if(n==='event') renderEvents();
   if(n==='req')   {initReqForm();renderReqLog();}
   checkAlarms();
+  if(!_gotoTabFromPop) history.pushState({tab:n},'','#'+n);
 }
+window.addEventListener('popstate',function(e){
+  const tab=(e.state&&e.state.tab)||'req';
+  _gotoTabFromPop=true;
+  gotoTab(tab);
+  _gotoTabFromPop=false;
+});
 
 // ── 모달 ──
 function openModal(id){document.getElementById(id).classList.add('show');}
@@ -4835,6 +4850,44 @@ function renderAnnualPlan(){
     <div class="annual-stat"><span style="color:var(--red);">❌ 미실시</span><span style="font-weight:700;">${cntMiss}건</span></div>`;
 }
 
+function exportAnnualPlanCSV(){
+  const year=_annualYear;
+  const today=new Date();
+  const MON=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
+  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='\ub2e8\uc885');
+  if(!eqs.length){toast('\uc7a5\ube44 \uc5c6\uc74c','w');return;}
+  const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
+  const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const header=[esc('\uc7a5\ube44\uba85'),esc('\uc8fc\uae30(\uc77c)'),...MON.map(m=>esc(m)),esc('\uc5f0\uac04\ud569\uacc4(\uc2e4/\ubaa9\ud45c)'),esc('\ub2ec\uc131\ub960(%)')].join(',');
+  const rows=[esc(year+'\ub144 \uc124\ube44 \uc5f0\uac04 \uc810\uac80 \uacc4\ud68d\ud45c'),'',header];
+  eqs.forEach(eq=>{
+    const cycle=parseInt(eq.cycle)||30;
+    let yearDone=0,yearExp=0;
+    const cells=[];
+    for(let m=0;m<12;m++){
+      const monthStr=year+'-'+String(m+1).padStart(2,'0');
+      const dim=new Date(year,m+1,0).getDate();
+      const exp=Math.max(0,Math.round(dim/cycle));
+      const done=yearInsps.filter(d=>d.eqId==eq.id&&d.date.startsWith(monthStr)).length;
+      const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
+      const isPast=today.getFullYear()>year||(today.getFullYear()===year&&today.getMonth()>m);
+      yearDone+=done; yearExp+=exp;
+      let txt;
+      if(exp===0) txt='\ud574\ub2f9\uc5c6\uc74c';
+      else if(isFut) txt='\uacc4\ud68d';
+      else if(done>=exp) txt='\uc644\ub8cc('+done+'\ud68c)';
+      else if(done>0) txt='\ubd80\ubd84('+done+'/'+exp+')';
+      else txt='\ubbf8\uc2e4\uc2dc';
+      cells.push(esc(txt));
+    }
+    const rate=yearExp>0?Math.round(yearDone/yearExp*100):null;
+    const summary=yearExp>0?(yearDone+'/'+yearExp+'\ud68c'):yearDone+'\ud68c';
+    rows.push([esc(eq.name),esc(cycle),...cells,esc(summary),esc(rate!==null?rate+'%':'')].join(','));
+  });
+  download('\uc5f0\uac04\uc810\uac80\uacc4\ud68dCSV_'+year+'\ub144_'+localToday()+'.csv','\ufeff'+rows.join('\n'),'text/csv');
+  toast(year+'\ub144 \uc5f0\uac04 \uc810\uac80 \uacc4\ud68d CSV \ub2e4\uc6b4\ub85c\ub4dc \uc644\ub8cc');
+}
+
 function exportAnnualPlan(){
   const year=_annualYear;
   const today=new Date();
@@ -5375,6 +5428,8 @@ function _fireCatchupNotification() {
 
 // ── 초기화 ──
 renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();initReqForm();
+// 초기 히스토리 상태 설정 (모바일 뒤로가기 대응)
+{const _initTab=document.querySelector('.tab.active')?.id?.replace('tab-','')||'req';history.replaceState({tab:_initTab},'','#'+_initTab);}
 // 알림 활성화 상태면 로컬 스케줄러 시작 + 놓친 알림 즉시 확인
 if (localStorage.getItem('fcm_enabled') === '1') {
   window.scheduleLocalNotifications?.();
