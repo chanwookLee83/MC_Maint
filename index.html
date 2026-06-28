@@ -4817,18 +4817,20 @@ function renderAnnualPlan(){
 
   eqs.forEach(eq=>{
     const cycle=parseInt(eq.cycle)||30;
+    const yearlyCount=Math.max(1,Math.round(365/cycle));
     let yearDone=0,yearExp=0;
     let cells='';
     for(let m=0;m<12;m++){
       const monthStr=year+'-'+String(m+1).padStart(2,'0');
-      const dim=new Date(year,m+1,0).getDate();
-      const exp=Math.max(1,Math.round(dim/cycle));
+      const isTarget=Math.floor(m*yearlyCount/12)<Math.floor((m+1)*yearlyCount/12);
+      const exp=isTarget?1:0;
       const done=yearInsps.filter(d=>d.eqId==eq.id&&d.date.startsWith(monthStr)).length;
       const isPast=today.getFullYear()>year||(today.getFullYear()===year&&today.getMonth()>m);
       const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
       yearDone+=done; yearExp+=exp;
       let cls,txt;
-      if(isFut){cls='ac-plan';txt='· 계획';}
+      if(exp===0){cls='ac-none';txt='—';}
+      else if(isFut){cls='ac-plan';txt='· 계획';}
       else if(done>=exp){cls='ac-done';txt='✅ '+done+'회';cntDone++;}
       else if(done>0){cls='ac-partial';txt='⚠ '+done+'/'+exp;cntPartial++;}
       else{cls='ac-miss';txt='❌ 미실시';if(isPast)cntMiss++;}
@@ -4861,18 +4863,19 @@ function exportAnnualPlanCSV(){
   const rows=[esc(year+'\ub144 \uc124\ube44 \uc5f0\uac04 \uc810\uac80 \uacc4\ud68d\ud45c'),'',header];
   eqs.forEach(eq=>{
     const cycle=parseInt(eq.cycle)||30;
+    const yearlyCount=Math.max(1,Math.round(365/cycle));
     let yearDone=0,yearExp=0;
     const cells=[];
     for(let m=0;m<12;m++){
       const monthStr=year+'-'+String(m+1).padStart(2,'0');
-      const dim=new Date(year,m+1,0).getDate();
-      const exp=Math.max(1,Math.round(dim/cycle));
+      const isTarget=Math.floor(m*yearlyCount/12)<Math.floor((m+1)*yearlyCount/12);
+      const exp=isTarget?1:0;
       const done=yearInsps.filter(d=>d.eqId==eq.id&&d.date.startsWith(monthStr)).length;
       const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
-      const isPast=today.getFullYear()>year||(today.getFullYear()===year&&today.getMonth()>m);
       yearDone+=done; yearExp+=exp;
       let txt;
-      if(isFut) txt='\uacc4\ud68d';
+      if(exp===0) txt='\u2014';
+      else if(isFut) txt='\uacc4\ud68d';
       else if(done>=exp) txt='\uc644\ub8cc('+done+'\ud68c)';
       else if(done>0) txt='\ubd80\ubd84('+done+'/'+exp+')';
       else txt='\ubbf8\uc2e4\uc2dc';
@@ -4897,16 +4900,18 @@ function exportAnnualPlan(){
   let rows='';
   eqs.forEach(eq=>{
     const cycle=parseInt(eq.cycle)||30;
+    const yearlyCount=Math.max(1,Math.round(365/cycle));
     let cells='',tot=0,exp=0;
     for(let m=0;m<12;m++){
       const ms=year+'-'+String(m+1).padStart(2,'0');
-      const dim=new Date(year,m+1,0).getDate();
-      const e=Math.max(1,Math.round(dim/cycle));
+      const isTarget=Math.floor(m*yearlyCount/12)<Math.floor((m+1)*yearlyCount/12);
+      const e=isTarget?1:0;
       const d=yearInsps.filter(i=>i.eqId==eq.id&&i.date.startsWith(ms)).length;
       const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
       tot+=d; exp+=e;
       let bg,color,txt;
-      if(isFut){bg='#f8fafc';color='#94a3b8';txt='계획';}
+      if(e===0){bg='#f8fafc';color='#cbd5e1';txt='―';}
+      else if(isFut){bg='#f8fafc';color='#94a3b8';txt='계획';}
       else if(d>=e){bg='#f0fdf4';color='#15803d';txt='✓ '+d+'회';}
       else if(d>0){bg='#fffbeb';color='#92400e';txt='△ '+d+'/'+e;}
       else{bg='#fff1f2';color='#b91c1c';txt='미실시';}
