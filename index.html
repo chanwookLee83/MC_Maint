@@ -79,15 +79,17 @@ async function pollFirestore() {
 
     const serverDb = JSON.parse(data.db);
     if (typeof db !== 'undefined') {
-      db.eqs      = serverDb.eqs      || [];
-      db.maints   = serverDb.maints   || [];
-      db.parts    = serverDb.parts    || [];
-      db.insps    = serverDb.insps    || [];
-      db.inbounds = serverDb.inbounds || [];
-      db.events   = serverDb.events   || [];
-      db.boms     = serverDb.boms     || [];
-      db.reqs     = serverDb.reqs     || [];
-      db.calibs   = serverDb.calibs   || [];
+      db.eqs       = serverDb.eqs       || [];
+      db.maints    = serverDb.maints    || [];
+      db.parts     = serverDb.parts     || [];
+      db.insps     = serverDb.insps     || [];
+      db.inbounds  = serverDb.inbounds  || [];
+      db.events    = serverDb.events    || [];
+      db.boms      = serverDb.boms      || [];
+      db.reqs      = serverDb.reqs      || [];
+      db.calibs    = serverDb.calibs    || [];
+      db.eqChk     = serverDb.eqChk     || {};
+      db.customChk = serverDb.customChk || {};
       localStorage.setItem('mms_v1', data.db);
 
       if (typeof renderEqList === 'function') {
@@ -3775,7 +3777,7 @@ function renderInspLog(){
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
           ${hasChk?`<button class="btn-sm bsm-b" onclick="toggleInspDetail(${i})">📋</button>`:''}
           <button class="btn-sm bsm-a" onclick="openInspEdit(${d.id||i})">✏️</button>
-          <button class="btn-sm bsm-r" onclick="deleteInsp(${i})">DEL</button>
+          <button class="btn-sm bsm-r" onclick="deleteInsp(${d.id||i})">DEL</button>
         </div>
       </div>
       ${hasChk?`<div class="insp-log-detail" id="inspDetail-${i}">${chkDetail}</div>`:''}
@@ -4000,8 +4002,6 @@ function populateInspChkEq(){
   const today=localToday();
   sel.innerHTML='<option value="">-- 장비 선택 --</option>';
   db.eqs.forEach(eq=>{
-    // 점검주기 미설정 장비 제외 (점검 장비 아님)
-    if(!eq.cycle) return;
     // 오늘 이미 점검 완료한 장비 제외
     const todayDone=db.insps.some(d=>d.eqId===eq.id&&d.date===today);
     if(todayDone) return;
@@ -4618,9 +4618,12 @@ function completeInsp(ri){
   db.insps.unshift({id:Date.now(),eqId:eq.id,eqName:eq.name,date:localToday(),worker:worker||'',note:note||''});
   save();renderInsp();checkAlarms();toast('점검 완료 기록: '+eq.name);
 }
-function deleteInsp(i){
+function deleteInsp(id){
   if(!confirm('점검 기록을 삭제할까요?'))return;
-  db.insps.splice(i,1);save();renderInsp();toast('삭제됨','w');
+  let idx=db.insps.findIndex(d=>d.id===id);
+  if(idx===-1) idx=id;
+  if(idx<0||idx>=db.insps.length)return;
+  db.insps.splice(idx,1);save();renderInsp();renderInspLog();populateInspFilters();toast('삭제됨','w');
 }
 
 // ══════ CSV 내보내기 ══════
