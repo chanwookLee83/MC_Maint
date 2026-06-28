@@ -1303,6 +1303,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
         <label class="flabel">점검 장비 선택</label>
         <div class="fselect-w"><select class="fselect" id="inspChkEq" onchange="onInspEqChange()"><option value="">-- 장비 선택 --</option></select></div>
       </div>
+      <!-- 지난 점검일 정보 -->
+      <div id="inspLastInspInfo" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:9px 12px;margin-bottom:12px;">
+        <div id="inspLastInspText" style="font-family:var(--mono);font-size:12px;line-height:1.7;"></div>
+      </div>
       <div class="frow" style="margin-bottom:12px;">
         <div class="field"><label class="flabel">점검일</label><input class="finput" id="inspChkDate" type="date"></div>
         <div class="field"><label class="flabel">점검자</label><div class="ac-wrap"><input class="finput" id="inspChkWorker" placeholder="이름" autocomplete="off" oninput="acShow('inspChkWorker','workers')"><div class="ac-list" id="ac-inspChkWorker"></div></div></div>
@@ -3666,7 +3670,9 @@ function drawTypeChart(filteredMaints){
 function renderInsp(){
   renderChkPanels();
   populateInspChkEq();
-  document.getElementById('inspChkDate').value=localToday();
+  // 날짜가 비어있을 때만 오늘로 초기화 (폴링 시 사용자 입력값 보호)
+  const _dateEl=document.getElementById('inspChkDate');
+  if(!_dateEl.value) _dateEl.value=localToday();
   // 필터 셀렉트 초기화
   populateInspFilters();
   renderInspLog();
@@ -3821,12 +3827,47 @@ function renderChkPanels(){
       </div>`).join('');
     return `<div class="chk-panel${ci===0?' active':''}" id="chk-${catMap[cat]}">${allBtns}${items}</div>`;
   }).join('');
+  // 폴링으로 DOM이 재생성될 때 기존 체크 상태 시각 복원
+  CHK_CATS.forEach(cat=>{
+    if(!chkState[cat])return;
+    for(let i=0;i<CHK_COUNTS[cat];i++){
+      const v=chkState[cat][i];
+      if(v) setChkState(cat,i,v);
+    }
+  });
 }
 
 let chkState={pn:{},el:{},vs:{},fp:{}};
 let _autoVerdictSet=false;
 
 function onInspEqChange(){
+  const _eqId=document.getElementById('inspChkEq').value;
+  // 지난 점검일 정보 업데이트
+  const _infoEl=document.getElementById('inspLastInspInfo');
+  const _textEl=document.getElementById('inspLastInspText');
+  if(_infoEl&&_textEl){
+    if(!_eqId){_infoEl.style.display='none';}
+    else{
+      const _eqObj=db.eqs.find(e=>String(e.id)===String(_eqId));
+      const _lastInsp=db.insps.filter(i=>String(i.eqId)===String(_eqId)).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+      const _cycle=_eqObj?.cycle||28;
+      if(!_lastInsp){
+        _textEl.innerHTML='🔔 지난 점검 기록 없음';
+        _textEl.style.color='var(--red)';
+      }else{
+        const _days=daysSince(_lastInsp.date);
+        const _remain=_cycle-_days;
+        const _nd=new Date(_lastInsp.date);
+        _nd.setDate(_nd.getDate()+_cycle);
+        const _nextStr=_nd.toISOString().slice(0,10);
+        const _dColor=_remain<=0?'var(--red)':_remain<=5?'var(--amber)':'var(--green)';
+        const _dLabel=_remain<=0?`D+${Math.abs(_remain)} 초과`:`D-${_remain}`;
+        _textEl.innerHTML=`📅 지난 점검: <b style="color:var(--amber)">${_lastInsp.date}</b>${_lastInsp.worker?' | 👤 '+_lastInsp.worker:''}<br>🗓 차기 예정: <b style="color:${_dColor}">${_nextStr}</b> <span style="color:${_dColor};font-weight:700;">(${_dLabel})</span>`;
+        _textEl.style.color='var(--text)';
+      }
+      _infoEl.style.display='block';
+    }
+  }
   renderChkPanels(); // 장비별 항목으로 패널 재구성
   resetChkList();
 }
@@ -4037,18 +4078,13 @@ function saveChkList(){
   const checkedItems=CHK_CATS.reduce((sum,cat)=>sum+Object.values(chkState[cat]).filter(v=>v).length,0);
   if(checkedItems===0){toast('체크 항목이 없습니다','w');return;}
 
-  // NG 항목 수집
+  // NG 항목 수집 - 실제 라벨 사용 (커스텀 항목 포함)
   const ngList=[];
   const catNames={pn:'공압',el:'전기',vs:'외관',fp:'F/Proof'};
-  const itemLabels={
-    pn:['공압 공급 압력','에어 필터/드레인','레귤레이터 설정값','배관/피팅 누기','실린더 동작/쿠션','솔레노이드밸브','루브리케이터 오일','진공발생기/패드'],
-    el:['전원 전압','NFB/차단기','제어반 청결/발열','단자대/커넥터','접지 저항','센서 신호','인버터/서보 알람','케이블 덕트'],
-    vs:['프레임/볼트','커버/가드','이물질/칩','오일/그리스 누유','표시등/HMI','벨트/체인','LM가이드/볼스크류','방진/방음재'],
-    fp:['비상정지(EMO)','안전도어 인터락','광전센서(라이트커튼)','과부하/과전류 보호','치구/지그 형상감지','클램프 미착감지','이중화센서 정합','알람/에러 이력']
-  };
   CHK_CATS.forEach(cat=>{
+    const _catData=getChkData(cat,eqId||undefined);
     for(let i=0;i<CHK_COUNTS[cat];i++){
-      if(chkState[cat][i]==='ng') ngList.push(catNames[cat]+': '+itemLabels[cat][i]);
+      if(chkState[cat][i]==='ng') ngList.push(catNames[cat]+': '+(_catData.labels[i]||'항목'+(i+1)));
     }
   });
 
@@ -4071,7 +4107,16 @@ function saveChkList(){
   renderInsp();
   checkAlarms();
   resetChkList();
-  toast('✅ 점검 완료 저장: '+eqObj.name);
+  // 점검 완료 후 차기 점검일 자동 설정 (장비 사이클 기준, 직접 수정 가능)
+  const _cycle=eqObj.cycle||28;
+  const _nextDt=new Date(date);
+  _nextDt.setDate(_nextDt.getDate()+_cycle);
+  const _nextDateStr=_nextDt.toISOString().slice(0,10);
+  document.getElementById('inspChkDate').value=_nextDateStr;
+  // 지난 점검일 표시 숨기기 (장비 선택 해제됨)
+  const _infoEl2=document.getElementById('inspLastInspInfo');
+  if(_infoEl2) _infoEl2.style.display='none';
+  toast('✅ 점검 완료: '+eqObj.name+' | 차기 점검일 '+_nextDateStr+' 로 설정');
 }
 
 // ══════ BOM (장비별 파트) ══════
