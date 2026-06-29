@@ -702,6 +702,10 @@ body.light .sec-title::after{background:#d4d9e2;}
 .chk-edit-label{font-size:13px;color:var(--text);}
 .chk-edit-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
 .chk-edit-del{background:#ef444415;border:1px solid #ef444430;color:var(--red);border-radius:7px;padding:5px 9px;font-family:var(--cond);font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;}
+#chkEditModal .frow{grid-template-columns:minmax(0,1fr);}
+#chkEditModal .field{min-width:0;}
+#chkEditModal #chkEditEq{padding-right:34px;text-overflow:ellipsis;}
+#chkEditModal #chkEditEqNote{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* ── 자동완성 ── */
 .insp-cat-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
@@ -2055,6 +2059,18 @@ if('serviceWorker' in navigator){
 // ── 유틸 ──
 function localToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function localNow(){const d=new Date();return localToday()+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function localDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function toPrevFridayIfWeekend(d){
+  const day=d.getDay();
+  if(day===6) d.setDate(d.getDate()-1);      // 토요일 -> 금요일
+  else if(day===0) d.setDate(d.getDate()-2); // 일요일 -> 금요일
+  return d;
+}
+function autoInspDate(baseDateStr, addDays=0){
+  const d=baseDateStr?new Date(baseDateStr):new Date();
+  if(addDays) d.setDate(d.getDate()+addDays);
+  return localDateStr(toPrevFridayIfWeekend(d));
+}
 function fmtCost(n){return'₩'+Number(n||0).toLocaleString();}
 function diffHours(s,e){if(!s||!e)return 0;return Math.max(0,((new Date(e)-new Date(s))/3600000));}
 function daysSince(d){if(!d)return null;return Math.floor((Date.now()-new Date(d))/(86400000));}
@@ -3672,7 +3688,7 @@ function renderInsp(){
   populateInspChkEq();
   // 날짜가 비어있을 때만 오늘로 초기화 (폴링 시 사용자 입력값 보호)
   const _dateEl=document.getElementById('inspChkDate');
-  if(!_dateEl.value) _dateEl.value=localToday();
+  if(!_dateEl.value) _dateEl.value=autoInspDate();
   // 필터 셀렉트 초기화
   populateInspFilters();
   renderInspLog();
@@ -4109,9 +4125,7 @@ function saveChkList(){
   resetChkList();
   // 점검 완료 후 차기 점검일 자동 설정 (장비 사이클 기준, 직접 수정 가능)
   const _cycle=eqObj.cycle||28;
-  const _nextDt=new Date(date);
-  _nextDt.setDate(_nextDt.getDate()+_cycle);
-  const _nextDateStr=_nextDt.toISOString().slice(0,10);
+  const _nextDateStr=autoInspDate(date,_cycle);
   document.getElementById('inspChkDate').value=_nextDateStr;
   // 지난 점검일 표시 숨기기 (장비 선택 해제됨)
   const _infoEl2=document.getElementById('inspLastInspInfo');
@@ -4317,6 +4331,7 @@ function openChkEdit(){
   // 점검화면에서 선택 중인 장비를 모달 기본값으로 설정
   const inspEqId = document.getElementById('inspChkEq')?.value || '';
   const eqSel = document.getElementById('chkEditEq');
+  const noteEl = document.getElementById('chkEditEqNote');
   if(eqSel){
     eqSel.innerHTML = '<option value="">🌐 기본값 (전체 장비 공통)</option>';
     db.eqs.filter(e=>e.status!=='단종').forEach(eq=>{
@@ -4324,14 +4339,48 @@ function openChkEdit(){
       eqSel.innerHTML += `<option value="${eq.id}">${eq.name}${hasOwn?' ✏️':''}</option>`;
     });
     if(inspEqId) eqSel.value = inspEqId;
+    bindLongPressToast(eqSel, ()=>{
+      const opt=eqSel.options[eqSel.selectedIndex];
+      return opt?opt.textContent.trim():'';
+    });
+  }
+  if(noteEl){
+    bindLongPressToast(noteEl, ()=>noteEl.textContent.trim());
   }
   openModal('chkEditModal');
   onChkEditEqChange();
 }
 
+function bindLongPressToast(el, getMsg){
+  if(!el || el.dataset.lpToastBound==='1') return;
+  let lpTimer=null;
+  const clearLpTimer=()=>{
+    if(lpTimer){
+      clearTimeout(lpTimer);
+      lpTimer=null;
+    }
+  };
+  el.addEventListener('touchstart',()=>{
+    clearLpTimer();
+    lpTimer=setTimeout(()=>{
+      const msg=typeof getMsg==='function'?getMsg():getMsg;
+      if(msg) toast(msg,'ok');
+    },550);
+  },{passive:true});
+  el.addEventListener('touchend',clearLpTimer,{passive:true});
+  el.addEventListener('touchcancel',clearLpTimer,{passive:true});
+  el.addEventListener('touchmove',clearLpTimer,{passive:true});
+  el.dataset.lpToastBound='1';
+}
+
 function onChkEditEqChange(){
-  const eqId = document.getElementById('chkEditEq')?.value || '';
+  const eqSel = document.getElementById('chkEditEq');
+  const eqId = eqSel?.value || '';
   const noteEl = document.getElementById('chkEditEqNote');
+  if(eqSel){
+    const opt = eqSel.options[eqSel.selectedIndex];
+    eqSel.title = opt ? opt.textContent : '';
+  }
   if(noteEl){
     if(eqId){
       const hasOwn = db.eqChk[eqId] && Object.keys(db.eqChk[eqId]).length > 0;
@@ -4341,6 +4390,7 @@ function onChkEditEqChange(){
       noteEl.textContent = '모든 장비에 공통으로 적용되는 기본 점검항목입니다';
       noteEl.style.color = 'var(--muted)';
     }
+    noteEl.title = noteEl.textContent;
   }
   renderChkEditList();
 }
