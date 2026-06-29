@@ -62,7 +62,7 @@ self.addEventListener('message', event => {
 });
 
 // ── 캐시 (버전 올림) ──
-const CACHE = 'mms-v75';
+const CACHE = 'mms-v76';
 const ASSETS = [
   './index.html',
   './manifest.json',
