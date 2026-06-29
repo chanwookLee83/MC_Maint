@@ -4883,7 +4883,8 @@ function exportInspReport(){
           const def=getChkData(cat,d.eqId);
           Object.entries(d.chk[cat]).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).forEach(([idx,val])=>{
             const i=parseInt(idx);
-            items.push({cat,label:def.labels[i]||'항목'+(i+1),sub:def.subs[i]||'',result:val});
+            if(!def.labels[i]) return;
+            items.push({cat,label:def.labels[i],sub:def.subs[i]||'',result:val});
           });
         });
       }
@@ -5154,8 +5155,9 @@ function exportInspCSV(){
             .sort((a,b)=>parseInt(a[0])-parseInt(b[0]))
             .forEach(([idx,val])=>{
               const i=parseInt(idx);
+              if(!def.labels[i]) return;
               items.push({
-                label:catPrefix[cat]+' '+(def.labels[i]||'항목'+(i+1)),
+                label:catPrefix[cat]+' '+def.labels[i],
                 sub:  def.subs[i]||'',
                 result:val==='ok'?'OK':val==='ng'?'NG':'-'
               });
