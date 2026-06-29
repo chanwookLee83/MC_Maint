@@ -4452,24 +4452,73 @@ function cancelChkEdit(cat,i){
   document.getElementById('chk-view-'+cat+'-'+i).style.display='block';
   document.getElementById('chk-form-'+cat+'-'+i).style.display='none';
 }
+// 목록 수정 시 영향받는 점검 기록 필터
+function _affectedInsps(cat, eqId){
+  if(eqId) return db.insps.filter(r=>r.eqId==eqId);
+  // 전체 기본값 수정: 장비별 전용 항목이 없는 기록만 영향받음
+  return db.insps.filter(r=>!(db.eqChk[r.eqId]&&db.eqChk[r.eqId][cat]));
+}
+// 항목 삭제 시 기존 점검기록 자동 업데이트
+function applyChkDeletion(cat, idx, eqId, deletedLabel){
+  const catName={pn:'공압',el:'전기',vs:'외관',fp:'F/Proof'}[cat];
+  let count=0;
+  _affectedInsps(cat, eqId).forEach(rec=>{
+    if(!rec.chk||!rec.chk[cat]) return;
+    const catChk=rec.chk[cat];
+    const hadValue=!!catChk[idx];
+    // 삭제된 인덱스 제거 후 나머지 인덱스 한 칸씩 당김
+    const newCatChk={};
+    Object.keys(catChk).map(Number).sort((a,b)=>a-b).forEach(k=>{
+      if(k<idx) newCatChk[k]=catChk[k];
+      else if(k>idx) newCatChk[k-1]=catChk[k];
+    });
+    rec.chk[cat]=newCatChk;
+    if(rec.totalItems!=null) rec.totalItems=Math.max(0,rec.totalItems-1);
+    if(rec.checkedItems!=null&&hadValue) rec.checkedItems=Math.max(0,rec.checkedItems-1);
+    // ngList에서 삭제된 항목 제거
+    if(rec.ngList&&deletedLabel){
+      const entry=catName+': '+deletedLabel;
+      const ni=rec.ngList.indexOf(entry);
+      if(ni!==-1) rec.ngList.splice(ni,1);
+    }
+    count++;
+  });
+  return count;
+}
+// 항목 이름 수정 시 기존 점검기록 ngList 자동 업데이트
+function applyChkRename(cat, idx, eqId, oldLabel, newLabel){
+  if(oldLabel===newLabel) return 0;
+  const catName={pn:'공압',el:'전기',vs:'외관',fp:'F/Proof'}[cat];
+  let count=0;
+  _affectedInsps(cat, eqId).forEach(rec=>{
+    if(!rec.ngList) return;
+    const oi=rec.ngList.indexOf(catName+': '+oldLabel);
+    if(oi!==-1){rec.ngList[oi]=catName+': '+newLabel;count++;}
+  });
+  return count;
+}
 function saveChkItem(cat,i){
   const label=document.getElementById('chk-inp-label-'+cat+'-'+i).value.trim();
   const sub=document.getElementById('chk-inp-sub-'+cat+'-'+i).value.trim();
   if(!label){toast('항목명을 입력해 주세요','w');return;}
   const eqId=document.getElementById('chkEditEq')?.value||'';
   const data=getChkData(cat, eqId||undefined);
+  const oldLabel=data.labels[i];
+  const renamed=applyChkRename(cat,i,eqId||undefined,oldLabel,label);
   data.labels[i]=label;
   data.subs[i]=sub;
   saveChkData(cat,data,eqId||undefined);
-  toast('✅ 수정 완료');
+  toast(renamed>0?`✅ 수정 완료 · 기존 점검기록 ${renamed}건 NG목록 업데이트`:'✅ 수정 완료');
 }
 function deleteChkItem(cat,idx){
   const eqId=document.getElementById('chkEditEq')?.value||'';
   const data=getChkData(cat, eqId||undefined);
+  const deletedLabel=data.labels[idx];
+  const cnt=applyChkDeletion(cat,idx,eqId||undefined,deletedLabel);
   data.labels.splice(idx,1);
   data.subs.splice(idx,1);
   saveChkData(cat,data,eqId||undefined);
-  toast('삭제됨');
+  toast(cnt>0?`삭제됨 · 기존 점검기록 ${cnt}건 자동 업데이트`:'삭제됨');
 }
 
 function addChkItem(){
