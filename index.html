@@ -4890,7 +4890,7 @@ function exportInspReport(){
       }
       if(items.length===0){
         const vc=d.verdict==='OK'?'#15803d':d.verdict==='NG'?'#b91c1c':'#64748b';
-        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.date}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};">${d.verdict||''}</td></tr>`;
+        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;word-break:break-word;overflow-wrap:break-word;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.date}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};">${d.verdict||''}</td></tr>`;
         return;
       }
       items.forEach((it,idx)=>{
@@ -4899,7 +4899,7 @@ function exportInspReport(){
         const vc=d.verdict==='OK'?'#15803d':d.verdict==='NG'?'#b91c1c':'#64748b';
         const TD=`border:1px solid #e2e8f0;padding:6px 10px;background:${catBg[it.cat]};`;
         bodyHtml+=`<tr>
-          <td style="${TD}font-weight:${idx===0?'600':'400'};color:${idx===0?'inherit':'transparent'};">${idx===0?'▶ '+d.eqName:''}</td>
+          <td style="${TD}font-weight:${idx===0?'600':'400'};color:${idx===0?'inherit':'transparent'};word-break:break-word;overflow-wrap:break-word;">${idx===0?'▶ '+d.eqName:''}</td>
           <td style="${TD}color:${idx===0?'inherit':'transparent'};">${idx===0?d.date:''}</td>
           <td style="${TD}">${d.worker||''}</td>
           <td style="${TD}"><span style="color:${catFg[it.cat]};font-size:9pt;font-weight:700;margin-right:5px;">[${catLabel[it.cat]}]</span>${it.label}</td>
@@ -4930,7 +4930,7 @@ table{border-collapse:collapse;width:100%;}
   <span><span class="lb" style="background:#f0fdf4;border:1px solid #bbf7d0;"></span>외관</span>
   <span><span class="lb" style="background:#f5f3ff;border:1px solid #ddd6fe;"></span>F/Proof</span>
 </div>
-<table><colgroup><col style="min-width:130px;"><col style="width:88px;"><col style="width:68px;"><col><col style="width:155px;"><col style="width:58px;"><col style="width:120px;"><col style="width:68px;"></colgroup>
+<table><colgroup><col style="width:200px;"><col style="width:88px;"><col style="width:68px;"><col><col style="width:155px;"><col style="width:58px;"><col style="width:120px;"><col style="width:68px;"></colgroup>
 <tbody>${bodyHtml}</tbody></table>
 <div class="footer">※ 본 보고서는 설비관리 시스템에서 자동 생성되었습니다.</div>
 </body></html>`;
