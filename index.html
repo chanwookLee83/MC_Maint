@@ -1413,7 +1413,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div class="card" style="border-top:2px solid var(--blue);">
 
       <div class="frow">
-        <div class="field"><label class="flabel">날짜 *</label><input class="finput" id="evDate" type="date"></div>
+        <div class="field"><label class="flabel">날짜 *</label><input class="finput" id="evDate" type="date" onchange="onEvStartChange()"></div>
         <div class="field"><label class="flabel">종료일 (선택)</label><input class="finput" id="evDateEnd" type="date"></div>
       </div>
 
@@ -1748,7 +1748,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="modal">
     <div class="modal-title">📅 일정 수정 <button class="modal-close" onclick="closeModal('evModal')">✕</button></div>
     <div class="frow">
-      <div class="field"><label class="flabel">날짜</label><input class="finput" id="eEvDate" type="date"></div>
+      <div class="field"><label class="flabel">날짜</label><input class="finput" id="eEvDate" type="date" onchange="onEEvStartChange()"></div>
       <div class="field"><label class="flabel">종료일</label><input class="finput" id="eEvDateEnd" type="date"></div>
     </div>
     <div class="field"><label class="flabel">제목</label><input class="finput" id="eEvTitle" autocomplete="off"></div>
@@ -4495,9 +4495,33 @@ function clearEventForm(){
   ['evDate','evDateEnd','evTitle','evOwner','evContent'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
-  document.getElementById('evDate').value=localToday();
+  const sd=document.getElementById('evDate');
+  sd.value=localToday();sd.dataset.prev=localToday();
+  document.getElementById('evDateEnd').min=localToday();
   document.getElementById('evCat').value='PM';
 }
+
+// ── 시작일 변경 시 종료일 자동 반영 (기간 유지) ──
+function _ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function _parseYmd(s){const p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);}
+function _syncEventEnd(startEl,endEl){
+  const start=startEl.value;
+  if(!start)return;
+  endEl.min=start;
+  const end=endEl.value;
+  if(!end){
+    endEl.value=start;
+  }else{
+    const base=startEl.dataset.prev||start;
+    let dur=Math.round((_parseYmd(end)-_parseYmd(base))/86400000);
+    if(dur<0)dur=0;
+    const nd=_parseYmd(start);nd.setDate(nd.getDate()+dur);
+    endEl.value=_ymd(nd);
+  }
+  startEl.dataset.prev=start;
+}
+function onEvStartChange(){_syncEventEnd(document.getElementById('evDate'),document.getElementById('evDateEnd'));}
+function onEEvStartChange(){_syncEventEnd(document.getElementById('eEvDate'),document.getElementById('eEvDateEnd'));}
 
 function toggleEvDone(id){
   const ev=db.events.find(e=>e.id===id);
@@ -4514,8 +4538,10 @@ let evEditId=null;
 function openEvEdit(id){
   evEditId=id;
   const ev=db.events.find(e=>e.id===id);if(!ev)return;
-  document.getElementById('eEvDate').value=ev.date;
-  document.getElementById('eEvDateEnd').value=ev.dateEnd||'';
+  const esd=document.getElementById('eEvDate');
+  esd.value=ev.date;esd.dataset.prev=ev.date;
+  const eed=document.getElementById('eEvDateEnd');
+  eed.value=ev.dateEnd||'';eed.min=ev.date||'';
   document.getElementById('eEvTitle').value=ev.title;
   document.getElementById('eEvCat').value=ev.cat||'PM';
   document.getElementById('eEvOwner').value=ev.owner||'';
@@ -5499,7 +5525,7 @@ if (localStorage.getItem('fcm_enabled') === '1') {
   }
 }
 // 일정 등록 날짜 기본값
-const evDateEl=document.getElementById('evDate');if(evDateEl)evDateEl.value=localToday();
+const evDateEl=document.getElementById('evDate');if(evDateEl){evDateEl.value=localToday();evDateEl.dataset.prev=localToday();const evEndEl=document.getElementById('evDateEnd');if(evEndEl)evEndEl.min=localToday();}
 document.getElementById('mStart').value=localNow();
 updateMaintSummary();
 
