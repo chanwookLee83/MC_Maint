@@ -14,14 +14,20 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // 앱이 백그라운드일 때 FCM 메시지 수신 → OS 알림 표시
+// data 페이로드를 우선 사용해 백그라운드 표시/탭이동을 항상 보장한다.
 messaging.onBackgroundMessage(payload => {
-  const { title, body } = payload.notification || {};
-  const data = payload.data || {};
-  return self.registration.showNotification(title || '설비 알림', {
-    body: body || '',
+  const n = payload.notification || {};
+  const d = payload.data || {};
+  const title = d.title || n.title || '설비 알림';
+  const body  = d.body  || n.body  || '';
+  return self.registration.showNotification(title, {
+    body: body,
     icon: './icon-192.png',
     badge: './icon-192.png',
-    data: data
+    vibrate: [200, 100, 200],
+    tag: d.tag || 'mms-push',
+    renotify: true,
+    data: d
   });
 });
 
@@ -62,7 +68,7 @@ self.addEventListener('message', event => {
 });
 
 // ── 캐시 (버전 올림) ──
-const CACHE = 'mms-v77';
+const CACHE = 'mms-v68';
 const ASSETS = [
   './index.html',
   './manifest.json',
