@@ -1432,6 +1432,9 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
             <option value="개선">💡 개선</option>
             <option value="공사">🏗 공사</option>
             <option value="공정문서">📄 공정문서</option>
+            <option value="신뢰성테스트">🔬 신뢰성테스트</option>
+            <option value="RUN&RATE">📈 RUN&RATE</option>
+            <option value="고객요청사항">🙋 고객요청사항</option>
             <option value="불량">⚠️ 불량</option>
             <option value="기타">📌 기타</option>
           </select></div>
@@ -1471,6 +1474,9 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
           <option value="개선">개선</option>
           <option value="공사">공사</option>
           <option value="공정문서">공정문서</option>
+          <option value="신뢰성테스트">신뢰성테스트</option>
+          <option value="RUN&RATE">RUN&RATE</option>
+          <option value="고객요청사항">고객요청사항</option>
           <option value="불량">불량</option>
           <option value="기타">기타</option>
         </select>
@@ -1771,6 +1777,9 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
           <option value="개선">💡 개선</option>
           <option value="공사">🏗 공사</option>
           <option value="공정문서">📄 공정문서</option>
+          <option value="신뢰성테스트">🔬 신뢰성테스트</option>
+          <option value="RUN&RATE">📈 RUN&RATE</option>
+          <option value="고객요청사항">🙋 고객요청사항</option>
           <option value="불량">⚠️ 불량</option>
           <option value="기타">📌 기타</option>
         </select></div>
@@ -4475,8 +4484,8 @@ function getChkItems(cat){
 }
 
 // ══════ 일정 관리 ══════
-const EV_CAT_COLOR={PM:'var(--amber)',교육:'#8b5cf6',회의:'#06b6d4',설비:'var(--green)',안전:'var(--red)',개선:'#10b981',공사:'#f97316',공정문서:'#14b8a6',불량:'#ef4444',기타:'var(--muted2)'};
-const EV_CAT_ICON={PM:'🔧',교육:'📚',회의:'💬',설비:'⚙️',안전:'🦺',개선:'💡',공사:'🏗',공정문서:'📄',불량:'⚠️',기타:'📌'};
+const EV_CAT_COLOR={PM:'var(--amber)',교육:'#8b5cf6',회의:'#06b6d4',설비:'var(--green)',안전:'var(--red)',개선:'#10b981',공사:'#f97316',공정문서:'#14b8a6',신뢰성테스트:'#ec4899',RUN&RATE:'#0ea5e9',고객요청사항:'#eab308',불량:'#ef4444',기타:'var(--muted2)'};
+const EV_CAT_ICON={PM:'🔧',교육:'📚',회의:'💬',설비:'⚙️',안전:'🦺',개선:'💡',공사:'🏗',공정문서:'📄',신뢰성테스트:'🔬',RUN&RATE:'📈',고객요청사항:'🙋',불량:'⚠️',기타:'📌'};
 
 function evDday(dateStr){
   const today=localToday();
