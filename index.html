@@ -4573,7 +4573,7 @@ function renderEvents(){
   const filter=document.getElementById('evFilter')?.value||'';
   const today=localToday();
 
-  let list=[...db.events].sort((a,b)=>a.date.localeCompare(b.date));
+  let list=[...db.events].sort((a,b)=>b.date.localeCompare(a.date));
 
   // 필터
   if(filter==='upcoming') list=list.filter(e=>!e.done&&e.date>=today);
