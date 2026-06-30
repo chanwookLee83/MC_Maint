@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+*.local
+
+# Lock files (functions deps resolved at deploy)
+package-lock.json
+
+# OS
+.DS_Store
+Thumbs.db

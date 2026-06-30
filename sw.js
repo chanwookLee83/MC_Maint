@@ -68,7 +68,7 @@ self.addEventListener('message', event => {
 });
 
 // ── 캐시 (버전 올림) ──
-const CACHE = 'mms-v80';
+const CACHE = 'mms-v81';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -89,15 +89,33 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  const url = e.request.url;
+  const req = e.request;
+  const url = req.url;
+
+  // 외부 API/SDK는 항상 네트워크
   if (url.includes('firestore.googleapis.com') ||
       url.includes('firebase') ||
       url.includes('gstatic.com') ||
       url.includes('googleapis.com')) {
-    e.respondWith(fetch(e.request));
+    e.respondWith(fetch(req));
     return;
   }
+
+  // HTML/네비게이션은 네트워크 우선 → 최신 화면을 항상 반영
+  // (오프라인일 때만 캐시로 폴백)
+  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
+    e.respondWith(
+      fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put('./index.html', copy));
+        return res;
+      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // 정적 자원은 캐시 우선
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    caches.match(req).then(r => r || fetch(req))
   );
 });
