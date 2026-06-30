@@ -702,10 +702,6 @@ body.light .sec-title::after{background:#d4d9e2;}
 .chk-edit-label{font-size:13px;color:var(--text);}
 .chk-edit-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
 .chk-edit-del{background:#ef444415;border:1px solid #ef444430;color:var(--red);border-radius:7px;padding:5px 9px;font-family:var(--cond);font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;}
-#chkEditModal .frow{grid-template-columns:minmax(0,1fr);}
-#chkEditModal .field{min-width:0;}
-#chkEditModal #chkEditEq{padding-right:34px;text-overflow:ellipsis;}
-#chkEditModal #chkEditEqNote{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* ── 자동완성 ── */
 .insp-cat-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
@@ -1734,7 +1730,6 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </button>
       <div id="reqStatus" style="font-size:13px;color:var(--muted);min-height:20px;margin-top:8px;text-align:center;font-family:var(--mono);"></div>
     </div>
-  </div>
 
   <div class="sec" style="margin-top:4px;">
     <div class="sec-title">의뢰 이력</div>
@@ -2059,18 +2054,6 @@ if('serviceWorker' in navigator){
 // ── 유틸 ──
 function localToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function localNow(){const d=new Date();return localToday()+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-function localDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function toPrevFridayIfWeekend(d){
-  const day=d.getDay();
-  if(day===6) d.setDate(d.getDate()-1);      // 토요일 -> 금요일
-  else if(day===0) d.setDate(d.getDate()-2); // 일요일 -> 금요일
-  return d;
-}
-function autoInspDate(baseDateStr, addDays=0){
-  const d=baseDateStr?new Date(baseDateStr):new Date();
-  if(addDays) d.setDate(d.getDate()+addDays);
-  return localDateStr(toPrevFridayIfWeekend(d));
-}
 function fmtCost(n){return'₩'+Number(n||0).toLocaleString();}
 function diffHours(s,e){if(!s||!e)return 0;return Math.max(0,((new Date(e)-new Date(s))/3600000));}
 function daysSince(d){if(!d)return null;return Math.floor((Date.now()-new Date(d))/(86400000));}
@@ -2242,7 +2225,7 @@ function checkAlarms(){
 
   // ── 장비 점검 알람 ──
   db.eqs.forEach(eq=>{
-    if(eq.status==='단종'||eq.status==='고장') return;
+    if(eq.status==='단종') return;
     const lastInsp=db.insps.filter(i=>i.eqId===eq.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
     const cycle=eq.cycle||30;
 
@@ -3688,7 +3671,7 @@ function renderInsp(){
   populateInspChkEq();
   // 날짜가 비어있을 때만 오늘로 초기화 (폴링 시 사용자 입력값 보호)
   const _dateEl=document.getElementById('inspChkDate');
-  if(!_dateEl.value) _dateEl.value=autoInspDate();
+  if(!_dateEl.value) _dateEl.value=localToday();
   // 필터 셀렉트 초기화
   populateInspFilters();
   renderInspLog();
@@ -4016,7 +3999,7 @@ function renderInspBanner(){
   const items=[];
 
   db.eqs.forEach(eq=>{
-    if(eq.status==='단종'||eq.status==='고장') return;
+    if(eq.status==='단종') return;
     const lastInsp=db.insps.filter(i=>i.eqId===eq.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
     const cycle=eq.cycle||30;
 
@@ -4062,8 +4045,8 @@ function populateInspChkEq(){
     // 오늘 이미 점검 완료한 장비 제외
     const todayDone=db.insps.some(d=>d.eqId===eq.id&&d.date===today);
     if(todayDone) return;
-    // 단종·고장 장비 제외
-    if(eq.status==='단종'||eq.status==='고장') return;
+    // 단종 장비 제외
+    if(eq.status==='단종') return;
     // 상태 표시
     const lastInsp=db.insps.filter(i=>i.eqId===eq.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
     const cycle=eq.cycle||30;
@@ -4074,6 +4057,7 @@ function populateInspChkEq(){
       if(remain<=0) suffix=` ⚠ D+${Math.abs(remain)}`;
       else if(remain<=5) suffix=` 📅 D-${remain}`;
     }
+    if(eq.status==='고장') suffix+=' 🔴';
     sel.innerHTML+=`<option value="${eq.id}">${eq.name}${suffix}</option>`;
   });
   if(prev) sel.value=prev;
@@ -4124,7 +4108,9 @@ function saveChkList(){
   resetChkList();
   // 점검 완료 후 차기 점검일 자동 설정 (장비 사이클 기준, 직접 수정 가능)
   const _cycle=eqObj.cycle||28;
-  const _nextDateStr=autoInspDate(date,_cycle);
+  const _nextDt=new Date(date);
+  _nextDt.setDate(_nextDt.getDate()+_cycle);
+  const _nextDateStr=_nextDt.toISOString().slice(0,10);
   document.getElementById('inspChkDate').value=_nextDateStr;
   // 지난 점검일 표시 숨기기 (장비 선택 해제됨)
   const _infoEl2=document.getElementById('inspLastInspInfo');
@@ -4330,56 +4316,21 @@ function openChkEdit(){
   // 점검화면에서 선택 중인 장비를 모달 기본값으로 설정
   const inspEqId = document.getElementById('inspChkEq')?.value || '';
   const eqSel = document.getElementById('chkEditEq');
-  const noteEl = document.getElementById('chkEditEqNote');
   if(eqSel){
     eqSel.innerHTML = '<option value="">🌐 기본값 (전체 장비 공통)</option>';
-    db.eqs.filter(e=>e.status!=='단종'&&e.status!=='고장').forEach(eq=>{
+    db.eqs.filter(e=>e.status!=='단종').forEach(eq=>{
       const hasOwn = db.eqChk[eq.id] && Object.keys(db.eqChk[eq.id]).length > 0;
       eqSel.innerHTML += `<option value="${eq.id}">${eq.name}${hasOwn?' ✏️':''}</option>`;
     });
     if(inspEqId) eqSel.value = inspEqId;
-    bindLongPressToast(eqSel, ()=>{
-      const opt=eqSel.options[eqSel.selectedIndex];
-      return opt?opt.textContent.trim():'';
-    });
-  }
-  if(noteEl){
-    bindLongPressToast(noteEl, ()=>noteEl.textContent.trim());
   }
   openModal('chkEditModal');
   onChkEditEqChange();
 }
 
-function bindLongPressToast(el, getMsg){
-  if(!el || el.dataset.lpToastBound==='1') return;
-  let lpTimer=null;
-  const clearLpTimer=()=>{
-    if(lpTimer){
-      clearTimeout(lpTimer);
-      lpTimer=null;
-    }
-  };
-  el.addEventListener('touchstart',()=>{
-    clearLpTimer();
-    lpTimer=setTimeout(()=>{
-      const msg=typeof getMsg==='function'?getMsg():getMsg;
-      if(msg) toast(msg,'ok');
-    },550);
-  },{passive:true});
-  el.addEventListener('touchend',clearLpTimer,{passive:true});
-  el.addEventListener('touchcancel',clearLpTimer,{passive:true});
-  el.addEventListener('touchmove',clearLpTimer,{passive:true});
-  el.dataset.lpToastBound='1';
-}
-
 function onChkEditEqChange(){
-  const eqSel = document.getElementById('chkEditEq');
-  const eqId = eqSel?.value || '';
+  const eqId = document.getElementById('chkEditEq')?.value || '';
   const noteEl = document.getElementById('chkEditEqNote');
-  if(eqSel){
-    const opt = eqSel.options[eqSel.selectedIndex];
-    eqSel.title = opt ? opt.textContent : '';
-  }
   if(noteEl){
     if(eqId){
       const hasOwn = db.eqChk[eqId] && Object.keys(db.eqChk[eqId]).length > 0;
@@ -4389,7 +4340,6 @@ function onChkEditEqChange(){
       noteEl.textContent = '모든 장비에 공통으로 적용되는 기본 점검항목입니다';
       noteEl.style.color = 'var(--muted)';
     }
-    noteEl.title = noteEl.textContent;
   }
   renderChkEditList();
 }
@@ -4451,73 +4401,24 @@ function cancelChkEdit(cat,i){
   document.getElementById('chk-view-'+cat+'-'+i).style.display='block';
   document.getElementById('chk-form-'+cat+'-'+i).style.display='none';
 }
-// 목록 수정 시 영향받는 점검 기록 필터
-function _affectedInsps(cat, eqId){
-  if(eqId) return db.insps.filter(r=>r.eqId==eqId);
-  // 전체 기본값 수정: 장비별 전용 항목이 없는 기록만 영향받음
-  return db.insps.filter(r=>!(db.eqChk[r.eqId]&&db.eqChk[r.eqId][cat]));
-}
-// 항목 삭제 시 기존 점검기록 자동 업데이트
-function applyChkDeletion(cat, idx, eqId, deletedLabel){
-  const catName={pn:'공압',el:'전기',vs:'외관',fp:'F/Proof'}[cat];
-  let count=0;
-  _affectedInsps(cat, eqId).forEach(rec=>{
-    if(!rec.chk||!rec.chk[cat]) return;
-    const catChk=rec.chk[cat];
-    const hadValue=!!catChk[idx];
-    // 삭제된 인덱스 제거 후 나머지 인덱스 한 칸씩 당김
-    const newCatChk={};
-    Object.keys(catChk).map(Number).sort((a,b)=>a-b).forEach(k=>{
-      if(k<idx) newCatChk[k]=catChk[k];
-      else if(k>idx) newCatChk[k-1]=catChk[k];
-    });
-    rec.chk[cat]=newCatChk;
-    if(rec.totalItems!=null) rec.totalItems=Math.max(0,rec.totalItems-1);
-    if(rec.checkedItems!=null&&hadValue) rec.checkedItems=Math.max(0,rec.checkedItems-1);
-    // ngList에서 삭제된 항목 제거
-    if(rec.ngList&&deletedLabel){
-      const entry=catName+': '+deletedLabel;
-      const ni=rec.ngList.indexOf(entry);
-      if(ni!==-1) rec.ngList.splice(ni,1);
-    }
-    count++;
-  });
-  return count;
-}
-// 항목 이름 수정 시 기존 점검기록 ngList 자동 업데이트
-function applyChkRename(cat, idx, eqId, oldLabel, newLabel){
-  if(oldLabel===newLabel) return 0;
-  const catName={pn:'공압',el:'전기',vs:'외관',fp:'F/Proof'}[cat];
-  let count=0;
-  _affectedInsps(cat, eqId).forEach(rec=>{
-    if(!rec.ngList) return;
-    const oi=rec.ngList.indexOf(catName+': '+oldLabel);
-    if(oi!==-1){rec.ngList[oi]=catName+': '+newLabel;count++;}
-  });
-  return count;
-}
 function saveChkItem(cat,i){
   const label=document.getElementById('chk-inp-label-'+cat+'-'+i).value.trim();
   const sub=document.getElementById('chk-inp-sub-'+cat+'-'+i).value.trim();
   if(!label){toast('항목명을 입력해 주세요','w');return;}
   const eqId=document.getElementById('chkEditEq')?.value||'';
   const data=getChkData(cat, eqId||undefined);
-  const oldLabel=data.labels[i];
-  const renamed=applyChkRename(cat,i,eqId||undefined,oldLabel,label);
   data.labels[i]=label;
   data.subs[i]=sub;
   saveChkData(cat,data,eqId||undefined);
-  toast(renamed>0?`✅ 수정 완료 · 기존 점검기록 ${renamed}건 NG목록 업데이트`:'✅ 수정 완료');
+  toast('✅ 수정 완료');
 }
 function deleteChkItem(cat,idx){
   const eqId=document.getElementById('chkEditEq')?.value||'';
   const data=getChkData(cat, eqId||undefined);
-  const deletedLabel=data.labels[idx];
-  const cnt=applyChkDeletion(cat,idx,eqId||undefined,deletedLabel);
   data.labels.splice(idx,1);
   data.subs.splice(idx,1);
   saveChkData(cat,data,eqId||undefined);
-  toast(cnt>0?`삭제됨 · 기존 점검기록 ${cnt}건 자동 업데이트`:'삭제됨');
+  toast('삭제됨');
 }
 
 function addChkItem(){
@@ -4883,14 +4784,13 @@ function exportInspReport(){
           const def=getChkData(cat,d.eqId);
           Object.entries(d.chk[cat]).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).forEach(([idx,val])=>{
             const i=parseInt(idx);
-            if(!def.labels[i]) return;
-            items.push({cat,label:def.labels[i],sub:def.subs[i]||'',result:val});
+            items.push({cat,label:def.labels[i]||'항목'+(i+1),sub:def.subs[i]||'',result:val});
           });
         });
       }
       if(items.length===0){
         const vc=d.verdict==='OK'?'#15803d':d.verdict==='NG'?'#b91c1c':'#64748b';
-        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;word-break:break-word;overflow-wrap:break-word;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.date}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};">${d.verdict||''}</td></tr>`;
+        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.date}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};">${d.verdict||''}</td></tr>`;
         return;
       }
       items.forEach((it,idx)=>{
@@ -4899,7 +4799,7 @@ function exportInspReport(){
         const vc=d.verdict==='OK'?'#15803d':d.verdict==='NG'?'#b91c1c':'#64748b';
         const TD=`border:1px solid #e2e8f0;padding:6px 10px;background:${catBg[it.cat]};`;
         bodyHtml+=`<tr>
-          <td style="${TD}font-weight:${idx===0?'600':'400'};color:${idx===0?'inherit':'transparent'};word-break:break-word;overflow-wrap:break-word;">${idx===0?'▶ '+d.eqName:''}</td>
+          <td style="${TD}font-weight:${idx===0?'600':'400'};color:${idx===0?'inherit':'transparent'};">${idx===0?'▶ '+d.eqName:''}</td>
           <td style="${TD}color:${idx===0?'inherit':'transparent'};">${idx===0?d.date:''}</td>
           <td style="${TD}">${d.worker||''}</td>
           <td style="${TD}"><span style="color:${catFg[it.cat]};font-size:9pt;font-weight:700;margin-right:5px;">[${catLabel[it.cat]}]</span>${it.label}</td>
@@ -4930,7 +4830,7 @@ table{border-collapse:collapse;width:100%;}
   <span><span class="lb" style="background:#f0fdf4;border:1px solid #bbf7d0;"></span>외관</span>
   <span><span class="lb" style="background:#f5f3ff;border:1px solid #ddd6fe;"></span>F/Proof</span>
 </div>
-<table><colgroup><col style="width:200px;"><col style="width:88px;"><col style="width:68px;"><col><col style="width:155px;"><col style="width:58px;"><col style="width:120px;"><col style="width:68px;"></colgroup>
+<table><colgroup><col style="min-width:130px;"><col style="width:88px;"><col style="width:68px;"><col><col style="width:155px;"><col style="width:58px;"><col style="width:120px;"><col style="width:68px;"></colgroup>
 <tbody>${bodyHtml}</tbody></table>
 <div class="footer">※ 본 보고서는 설비관리 시스템에서 자동 생성되었습니다.</div>
 </body></html>`;
@@ -4952,7 +4852,7 @@ function renderAnnualPlan(){
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   document.getElementById('annualYearLabel').textContent=year+'년';
 
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
+  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종');
   const el=document.getElementById('annualTable');
   if(!eqs.length){el.innerHTML='<div class="empty"><span class="empty-icon">📋</span>점검 주기가 설정된 장비 없음</div>';return;}
 
@@ -5012,7 +4912,7 @@ function exportAnnualPlanCSV(){
   const year=_annualYear;
   const today=new Date();
   const MON=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='\ub2e8\uc885'&&e.status!=='\uace0\uc7a5');
+  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='\ub2e8\uc885');
   if(!eqs.length){toast('\uc7a5\ube44 \uc5c6\uc74c','w');return;}
   const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
   const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
@@ -5050,7 +4950,7 @@ function exportAnnualPlan(){
   const year=_annualYear;
   const today=new Date();
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
+  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종');
   if(!eqs.length){toast('장비 없음','w');return;}
   const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
 
@@ -5155,9 +5055,8 @@ function exportInspCSV(){
             .sort((a,b)=>parseInt(a[0])-parseInt(b[0]))
             .forEach(([idx,val])=>{
               const i=parseInt(idx);
-              if(!def.labels[i]) return;
               items.push({
-                label:catPrefix[cat]+' '+def.labels[i],
+                label:catPrefix[cat]+' '+(def.labels[i]||'항목'+(i+1)),
                 sub:  def.subs[i]||'',
                 result:val==='ok'?'OK':val==='ng'?'NG':'-'
               });
@@ -5265,7 +5164,7 @@ function _fireScheduledNotification(hour) {
     });
     const today = localToday();
     (db.eqs || []).forEach(eq => {
-      if (eq.status === '단종' || eq.status === '고장') return;
+      if (eq.status === '단종') return;
       const cycle = parseInt(eq.cycle) || 30;
       const eqInsps = (db.insps || []).filter(i => i.eqId === eq.id);
       if (!eqInsps.length) { issues.push(eq.name + ' 미점검'); return; }
@@ -5570,7 +5469,7 @@ function _fireCatchupNotification() {
     if ((p.qty ?? 0) <= (p.safe ?? 0)) issues.push(`[${p.pn}] ${p.name} 재고부족`);
   });
   (db.eqs || []).forEach(eq => {
-    if (eq.status === '단종' || eq.status === '고장') return;
+    if (eq.status === '단종') return;
     const cycle = parseInt(eq.cycle) || 30;
     const eqInsps = (db.insps || []).filter(i => i.eqId === eq.id);
     if (!eqInsps.length) { issues.push(`${eq.name} 미점검`); return; }
