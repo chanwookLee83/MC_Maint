@@ -4899,7 +4899,7 @@ function renderAnnualPlan(){
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   document.getElementById('annualYearLabel').textContent=year+'년';
 
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종');
+  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
   const el=document.getElementById('annualTable');
   if(!eqs.length){el.innerHTML='<div class="empty"><span class="empty-icon">📋</span>점검 주기가 설정된 장비 없음</div>';return;}
 
@@ -4959,7 +4959,7 @@ function exportAnnualPlanCSV(){
   const year=_annualYear;
   const today=new Date();
   const MON=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='\ub2e8\uc885');
+  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='\ub2e8\uc885'&&e.status!=='\uace0\uc7a5');
   if(!eqs.length){toast('\uc7a5\ube44 \uc5c6\uc74c','w');return;}
   const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
   const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
@@ -4997,7 +4997,7 @@ function exportAnnualPlan(){
   const year=_annualYear;
   const today=new Date();
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종');
+  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
   if(!eqs.length){toast('장비 없음','w');return;}
   const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
 
