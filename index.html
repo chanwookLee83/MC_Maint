@@ -3892,12 +3892,21 @@ function onInspEqChange(){
         _textEl.style.color='var(--text)';
       }
       _infoEl.style.display='block';
-      // 이번달 점검 기록이 존재하면 점검일을 오늘 날짜로 설정
+      // 점검일 자동 설정: 차기 예정 점검일이 이번달이거나 이미 지난(초과) 장비면 오늘 날짜,
+      // 그 외(예정일이 다음달 이후)면 차기 예정일을 표시. 미점검 장비는 오늘.
       const _dateEl=document.getElementById('inspChkDate');
       if(_dateEl){
-        const _thisMonth=localToday().slice(0,7);
-        const _hasThisMonth=db.insps.some(i=>String(i.eqId)===String(_eqId)&&(i.date||'').slice(0,7)===_thisMonth);
-        if(_hasThisMonth) _dateEl.value=localToday();
+        const _todayStr=localToday();
+        const _thisMonth=_todayStr.slice(0,7);
+        if(!_lastInsp){
+          _dateEl.value=_todayStr;
+        }else{
+          const _ndSet=new Date(_lastInsp.date);
+          _ndSet.setDate(_ndSet.getDate()+_cycle);
+          const _nextSet=_ndSet.toISOString().slice(0,10);
+          // 차기 예정일 월 <= 이번달  →  이번달 내 점검 대상이므로 오늘 날짜를 따라옴
+          _dateEl.value=(_nextSet.slice(0,7)<=_thisMonth)?_todayStr:_nextSet;
+        }
       }
     }
   }
