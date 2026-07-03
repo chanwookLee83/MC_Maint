@@ -92,6 +92,33 @@ async function pollFirestore() {
       db.customChk = serverDb.customChk || {};
       localStorage.setItem('mms_v1', data.db);
 
+      // ── 새 정비 의뢰 로컬 알림 (FCM 푸시 미도달 대비 폴백) ──
+      // 앱이 백그라운드/포그라운드로 살아있는 동안 폴링으로 새 의뢰를 감지하면
+      // OS 알림을 직접 띄운다. 최초 동기화분은 시드 처리하여 중복 알림을 막는다.
+      try {
+        if (!window._notifiedReqIds) window._notifiedReqIds = new Set();
+        const _firstReqSeed = !window._reqNotiSeeded;
+        const _canNotifyReq = ('Notification' in window) &&
+                              Notification.permission === 'granted' &&
+                              localStorage.getItem('fcm_enabled') === '1';
+        (db.reqs || []).forEach(r => {
+          if (!r || r.id == null) return;
+          if (_firstReqSeed) { window._notifiedReqIds.add(r.id); return; }
+          if (r.done || window._notifiedReqIds.has(r.id)) return;
+          window._notifiedReqIds.add(r.id);
+          if (_canNotifyReq && typeof window._showOsNotification === 'function') {
+            const _when = [r.reqDate, r.reqTime].filter(Boolean).join(' ');
+            const _who  = r.requester ? ' · ' + r.requester : '';
+            window._showOsNotification(
+              '🛠️ 정비 의뢰 접수',
+              (r.eqName || '설비') + _who + '\n' + (r.content || '') + (_when ? '\n(' + _when + ')' : ''),
+              { tab: 'req', tag: 'mms-req' }
+            );
+          }
+        });
+        window._reqNotiSeeded = true;
+      } catch(e) { console.warn('정비 의뢰 알림 처리 오류:', e); }
+
       if (typeof renderEqList === 'function') {
         renderEqList();
         renderMaintLog();
@@ -5384,6 +5411,8 @@ async function submitMaintenanceRequest() {
 
   if (!db.reqs) db.reqs = [];
   db.reqs.unshift({ id: reqId, eqName, reqDate, reqTime, content, requester, photos });
+  // 의뢰를 등록한 본인 기기에서는 폴백 알림이 다시 뜨지 않도록 미리 처리 표시
+  (window._notifiedReqIds = window._notifiedReqIds || new Set()).add(reqId);
   save();
 
   let fcmSent = false;
