@@ -2233,6 +2233,12 @@ function deleteCalib(id){
 
 // ── 알람 ──
 function toggleAlarm(){document.getElementById('alarmPanel').classList.toggle('open');}
+function goAlarm(tab,eqId){
+  const panel=document.getElementById('alarmPanel');
+  if(panel) panel.classList.remove('open');
+  if(tab==='insp'&&eqId){goInspWithEq(eqId);return;}
+  gotoTab(tab);
+}
 function checkAlarms(){
   const alarms=[];
   const today=localToday();
@@ -2240,7 +2246,7 @@ function checkAlarms(){
   // ── 안전재고 이하 ──
   db.parts.forEach(p=>{
     if(p.qty<=p.safe){
-      alarms.push({type:'critical',icon:'🔴',text:`[${p.pn}] ${p.name} 재고 부족`,sub:`현재 ${p.qty}개 / 안전재고 ${p.safe}개`});
+      alarms.push({type:'critical',icon:'🔴',text:`[${p.pn}] ${p.name} 재고 부족`,sub:`현재 ${p.qty}개 / 안전재고 ${p.safe}개`,tab:'parts'});
     }
   });
 
@@ -2252,7 +2258,7 @@ function checkAlarms(){
 
     // 한 번도 점검 안 한 장비
     if(!lastInsp){
-      alarms.push({type:'warning',icon:'🔔',text:`[${eq.name}] 미점검 장비`,sub:`점검 기록 없음 — 점검이 필요합니다`});
+      alarms.push({type:'warning',icon:'🔔',text:`[${eq.name}] 미점검 장비`,sub:`점검 기록 없음 — 점검이 필요합니다`,tab:'insp',eqId:eq.id});
       return;
     }
 
@@ -2262,9 +2268,9 @@ function checkAlarms(){
     const days=daysSince(lastInsp.date);
     const remain=cycle-days;
     if(remain<=0){
-      alarms.push({type:'critical',icon:'⚠️',text:`[${eq.name}] 점검 기한 초과`,sub:`마지막 점검 후 ${days}일 경과 (주기 ${cycle}일)`});
+      alarms.push({type:'critical',icon:'⚠️',text:`[${eq.name}] 점검 기한 초과`,sub:`마지막 점검 후 ${days}일 경과 (주기 ${cycle}일)`,tab:'insp',eqId:eq.id});
     } else if(remain<=5){
-      alarms.push({type:'warning',icon:'📅',text:`[${eq.name}] 점검 D-${remain}`,sub:`${lastInsp.date} 점검 후 ${days}일 경과`});
+      alarms.push({type:'warning',icon:'📅',text:`[${eq.name}] 점검 D-${remain}`,sub:`${lastInsp.date} 점검 후 ${days}일 경과`,tab:'insp',eqId:eq.id});
     }
   });
 
@@ -2275,10 +2281,10 @@ function checkAlarms(){
     const next=addCalibMonths(c.lastDate,c.cycleMon);
     const remain=Math.ceil((new Date(next)-new Date(today))/86400000);
     if(remain<=0){
-      alarms.push({type:'critical',icon:'📐',text:`[${c.name}] 검교정 기한 초과`,sub:`차기 검교정일: ${next} (${Math.abs(remain)}일 초과)`});
+      alarms.push({type:'critical',icon:'📐',text:`[${c.name}] 검교정 기한 초과`,sub:`차기 검교정일: ${next} (${Math.abs(remain)}일 초과)`,tab:'calib'});
       calibWarnCount++;
     } else if(remain<=10){
-      alarms.push({type:'warning',icon:'📐',text:`[${c.name}] 검교정 D-${remain}`,sub:`차기 검교정일: ${next}`});
+      alarms.push({type:'warning',icon:'📐',text:`[${c.name}] 검교정 D-${remain}`,sub:`차기 검교정일: ${next}`,tab:'calib'});
       calibWarnCount++;
     }
   });
@@ -2291,7 +2297,7 @@ function checkAlarms(){
 
   const el=document.getElementById('alarmList');
   el.innerHTML=alarms.length?alarms.map(a=>`
-    <div class="alarm-item ${a.type}">
+    <div class="alarm-item ${a.type}"${a.tab?` onclick="goAlarm('${a.tab}'${a.eqId!=null?','+a.eqId:''})" style="cursor:pointer;"`:''}>
       <div class="alarm-icon">${a.icon}</div>
       <div class="alarm-text">${a.text}</div>
       <div class="alarm-sub">${a.sub}</div>
@@ -3886,6 +3892,13 @@ function onInspEqChange(){
         _textEl.style.color='var(--text)';
       }
       _infoEl.style.display='block';
+      // 이번달 점검 기록이 존재하면 점검일을 오늘 날짜로 설정
+      const _dateEl=document.getElementById('inspChkDate');
+      if(_dateEl){
+        const _thisMonth=localToday().slice(0,7);
+        const _hasThisMonth=db.insps.some(i=>String(i.eqId)===String(_eqId)&&(i.date||'').slice(0,7)===_thisMonth);
+        if(_hasThisMonth) _dateEl.value=localToday();
+      }
     }
   }
   renderChkPanels(); // 장비별 항목으로 패널 재구성
@@ -4092,6 +4105,7 @@ function saveChkList(){
   if(!eqId){toast('장비를 선택해 주세요','w');return;}
   const eqObj=db.eqs.find(e=>e.id==eqId);
   if(!eqObj){toast('장비 없음','e');return;}
+  if(!worker){toast('등록자(점검자) 이름을 입력해 주세요','w');document.getElementById('inspChkWorker')?.focus();return;}
 
   // 전체 체크 수 확인
   const totalItems=Object.values(CHK_COUNTS).reduce((a,b)=>a+b,0);
