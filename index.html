@@ -1049,6 +1049,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
             <option value="프로그램">프로그램 수정</option>
             <option value="기구부">기구부 수정</option>
             <option value="개선">개선 수정</option>
+            <option value="대기">정비대기</option>
           </select></div>
         </div>
         <div class="field"><label class="flabel">작업자</label><div class="ac-wrap"><input class="finput" id="mWorker" placeholder="이름" autocomplete="off" oninput="acShow('mWorker','workers')"><div class="ac-list" id="ac-mWorker"></div></div></div>
@@ -1115,6 +1116,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <button class="filter-chip" data-val="프로그램" onclick="setMTypeFilter('프로그램')">프로그램</button>
       <button class="filter-chip" data-val="기구부" onclick="setMTypeFilter('기구부')">기구부</button>
       <button class="filter-chip" data-val="개선" onclick="setMTypeFilter('개선')">개선</button>
+      <button class="filter-chip" data-val="대기" onclick="setMTypeFilter('대기')">정비대기</button>
     </div>
     <!-- 날짜 필터 -->
     <div class="frow" style="margin-bottom:10px;">
@@ -2029,6 +2031,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
           <option value="프로그램">프로그램 수정</option>
           <option value="기구부">기구부 수정</option>
           <option value="개선">개선 수정</option>
+          <option value="대기">정비대기</option>
         </select></div>
       </div>
       <div class="field"><label class="flabel">작업자</label><div class="ac-wrap"><input class="finput" id="eMWorker" autocomplete="off" oninput="acShow('eMWorker','workers')"><div class="ac-list" id="ac-eMWorker"></div></div></div>
@@ -2902,6 +2905,12 @@ function saveMaint(){
   save();clearMaintForm();renderMaintLog();renderEqList();checkAlarms();updateMaintSummary();
   toast('정비 저장 완료');
   if(stockWarn.length) setTimeout(()=>toast('⚠ 안전재고 이하: '+stockWarn.join(', '),'w'),1500);
+  // 저장 후 다음 정비 입력을 위해 장비 선택 리스트로 자동 이동
+  const mEqInput=document.getElementById('mEqInput');
+  if(mEqInput){
+    mEqInput.scrollIntoView({behavior:'smooth',block:'center'});
+    mEqInput.focus();
+  }
 }
 function onMStartChange(){
   const startVal=document.getElementById('mStart').value;
@@ -3692,8 +3701,8 @@ function drawTypeChart(filteredMaints){
   const strokeCol=isLight?'#f0f4f8':'#0a0c0f';
   const countCol=isLight?'#c47f00':'#ffcb2b';
   const maints=filteredMaints||db.maints;
-  const types=['고장','프로그램','기구부','개선'];
-  const COLS=['#ef4444','#3b82f6','#f59e0b','#10b981'];
+  const types=['고장','프로그램','기구부','개선','대기'];
+  const COLS=['#ef4444','#3b82f6','#f59e0b','#10b981','#8b8b9c'];
   const counts=types.map(t=>maints.filter(m=>m.type===t).length);
   const total=counts.reduce((a,b)=>a+b,0);
   if(!total){ctx.fillStyle=mutedCol;ctx.textAlign='center';ctx.font='14px monospace';ctx.fillText('데이터 없음',W/2,H/2);return;}
