@@ -82,6 +82,7 @@ async function pollFirestore() {
       db.eqs       = serverDb.eqs       || [];
       db.maints    = serverDb.maints    || [];
       db.parts     = serverDb.parts     || [];
+      db.partTypes = serverDb.partTypes || [];
       db.insps     = serverDb.insps     || [];
       db.inbounds  = serverDb.inbounds  || [];
       db.events    = serverDb.events    || [];
@@ -1160,11 +1161,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <div class="frow">
         <div class="field"><label class="flabel">메이커</label><div class="ac-wrap"><input class="finput" id="pMaker" placeholder="예) SKF" autocomplete="off" oninput="acShow('pMaker','makers')"><div class="ac-list" id="ac-pMaker"></div></div></div>
         <div class="field"><label class="flabel">타입</label>
-          <div class="fselect-w"><select class="fselect" id="pType">
-            <option>실린더</option><option>센서</option><option>스위치</option><option>버튼</option>
-            <option>솔레노이드밸브</option><option>전자코일</option><option>벨트</option>
-            <option>모터</option><option>진공이젝터</option><option>기타</option>
-          </select></div>
+          <div class="fselect-w"><select class="fselect" id="pType" onchange="onPartTypeSelectChange(this)"></select></div>
         </div>
       </div>
       <div class="frow3">
@@ -1200,16 +1197,6 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <!-- 타입 필터 -->
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;" id="partTypeFilter">
       <button class="filter-chip active" data-type="ALL" onclick="setPartTypeFilter('ALL')">ALL</button>
-      <button class="filter-chip" data-type="실린더" onclick="setPartTypeFilter('실린더')">실린더</button>
-      <button class="filter-chip" data-type="센서" onclick="setPartTypeFilter('센서')">센서</button>
-      <button class="filter-chip" data-type="스위치" onclick="setPartTypeFilter('스위치')">스위치</button>
-      <button class="filter-chip" data-type="버튼" onclick="setPartTypeFilter('버튼')">버튼</button>
-      <button class="filter-chip" data-type="솔레노이드벨브" onclick="setPartTypeFilter('솔레노이드벨브')">솔레노이드벨브</button>
-      <button class="filter-chip" data-type="전자코일" onclick="setPartTypeFilter('전자코일')">전자코일</button>
-      <button class="filter-chip" data-type="벨트" onclick="setPartTypeFilter('벨트')">벨트</button>
-      <button class="filter-chip" data-type="모터" onclick="setPartTypeFilter('모터')">모터</button>
-      <button class="filter-chip" data-type="진공이젝터" onclick="setPartTypeFilter('진공이젝터')">진공이젝터</button>
-      <button class="filter-chip" data-type="기타" onclick="setPartTypeFilter('기타')">기타</button>
     </div>
     <div class="search-result-count" id="partSearchCount"></div>
     <div id="partList"><div class="empty"><span class="empty-icon">📦</span>등록된 부품 없음</div></div>
@@ -1974,10 +1961,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div class="frow">
       <div class="field"><label class="flabel">메이커</label><div class="ac-wrap"><input class="finput" id="ePMaker" autocomplete="off" oninput="acShow('ePMaker','makers')"><div class="ac-list" id="ac-ePMaker"></div></div></div>
       <div class="field"><label class="flabel">타입</label>
-        <div class="fselect-w"><select class="fselect" id="ePType">
-          <option>베어링</option><option>오일/윤활</option><option>벨트</option><option>필터</option>
-          <option>센서</option><option>모터</option><option>밸브</option><option>기타</option>
-        </select></div>
+        <div class="fselect-w"><select class="fselect" id="ePType" onchange="onPartTypeSelectChange(this)"></select></div>
       </div>
     </div>
     <div class="frow3">
@@ -2134,6 +2118,7 @@ if(!db.eqChk)db.eqChk={};        // 장비별 전용 점검항목
 if(!db.inbounds) db.inbounds=[];
 if(!db.reqs) db.reqs=[];
 if(!db.calibs) db.calibs=[];
+if(!db.partTypes) db.partTypes=[];
 function save(){
   localStorage.setItem('mms_v1',JSON.stringify(db));
   // Firestore 동기화 (Firebase 준비됐을 때만)
@@ -2386,6 +2371,59 @@ function setPartTypeFilter(type){
     c.classList.toggle('active', c.dataset.type === type);
   });
   renderParts();
+}
+
+// ══════ 부품 타입 (사용자 추가 가능) ══════
+const PART_TYPE_BASE = ['실린더','센서','스위치','버튼','솔레노이드밸브','전자코일','벨트','모터','진공이젝터','기타'];
+
+function getPartTypes(){
+  const set=new Set(PART_TYPE_BASE);
+  (db.partTypes||[]).forEach(t=>t&&set.add(t));
+  (db.parts||[]).forEach(p=>p.type&&set.add(p.type));
+  set.delete('기타');
+  return [...set,'기타'];
+}
+
+function renderPartTypeSelect(selId, selected){
+  const sel=document.getElementById(selId);
+  if(!sel) return;
+  const cur = selected!==undefined ? selected : sel.value;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  sel.innerHTML = getPartTypes().map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')
+    + '<option value="__add__">+ 새 타입 추가...</option>';
+  if(cur && getPartTypes().includes(cur)) sel.value=cur;
+  sel.dataset.prev = sel.value;
+}
+
+function onPartTypeSelectChange(sel){
+  if(sel.value==='__add__'){
+    const name=(prompt('추가할 부품 타입명을 입력하세요')||'').trim();
+    if(!name){ sel.value=sel.dataset.prev||getPartTypes()[0]; return; }
+    if(!db.partTypes.includes(name) && !PART_TYPE_BASE.includes(name)){
+      db.partTypes.push(name); save();
+    }
+    renderAllPartTypeUI();
+    sel.value=name;
+  }
+  sel.dataset.prev = sel.value;
+}
+
+function renderAllPartTypeUI(){
+  const pSel=document.getElementById('pType');
+  const eSel=document.getElementById('ePType');
+  renderPartTypeSelect('pType', pSel?pSel.value:undefined);
+  renderPartTypeSelect('ePType', eSel?eSel.value:undefined);
+  renderPartTypeFilterChips();
+}
+
+function renderPartTypeFilterChips(){
+  const wrap=document.getElementById('partTypeFilter');
+  if(!wrap) return;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const escJs=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const chips=[`<button class="filter-chip${partTypeFilter==='ALL'?' active':''}" data-type="ALL" onclick="setPartTypeFilter('ALL')">ALL</button>`]
+    .concat(getPartTypes().map(t=>`<button class="filter-chip${partTypeFilter===t?' active':''}" data-type="${esc(t)}" onclick="setPartTypeFilter('${escJs(t)}')">${esc(t)}</button>`));
+  wrap.innerHTML = chips.join('');
 }
 
 function hlText(text, q){
@@ -3116,6 +3154,8 @@ function renderParts(){
   const el=document.getElementById('partList');
   const cntEl=document.getElementById('partSearchCount');
 
+  renderAllPartTypeUI();
+
   // 요약 바 업데이트 (전체 기준)
   const totalValue=db.parts.reduce((s,p)=>s+(p.price||0)*(p.qty||0),0);
   const shortCount=db.parts.filter(p=>p.qty<=p.safe).length;
@@ -3183,7 +3223,7 @@ function openPartEdit(i){
   document.getElementById('ePPN').value=p.pn;
   document.getElementById('ePName').value=p.name;
   document.getElementById('ePMaker').value=p.maker||'';
-  document.getElementById('ePType').value=p.type;
+  renderPartTypeSelect('ePType', p.type);
   document.getElementById('ePPrice').value=p.price;
   document.getElementById('ePQty').value=p.qty;
   document.getElementById('ePSafe').value=p.safe;
