@@ -482,6 +482,15 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .mlog-part-name{font-size:12px;flex:1;margin:0 8px;}
 .mlog-part-qty{font-family:var(--mono);font-size:11px;color:var(--muted);}
 .mlog-part-cost{font-family:var(--mono);font-size:11px;color:var(--amber);margin-left:8px;}
+.mlog-year-group{margin-bottom:9px;border-radius:13px;overflow:hidden;border:1px solid var(--border);}
+.mlog-year-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--card2);cursor:pointer;user-select:none;transition:background .15s;}
+.mlog-year-hd:hover{background:var(--border);}
+.mlog-year-hd-left{display:flex;align-items:center;gap:9px;}
+.mlog-year-hd .y-label{font-family:var(--cond);font-size:17px;font-weight:900;letter-spacing:3px;color:var(--blue);}
+.mlog-year-hd .y-count{font-family:var(--mono);font-size:12px;color:var(--muted);}
+.mlog-year-hd .y-arr{font-size:14px;color:var(--blue);transition:transform .2s;}
+.mlog-year-body{display:none;padding:9px 9px 0;}
+.mlog-year-body.open{display:block;}
 
 /* PARTS */
 .part-item{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px;margin-bottom:9px;}
@@ -3018,39 +3027,60 @@ function renderMaintLog(){
   }
   if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon">🔧</span>'+(fEq||fType||fFrom||fTo?'필터 조건에 맞는 정비 이력 없음':'정비 이력 없음')+'</div>';return;}
   updateMaintSummary();
-  el.innerHTML=list.map((m,i)=>{
-    const realIdx=db.maints.indexOf(m);
-    const typeColor={'고장':'r','프로그램':'b','기구부':'a','개선':'g'}[m.type]||'';
+  const byYear={};
+  list.forEach(m=>{
     const rd=m.start?m.start.slice(0,10):null;
-    return `
-    <div class="mlog-item">
-      <div class="mlog-head">
-        <div class="mlog-head-left">
-          <div class="mlog-eq">🏭 ${m.eqName}</div>
-          <div class="mlog-date">${rd?`🔧 수리: <b>${rd}</b> &nbsp;·&nbsp; 📋 등록: ${m.date}`:`📅 ${m.date}`}${m.worker?' | 👤 '+m.worker:''}</div>
+    const y=(rd||m.date||'').slice(0,4)||'미상';
+    (byYear[y]=byYear[y]||[]).push(m);
+  });
+  const years=Object.keys(byYear).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML=years.map((year,yi)=>{
+    const isOpen=yi===0;
+    const items=byYear[year].map(m=>{
+      const realIdx=db.maints.indexOf(m);
+      const typeColor={'고장':'r','프로그램':'b','기구부':'a','개선':'g'}[m.type]||'';
+      const rd=m.start?m.start.slice(0,10):null;
+      return `
+      <div class="mlog-item">
+        <div class="mlog-head">
+          <div class="mlog-head-left">
+            <div class="mlog-eq">🏭 ${m.eqName}</div>
+            <div class="mlog-date">${rd?`🔧 수리: <b>${rd}</b> &nbsp;·&nbsp; 📋 등록: ${m.date}`:`📅 ${m.date}`}${m.worker?' | 👤 '+m.worker:''}</div>
+          </div>
+          <button class="btn-sm bsm-a" onclick="openMaintEdit(${realIdx})" style="margin-right:4px;">✏️ 수정</button>
+          <button class="btn-sm bsm-r" onclick="deleteMaint(${realIdx})">DEL</button>
         </div>
-        <button class="btn-sm bsm-a" onclick="openMaintEdit(${realIdx})" style="margin-right:4px;">✏️ 수정</button>
-        <button class="btn-sm bsm-r" onclick="deleteMaint(${realIdx})">DEL</button>
+        <div class="mlog-chips">
+          <span class="mchip ${typeColor}">⚙ ${m.type}</span>
+          ${m.hours?`<span class="mchip a">⏱ ${m.hours.toFixed(1)}h</span>`:''}
+          ${m.partCost?`<span class="mchip b">💰 ${fmtCost(m.partCost)}</span>`:''}
+          ${m.cause?`<span class="mchip">🔍 ${m.cause}</span>`:''}
+        </div>
+        <div class="mlog-content">${m.content}</div>
+        ${m.parts&&m.parts.length?`
+        <div class="mlog-parts">
+          <div class="mlog-parts-title">사용 부품</div>
+          ${m.parts.map(p=>`
+          <div class="mlog-part-row">
+            <span class="mlog-part-pn">[${p.pn}]</span>
+            <span class="mlog-part-name">${p.name}</span>
+            <span class="mlog-part-qty">×${p.qty}</span>
+            <span class="mlog-part-cost">${fmtCost(p.price*p.qty)}</span>
+          </div>`).join('')}
+        </div>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="mlog-year-group">
+      <div class="mlog-year-hd${isOpen?' open':''}" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');this.querySelector('.y-arr').textContent=this.classList.contains('open')?'▾':'▸';">
+        <div class="mlog-year-hd-left">
+          <span class="y-label">${year}년</span>
+          <span class="y-count">${byYear[year].length}건</span>
+        </div>
+        <span class="y-arr">${isOpen?'▾':'▸'}</span>
       </div>
-      <div class="mlog-chips">
-        <span class="mchip ${typeColor}">⚙ ${m.type}</span>
-        ${m.hours?`<span class="mchip a">⏱ ${m.hours.toFixed(1)}h</span>`:''}
-        ${m.partCost?`<span class="mchip b">💰 ${fmtCost(m.partCost)}</span>`:''}
-        ${m.cause?`<span class="mchip">🔍 ${m.cause}</span>`:''}
-      </div>
-      <div class="mlog-content">${m.content}</div>
-      ${m.parts&&m.parts.length?`
-      <div class="mlog-parts">
-        <div class="mlog-parts-title">사용 부품</div>
-        ${m.parts.map(p=>`
-        <div class="mlog-part-row">
-          <span class="mlog-part-pn">[${p.pn}]</span>
-          <span class="mlog-part-name">${p.name}</span>
-          <span class="mlog-part-qty">×${p.qty}</span>
-          <span class="mlog-part-cost">${fmtCost(p.price*p.qty)}</span>
-        </div>`).join('')}
-      </div>`:''}
-    </div>`}).join('');
+      <div class="mlog-year-body${isOpen?' open':''}">${items}</div>
+    </div>`;
+  }).join('');
 }
 function deleteMaint(i){
   if(!confirm('정비 기록을 삭제할까요?'))return;
