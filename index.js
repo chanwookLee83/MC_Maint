@@ -120,7 +120,7 @@ async function sendScheduledPush(hour) {
 
     // 부품 재고 부족 체크
     (appDb.parts || []).forEach(p => {
-      if ((p.qty ?? 0) <= (p.safe ?? 0)) {
+      if ((p.qty ?? 0) <= (p.safe ?? 0) && p.alertOn !== false) {
         issues.push(`${p.name} 재고부족`);
       }
     });
