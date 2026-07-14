@@ -127,7 +127,7 @@ async function sendScheduledPush(hour) {
 
     // 설비 점검 초과 체크
     (appDb.eqs || []).forEach(eq => {
-      if (eq.status === '단종') return;
+      if (eq.status === '단종' || eq.status === '고장') return;
       const cycle   = parseInt(eq.cycle) || 30;
       const eqInsps = (appDb.insps || []).filter(i => i.eqId === eq.id);
 

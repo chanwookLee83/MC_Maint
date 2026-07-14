@@ -405,8 +405,10 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .kpi-sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;}
 
 /* EQUIPMENT CARD */
-.eq-card{background:var(--card);border:1px solid var(--border);border-radius:13px;margin-bottom:10px;overflow:hidden;transition:border-color .2s;}
+.eq-card{background:var(--card);border:1px solid var(--border);border-radius:13px;margin-bottom:10px;overflow:hidden;transition:border-color .2s,background .2s;}
 .eq-card:hover{border-color:var(--border2);}
+.eq-card.st-fail{background:#ef444412;border-color:#ef444435;}
+.eq-card.st-eol{background:#6b728018;border-color:#6b728038;opacity:.8;}
 .eq-head{padding:14px;cursor:pointer;display:flex;align-items:center;gap:11px;}
 .eq-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#f59e0b22,#f59e0b08);border:1px solid #f59e0b28;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
 .eq-info{flex:1;min-width:0;}
@@ -1040,6 +1042,13 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <span class="search-bar-icon">🔍</span>
       <input class="search-bar" id="eqSearch" type="text" placeholder="장비명 · 시리얼번호 · 위치 검색..." oninput="onEqSearch()" autocomplete="off">
       <button class="search-bar-clear" id="eqSearchClear" onclick="clearEqSearch()">✕</button>
+    </div>
+    <!-- 상태 필터 -->
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;" id="eqStatusFilter">
+      <button class="filter-chip active" data-status="ALL" onclick="setEqStatusFilter('ALL')">ALL</button>
+      <button class="filter-chip" data-status="정상" onclick="setEqStatusFilter('정상')">🟢 정상</button>
+      <button class="filter-chip" data-status="고장" onclick="setEqStatusFilter('고장')">🔴 고장</button>
+      <button class="filter-chip" data-status="단종" onclick="setEqStatusFilter('단종')">⚫ 단종</button>
     </div>
     <div class="search-result-count" id="eqSearchCount"></div>
     <div id="eqList"><div class="empty"><span class="empty-icon">🏭</span>등록된 장비 없음</div></div>
@@ -2323,9 +2332,9 @@ function checkAlarms(){
     }
   });
 
-  // ── 장비 점검 알람 ──
+  // ── 장비 점검 알람 (고장·단종 장비는 제외) ──
   db.eqs.forEach(eq=>{
-    if(eq.status==='단종') return;
+    if(eq.status==='단종'||eq.status==='고장') return;
     const lastInsp=db.insps.filter(i=>i.eqId===eq.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
     const cycle=eq.cycle||30;
 
@@ -2398,6 +2407,7 @@ function checkAlarms(){
 
 // ══════ 장비 검색 ══════
 let eqSearchQ = '';
+let eqStatusFilter = 'ALL';
 
 function onEqSearch(){
   eqSearchQ = document.getElementById('eqSearch').value.trim();
@@ -2408,6 +2418,13 @@ function clearEqSearch(){
   document.getElementById('eqSearch').value = '';
   eqSearchQ = '';
   document.getElementById('eqSearchClear').style.display = 'none';
+  renderEqList();
+}
+function setEqStatusFilter(status){
+  eqStatusFilter = status;
+  document.querySelectorAll('#eqStatusFilter .filter-chip').forEach(c=>{
+    c.classList.toggle('active', c.dataset.status === status);
+  });
   renderEqList();
 }
 
@@ -2687,6 +2704,8 @@ function renderEqList(){
   if(!db.eqs.length){el.innerHTML='<div class="empty"><span class="empty-icon">🏭</span>등록된 장비 없음</div>';if(cntEl)cntEl.innerHTML='';return;}
   const q=(eqSearchQ||'').toLowerCase();
   const filtered=db.eqs.filter(eq=>{
+    const mStatus=eqStatusFilter==='ALL'||(eq.status||'정상')===eqStatusFilter;
+    if(!mStatus) return false;
     if(!q) return true;
     return (eq.name||'').toLowerCase().includes(q)||
            (eq.serial||'').toLowerCase().includes(q)||
@@ -2695,7 +2714,7 @@ function renderEqList(){
            (eq.maker||'').toLowerCase().includes(q)||
            (eq.power||'').toLowerCase().includes(q);
   });
-  if(cntEl) cntEl.innerHTML = q ? `검색결과 <span>${filtered.length}</span> / ${db.eqs.length}건` : `전체 <span>${db.eqs.length}</span>건`;
+  if(cntEl) cntEl.innerHTML = (q||eqStatusFilter!=='ALL') ? `검색결과 <span>${filtered.length}</span> / ${db.eqs.length}건` : `전체 <span>${db.eqs.length}</span>건`;
   if(!filtered.length){el.innerHTML='<div class="empty"><span class="empty-icon">🔍</span>"'+q+'" 검색 결과 없음</div>';return;}
   el.innerHTML=filtered.map((eq,fi)=>{
     const i=db.eqs.indexOf(eq);
@@ -2722,8 +2741,9 @@ function renderEqList(){
       nextInspDate=next.toISOString().slice(0,10);
     }
 
+    const stCls=eq.status==='고장'?'st-fail':eq.status==='단종'?'st-eol':'';
     return `
-    <div class="eq-card" id="eq-card-${i}">
+    <div class="eq-card${stCls?' '+stCls:''}" id="eq-card-${i}">
       <div class="eq-head" onclick="toggleEq(${i})">
         <div class="eq-icon">🏭</div>
         <div class="eq-info">
@@ -4217,7 +4237,7 @@ function renderInspBanner(){
   const items=[];
 
   db.eqs.forEach(eq=>{
-    if(eq.status==='단종') return;
+    if(eq.status==='단종'||eq.status==='고장') return;
     const lastInsp=db.insps.filter(i=>i.eqId===eq.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
     const cycle=eq.cycle||30;
 
@@ -5409,7 +5429,7 @@ function _fireScheduledNotification(hour) {
     });
     const today = localToday();
     (db.eqs || []).forEach(eq => {
-      if (eq.status === '단종') return;
+      if (eq.status === '단종' || eq.status === '고장') return;
       const cycle = parseInt(eq.cycle) || 30;
       const eqInsps = (db.insps || []).filter(i => i.eqId === eq.id);
       if (!eqInsps.length) { issues.push(eq.name + ' 미점검'); return; }
@@ -5716,7 +5736,7 @@ function _fireCatchupNotification() {
     if ((p.qty ?? 0) <= (p.safe ?? 0) && p.alertOn !== false) issues.push(`[${p.pn}] ${p.name} 재고부족`);
   });
   (db.eqs || []).forEach(eq => {
-    if (eq.status === '단종') return;
+    if (eq.status === '단종' || eq.status === '고장') return;
     const cycle = parseInt(eq.cycle) || 30;
     const eqInsps = (db.insps || []).filter(i => i.eqId === eq.id);
     if (!eqInsps.length) { issues.push(`${eq.name} 미점검`); return; }
