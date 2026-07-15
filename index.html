@@ -5438,6 +5438,22 @@ function _fireScheduledNotification(hour) {
       const days = Math.floor((new Date(today) - new Date(last.date)) / 86400000);
       if (days >= cycle) issues.push(eq.name + ' 점검초과');
     });
+    (db.calibs || []).forEach(c => {
+      if (!c.lastDate || !c.cycleMon) return;
+      const next = addCalibMonths(c.lastDate, c.cycleMon);
+      const remain = Math.ceil((new Date(next) - new Date(today)) / 86400000);
+      if (remain <= 0) issues.push(c.name + ' 검교정초과');
+      else if (remain <= 10) issues.push(c.name + ' 검교정 D-' + remain);
+    });
+    (db.events || []).forEach(ev => {
+      if (ev.done) return;
+      const endDate = ev.dateEnd || ev.date;
+      const diffStart = Math.round((new Date(ev.date) - new Date(today)) / 86400000);
+      const diffEnd   = Math.round((new Date(endDate) - new Date(today)) / 86400000);
+      if (diffEnd < 0) issues.push('[일정] ' + ev.title + ' 기한초과');
+      else if (diffStart <= 0) issues.push('[일정] ' + ev.title + ' 진행중');
+      else if (diffStart <= 7) issues.push('[일정] ' + ev.title + ' D-' + diffStart);
+    });
   }
   const title = `🔔 설비관리 ${hour}:00 알림`;
   const body = issues.length
@@ -5744,6 +5760,22 @@ function _fireCatchupNotification() {
     if (last.date === today) return;
     const days = Math.floor((new Date(today) - new Date(last.date)) / 86400000);
     if (days >= cycle) issues.push(`${eq.name} 점검초과 (${days}일)`);
+  });
+  (db.calibs || []).forEach(c => {
+    if (!c.lastDate || !c.cycleMon) return;
+    const next = addCalibMonths(c.lastDate, c.cycleMon);
+    const remain = Math.ceil((new Date(next) - new Date(today)) / 86400000);
+    if (remain <= 0) issues.push(`${c.name} 검교정초과 (${Math.abs(remain)}일)`);
+    else if (remain <= 10) issues.push(`${c.name} 검교정 D-${remain}`);
+  });
+  (db.events || []).forEach(ev => {
+    if (ev.done) return;
+    const endDate = ev.dateEnd || ev.date;
+    const diffStart = Math.round((new Date(ev.date) - new Date(today)) / 86400000);
+    const diffEnd   = Math.round((new Date(endDate) - new Date(today)) / 86400000);
+    if (diffEnd < 0) issues.push(`[일정] ${ev.title} 기한초과`);
+    else if (diffStart <= 0) issues.push(`[일정] ${ev.title} 진행중`);
+    else if (diffStart <= 7) issues.push(`[일정] ${ev.title} D-${diffStart}`);
   });
 
   if (!issues.length) return; // 이상 없으면 알림 안 보냄

@@ -144,6 +144,34 @@ async function sendScheduledPush(hour) {
       );
       if (days >= cycle) issues.push(`${eq.name} 점검초과(${days}일)`);
     });
+
+    // 검교정 만료 체크
+    (appDb.calibs || []).forEach(c => {
+      if (!c.lastDate || !c.cycleMon) return;
+      const next = new Date(c.lastDate);
+      next.setMonth(next.getMonth() + parseInt(c.cycleMon));
+      const remain = Math.ceil((next - new Date(todayStr)) / 86400000);
+      if (remain <= 0) {
+        issues.push(`${c.name} 검교정초과(${Math.abs(remain)}일)`);
+      } else if (remain <= 10) {
+        issues.push(`${c.name} 검교정 D-${remain}`);
+      }
+    });
+
+    // 등록된 일정 체크 (당일/D-7 이내/기한 초과)
+    (appDb.events || []).forEach(ev => {
+      if (ev.done) return;
+      const endDate = ev.dateEnd || ev.date;
+      const diffStart = Math.round((new Date(ev.date) - new Date(todayStr)) / 86400000);
+      const diffEnd   = Math.round((new Date(endDate) - new Date(todayStr)) / 86400000);
+      if (diffEnd < 0) {
+        issues.push(`[일정] ${ev.title} 기한초과`);
+      } else if (diffStart <= 0) {
+        issues.push(`[일정] ${ev.title} 진행중`);
+      } else if (diffStart <= 7) {
+        issues.push(`[일정] ${ev.title} D-${diffStart}`);
+      }
+    });
   }
 
   // 3) 알림 내용 구성
