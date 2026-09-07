@@ -335,6 +335,8 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 /* SEC */
 .sec{margin-bottom:20px;}
 .sec-title{font-family:var(--cond);font-size:15px;font-weight:700;letter-spacing:3px;color:var(--muted2);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.rpt-btn{margin-left:auto;background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);border-radius:8px;padding:5px 11px;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;}
+.rpt-btn:active{transform:scale(.96);}
 .sec-title::before{content:'';width:3px;height:16px;background:var(--amber);border-radius:2px;flex-shrink:0;}
 .sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
 
@@ -1053,7 +1055,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
   </div>
   <div class="sec">
-    <div class="sec-title">등록 장비 목록</div>
+    <div class="sec-title">등록 장비 목록 <button class="rpt-btn" onclick="exportEqReport()">⬇ HTML</button></div>
     <div class="search-bar-wrap">
       <span class="search-bar-icon">🔍</span>
       <input class="search-bar" id="eqSearch" type="text" placeholder="장비명 · 시리얼번호 · 위치 검색..." oninput="onEqSearch()" autocomplete="off">
@@ -1149,7 +1151,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   </div>
 
   <div class="sec" style="margin-top:4px;">
-    <div class="sec-title">정비 이력</div>
+    <div class="sec-title">정비 이력 <button class="rpt-btn" onclick="exportMaintReport()">⬇ HTML</button></div>
     <!-- 장비 필터 자동완성 -->
     <div class="ac-wrap" style="margin-bottom:8px;">
       <input class="finput" id="mFilterEqInput" placeholder="🔍 장비명 검색 (비우면 전체)..." autocomplete="off"
@@ -1213,7 +1215,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
   </div>
   <div class="sec">
-    <div class="sec-title">부품 재고 현황</div>
+    <div class="sec-title">부품 재고 현황 <button class="rpt-btn" onclick="exportPartsReport()">⬇ HTML</button></div>
     <!-- 재고 요약 -->
     <div id="partSummaryBar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 10px;text-align:center;">
@@ -1248,7 +1250,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="sec" style="margin-top:4px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <div class="sec-title" style="margin-bottom:0;">검교정 관리</div>
-      <button class="btn-sm" style="background:var(--blue);color:#fff;border-color:var(--blue);" onclick="openCalibForm()">+ 추가</button>
+      <div style="display:flex;gap:6px;">
+        <button class="rpt-btn" style="margin-left:0;" onclick="exportCalibReport()">⬇ HTML</button>
+        <button class="btn-sm" style="background:var(--blue);color:#fff;border-color:var(--blue);" onclick="openCalibForm()">+ 추가</button>
+      </div>
     </div>
     <div id="calibSummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;border:1px solid var(--border);">
@@ -1356,6 +1361,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="sec">
     <div class="sec-title">부품 사용 TOP 5</div>
     <div class="card blue-t" id="partUsageRank"><div class="empty" style="padding:14px;">데이터 없음</div></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">통계 내보내기</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px;">현재 기간 필터가 적용된 통계를 파일로 저장합니다.</div>
+    <button class="share-btn" style="background:linear-gradient(135deg,#10b98120,#10b98108);border:1px solid #10b98140;color:var(--green);" onclick="exportStatsReport()"><span>📄</span> 통계 리포트 (HTML · 그래프 포함)</button>
+    <button class="share-btn sb-blue" style="margin-top:8px;" onclick="exportStatsXLSX()"><span>📊</span> 통계 데이터 (Excel · 시트별 정리)</button>
   </div>
 </div>
 
@@ -2141,6 +2152,9 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
 <div class="toast" id="toast"></div>
 <div class="sync-badge" id="syncBadge"></div>
+
+<!-- 통계 XLSX 내보내기용 (SheetJS) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
 // ── Service Worker ──
@@ -3821,15 +3835,16 @@ function renderStats(){
   }
 }
 
-function drawMonthlyChart(filteredMaints){
-  const canvas=document.getElementById('cvMonthly');if(!canvas)return;
+function drawMonthlyChart(filteredMaints,exportCanvas,exportW){
+  const canvas=exportCanvas||document.getElementById('cvMonthly');if(!canvas)return;
   const ctx=canvas.getContext('2d');
-  const dpr=window.devicePixelRatio||1;
-  const W=canvas.parentElement.clientWidth||300,H=190;
+  const dpr=exportCanvas?2:(window.devicePixelRatio||1);
+  const W=exportCanvas?(exportW||720):(canvas.parentElement.clientWidth||300),H=190;
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
-  const isLight=document.body.classList.contains('light');
+  const isLight=exportCanvas?true:document.body.classList.contains('light');
+  if(exportCanvas){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);}
   const textCol=isLight?'#374151':'#e2e8f0';
   const mutedCol=isLight?'#6b7280':'#4b5e74';
   const gridCol=isLight?'#d4d9e2':'#252d38';
@@ -3877,15 +3892,16 @@ function drawMonthlyChart(filteredMaints){
   for(let i=0;i<=4;i++){const v=Math.round(mx*i/4);const y=pad.t+cH*(1-i/4);ctx.fillText(v,pad.l-4,y+4);}
 }
 
-function drawTypeChart(filteredMaints){
-  const canvas=document.getElementById('cvType');if(!canvas)return;
+function drawTypeChart(filteredMaints,exportCanvas,exportW){
+  const canvas=exportCanvas||document.getElementById('cvType');if(!canvas)return;
   const ctx=canvas.getContext('2d');
-  const dpr=window.devicePixelRatio||1;
-  const W=canvas.parentElement.clientWidth||300,H=210;
+  const dpr=exportCanvas?2:(window.devicePixelRatio||1);
+  const W=exportCanvas?(exportW||720):(canvas.parentElement.clientWidth||300),H=210;
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
-  const isLight=document.body.classList.contains('light');
+  const isLight=exportCanvas?true:document.body.classList.contains('light');
+  if(exportCanvas){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);}
   const textCol=isLight?'#111827':'#e2e8f0';
   const mutedCol=isLight?'#6b7280':'#4b5e74';
   const bgCol=isLight?'#ffffff':'#181c22';
@@ -5135,6 +5151,403 @@ table{border-collapse:collapse;width:100%;}
   const suffix=(filterMonth||filterEq||filterVerdict)?'_필터적용':'';
   download('점검이력보고서'+suffix+'_'+localToday()+'.html',html,'text/html');
   toast('점검이력 HTML 보고서 다운로드 완료');
+}
+
+// ══════ 통계 내보내기 ══════
+function downloadFile(name,content,type){
+  try{
+    const blob=new Blob([content],{type:type+';charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
+  }catch(e){ download(name,content,type); }
+}
+
+function getStatsExportData(){
+  const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
+  const fTo=document.getElementById('sFilterDateTo')?.value||'';
+  const fm=db.maints.filter(m=>{
+    const md=(m.start?m.start.slice(0,10):null)||m.date;
+    return (!fFrom||md>=fFrom)&&(!fTo||md<=fTo);
+  });
+  const periodLabel=(fFrom||fTo)?`${fFrom||'처음'} ~ ${fTo||'현재'}`:'전체 기간';
+  const kpi={
+    eqCount:db.eqs.length,
+    maintCount:fm.length,
+    failCount:fm.filter(m=>m.type==='고장').length,
+    totalCost:fm.reduce((s,m)=>s+(m.partCost||0),0)
+  };
+  const perEq=db.eqs.map(eq=>{
+    const all=fm.filter(m=>m.eqId===eq.id);
+    if(!all.length) return null;
+    return {
+      name:eq.name,
+      maints:all.length,
+      fails:all.filter(m=>m.type==='고장').length,
+      mtbf:calcMTBFFiltered(eq.id,fm),
+      mttr:calcMTTRFiltered(eq.id,fm),
+      cost:all.reduce((s,m)=>s+(m.partCost||0),0)
+    };
+  }).filter(Boolean).sort((a,b)=>b.fails-a.fails||b.maints-a.maints);
+  const monthSet=new Set();
+  fm.forEach(m=>{const d=(m.start?m.start.slice(0,10):null)||m.date;if(d)monthSet.add(d.slice(0,7));});
+  const perMonth=[...monthSet].sort().map(ym=>{
+    const mAll=fm.filter(m=>{const d=(m.start?m.start.slice(0,10):null)||m.date;return d&&d.startsWith(ym);});
+    const mFail=mAll.filter(m=>m.type==='고장');
+    let t=0,c=0;
+    mFail.forEach(m=>{
+      if(m.start&&m.end){const df=(new Date(m.end)-new Date(m.start))/3600000;if(df>0){t+=df;c++;}}
+      else if(m.hours>0){t+=m.hours;c++;}
+    });
+    return {month:ym,maints:mAll.length,fails:mFail.length,mttr:c?t/c:null,cost:mAll.reduce((s,m)=>s+(m.partCost||0),0)};
+  });
+  const types=['고장','프로그램','기구부','개선','청소','작업자교육','대기'];
+  const perType=types.map(t=>({type:t,count:fm.filter(m=>m.type===t).length})).filter(x=>x.count>0);
+  const puMap={};
+  fm.forEach(m=>(m.parts||[]).forEach(p=>{
+    const k=p.pn+':'+p.name;
+    if(!puMap[k])puMap[k]={pn:p.pn,name:p.name,qty:0,cost:0};
+    puMap[k].qty+=(Number(p.qty)||0);puMap[k].cost+=(Number(p.price)||0)*(Number(p.qty)||0);
+  }));
+  const parts=Object.values(puMap).sort((a,b)=>b.qty-a.qty);
+  return {fFrom,fTo,periodLabel,fm,kpi,perEq,perMonth,perType,parts};
+}
+
+function exportStatsReport(){
+  if(!db.maints.length){toast('정비 데이터 없음','w');return;}
+  const d=getStatsExportData();
+  const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const mtbfTxt=v=>v==null?'—':`${v.toFixed(0)}h (~${Math.round(v/24)}일)`;
+  const mttrTxt=v=>v==null?'—':`${v.toFixed(1)}h (~${Math.round(v*60)}분)`;
+
+  let img1='',img2='';
+  try{
+    const c1=document.createElement('canvas');drawMonthlyChart(d.fm,c1,760);img1=c1.toDataURL('image/png');
+    const c2=document.createElement('canvas');drawTypeChart(d.fm,c2,760);img2=c2.toDataURL('image/png');
+  }catch(e){}
+
+  const kpiCards=`
+  <div class="kpi-row">
+    <div class="kpi"><span class="kl">TOTAL 장비</span><span class="kv">${d.kpi.eqCount}<small>대</small></span></div>
+    <div class="kpi"><span class="kl">총 정비건</span><span class="kv">${d.kpi.maintCount}<small>건</small></span></div>
+    <div class="kpi"><span class="kl">고장 건수</span><span class="kv" style="color:#b91c1c;">${d.kpi.failCount}<small>건</small></span></div>
+    <div class="kpi"><span class="kl">총 정비비용</span><span class="kv" style="color:#1d4ed8;">${fmtCost(d.kpi.totalCost)}</span></div>
+  </div>`;
+
+  const eqRows=d.perEq.length?d.perEq.map(e=>`<tr>
+    <td>${esc(e.name)}</td><td class="num">${e.maints}</td><td class="num">${e.fails}</td>
+    <td class="num">${mtbfTxt(e.mtbf)}</td><td class="num">${mttrTxt(e.mttr)}</td><td class="num">${fmtCost(e.cost)}</td>
+  </tr>`).join(''):`<tr><td colspan="6" class="empty">해당 기간 정비 기록 있는 장비 없음</td></tr>`;
+
+  const monthRows=d.perMonth.length?d.perMonth.map(m=>`<tr>
+    <td>${m.month}</td><td class="num">${m.maints}</td><td class="num">${m.fails}</td>
+    <td class="num">${m.mttr==null?'—':m.mttr.toFixed(1)+'h'}</td><td class="num">${fmtCost(m.cost)}</td>
+  </tr>`).join(''):`<tr><td colspan="5" class="empty">데이터 없음</td></tr>`;
+
+  const typeRows=d.perType.length?d.perType.map(t=>{
+    const pct=d.kpi.maintCount?Math.round(t.count/d.kpi.maintCount*100):0;
+    return `<tr><td>${t.type}</td><td class="num">${t.count}</td><td class="num">${pct}%</td></tr>`;
+  }).join(''):`<tr><td colspan="3" class="empty">데이터 없음</td></tr>`;
+
+  const partRows=d.parts.length?d.parts.map((p,i)=>`<tr>
+    <td class="num">${i+1}</td><td>${esc(p.name)}</td><td>${esc(p.pn)}</td><td class="num">${p.qty}</td><td class="num">${fmtCost(p.cost)}</td>
+  </tr>`).join(''):`<tr><td colspan="5" class="empty">데이터 없음</td></tr>`;
+
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>설비 통계 리포트</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'맑은 고딕',Malgun Gothic,Arial,sans-serif;padding:26px 34px;color:#1e293b;font-size:10pt;}
+h1{font-size:17pt;font-weight:700;margin-bottom:4px;}
+h2{font-size:12pt;font-weight:700;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #1e293b;}
+.meta{font-size:10pt;color:#64748b;margin-bottom:16px;}
+.kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+.kpi{flex:1;min-width:130px;border:1px solid #e2e8f0;border-left:3px solid #f59e0b;border-radius:8px;padding:10px 12px;}
+.kpi .kl{display:block;font-size:9pt;color:#64748b;margin-bottom:3px;}
+.kpi .kv{font-size:16pt;font-weight:800;color:#0f172a;}
+.kpi .kv small{font-size:9pt;font-weight:500;color:#94a3b8;margin-left:2px;}
+table{border-collapse:collapse;width:100%;margin-bottom:6px;}
+th,td{border:1px solid #e2e8f0;padding:6px 10px;text-align:left;font-size:9.5pt;}
+th{background:#f1f5f9;color:#334155;font-weight:700;}
+td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td.empty{text-align:center;color:#94a3b8;}
+.chart{margin:6px 0 4px;border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#fff;}
+.chart img{width:100%;height:auto;display:block;}
+.footer{margin-top:20px;font-size:9pt;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;}
+@media print{body{padding:14px 18px;}h2{page-break-after:avoid;}tr{page-break-inside:avoid;}}
+</style></head><body>
+<h1>📊 설비 정비 통계 리포트</h1>
+<div class="meta">출력일: ${localToday()} &nbsp;|&nbsp; 대상 기간: ${esc(d.periodLabel)} &nbsp;|&nbsp; 정비 ${d.kpi.maintCount}건</div>
+
+<h2>전체 KPI</h2>
+${kpiCards}
+
+<h2>장비별 MTBF / MTTR</h2>
+<table><thead><tr><th>장비명</th><th>정비건</th><th>고장</th><th>MTBF</th><th>MTTR</th><th>정비비용</th></tr></thead><tbody>${eqRows}</tbody></table>
+
+<h2>월별 추이</h2>
+<table><thead><tr><th>월</th><th>정비건수</th><th>고장건수</th><th>평균 MTTR</th><th>정비비용</th></tr></thead><tbody>${monthRows}</tbody></table>
+${img1?`<div class="chart"><img src="${img1}" alt="월별 정비 건수"></div>`:''}
+
+<h2>정비 유형 분포</h2>
+<table><thead><tr><th>유형</th><th>건수</th><th>비율</th></tr></thead><tbody>${typeRows}</tbody></table>
+${img2?`<div class="chart"><img src="${img2}" alt="정비 유형 분포"></div>`:''}
+
+<h2>부품 사용 내역</h2>
+<table><thead><tr><th>순위</th><th>부품명</th><th>형번</th><th>사용수량</th><th>금액</th></tr></thead><tbody>${partRows}</tbody></table>
+
+<div class="footer">※ 본 리포트는 설비관리 시스템에서 자동 생성되었습니다. 수치는 선택된 기간 필터 기준입니다.</div>
+</body></html>`;
+
+  const suffix=(d.fFrom||d.fTo)?'_'+(d.fFrom||'')+'_'+(d.fTo||''):'';
+  downloadFile('설비통계리포트'+suffix+'_'+localToday()+'.html',html,'text/html');
+  toast('통계 리포트 다운로드 완료');
+}
+
+function exportStatsXLSX(){
+  if(typeof XLSX==='undefined'){toast('엑셀 모듈 로드 실패 — 인터넷 연결 확인','e');return;}
+  if(!db.maints.length){toast('정비 데이터 없음','w');return;}
+  const d=getStatsExportData();
+  const wb=XLSX.utils.book_new();
+
+  const summary=[
+    ['설비 정비 통계 리포트'],
+    ['출력일',localToday()],
+    ['대상 기간',d.periodLabel],
+    [],
+    ['항목','값'],
+    ['TOTAL 장비(대)',d.kpi.eqCount],
+    ['총 정비건',d.kpi.maintCount],
+    ['고장 건수',d.kpi.failCount],
+    ['총 정비비용(원)',d.kpi.totalCost]
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),'요약');
+
+  const eqAoa=[['장비명','정비건','고장','MTBF(h)','MTBF(일)','MTTR(h)','MTTR(분)','정비비용(원)']];
+  d.perEq.forEach(e=>eqAoa.push([e.name,e.maints,e.fails,
+    e.mtbf==null?'':+e.mtbf.toFixed(1), e.mtbf==null?'':Math.round(e.mtbf/24),
+    e.mttr==null?'':+e.mttr.toFixed(2), e.mttr==null?'':Math.round(e.mttr*60), e.cost]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(eqAoa),'장비별 MTBF·MTTR');
+
+  const mAoa=[['월','정비건수','고장건수','평균 MTTR(h)','정비비용(원)']];
+  d.perMonth.forEach(m=>mAoa.push([m.month,m.maints,m.fails,m.mttr==null?'':+m.mttr.toFixed(2),m.cost]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(mAoa),'월별 추이');
+
+  const tAoa=[['유형','건수','비율(%)']];
+  d.perType.forEach(t=>tAoa.push([t.type,t.count,d.kpi.maintCount?+(t.count/d.kpi.maintCount*100).toFixed(1):0]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(tAoa),'유형별 분포');
+
+  const pAoa=[['순위','부품명','형번','사용수량','금액(원)']];
+  d.parts.forEach((p,i)=>pAoa.push([i+1,p.name,p.pn,p.qty,p.cost]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pAoa),'부품 사용');
+
+  const suffix=(d.fFrom||d.fTo)?'_'+(d.fFrom||'')+'_'+(d.fTo||''):'';
+  XLSX.writeFile(wb,'설비통계데이터'+suffix+'_'+localToday()+'.xlsx');
+  toast('통계 엑셀 다운로드 완료');
+}
+
+// ══════ 탭별 HTML 리포트 ══════
+function _rptEsc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function reportShell(title,metaLine,bodyHtml){
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${title}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'맑은 고딕',Malgun Gothic,Arial,sans-serif;padding:26px 32px;color:#1e293b;font-size:10pt;}
+h1{font-size:16pt;font-weight:700;margin-bottom:4px;}
+h2{font-size:12pt;font-weight:700;margin:20px 0 8px;padding-bottom:4px;border-bottom:2px solid #1e293b;}
+.meta{font-size:9.5pt;color:#64748b;margin-bottom:14px;}
+table{border-collapse:collapse;width:100%;margin-bottom:6px;}
+th,td{border:1px solid #e2e8f0;padding:6px 9px;text-align:left;font-size:9pt;vertical-align:top;}
+th{background:#f1f5f9;color:#334155;font-weight:700;white-space:nowrap;}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+td.c{text-align:center;white-space:nowrap;}
+td.empty{text-align:center;color:#94a3b8;}
+tr.danger td{background:#fef2f2;}
+tr.warn td{background:#fffbeb;}
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8pt;font-weight:700;}
+.tag.r{background:#fee2e2;color:#b91c1c;}.tag.a{background:#fef3c7;color:#92400e;}.tag.g{background:#dcfce7;color:#15803d;}.tag.m{background:#e2e8f0;color:#475569;}
+.sum{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.sum div{border:1px solid #e2e8f0;border-left:3px solid #64748b;border-radius:7px;padding:8px 12px;font-size:9pt;color:#64748b;}
+.sum b{display:block;font-size:14pt;color:#0f172a;margin-top:2px;font-weight:800;}
+.footer{margin-top:20px;font-size:8.5pt;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;}
+@media print{body{padding:14px 16px;}h2{page-break-after:avoid;}tr{page-break-inside:avoid;}thead{display:table-header-group;}}
+</style></head><body>
+<h1>${title}</h1>
+<div class="meta">${metaLine}</div>
+${bodyHtml}
+<div class="footer">※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 표시 내용은 화면에 적용된 필터 기준입니다. · 출력일 ${localToday()}</div>
+</body></html>`;
+}
+
+function exportMaintReport(){
+  if(!db.maints.length){toast('정비 데이터 없음','w');return;}
+  const esc=_rptEsc;
+  const fEq=document.getElementById('mFilterEqId')?.value||'';
+  const fType=(typeof _mTypeFilter!=='undefined'&&_mTypeFilter)||'';
+  const fFrom=document.getElementById('mFilterDateFrom')?.value||'';
+  const fTo=document.getElementById('mFilterDateTo')?.value||'';
+  let list=db.maints.filter(m=>{
+    const md=(m.start?m.start.slice(0,10):null)||m.date;
+    return (!fEq||m.eqId==fEq)&&(!fType||m.type===fType)&&(!fFrom||md>=fFrom)&&(!fTo||md<=fTo);
+  }).sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
+  if(!list.length){toast('해당 조건의 정비 이력 없음','w');return;}
+  let totCost=0,totFail=0;
+  const rows=list.map(m=>{
+    const rd=(m.start?m.start.slice(0,10):null)||m.date;
+    const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
+    const parts=(m.parts||[]).map(p=>`[${esc(p.pn)}] ${esc(p.name)} ×${p.qty}`).join('<br>')||'—';
+    const pc=(m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;
+    totCost+=pc; if(m.type==='고장')totFail++;
+    return `<tr>
+      <td class="c">${rd||'—'}</td>
+      <td>${esc(m.eqName)}</td>
+      <td class="c">${esc(m.type)}</td>
+      <td class="c">${durH>0?esc(fmtDur(durH)):'—'}</td>
+      <td>${esc(m.content)}</td>
+      <td>${esc(m.cause||'')||'—'}</td>
+      <td>${parts}</td>
+      <td class="num">${pc?fmtCost(pc):'—'}</td>
+      <td class="c">${esc(m.worker||'')||'—'}</td>
+    </tr>`;
+  }).join('');
+  const eqName=fEq?(db.eqs.find(e=>e.id==fEq)?.name||'선택 장비'):'전체';
+  const body=`<div class="sum">
+    <div>정비 건수<b>${list.length}</b></div>
+    <div>고장 건수<b>${totFail}</b></div>
+    <div>부품비용 합계<b>${fmtCost(totCost)}</b></div>
+  </div>
+  <table><thead><tr><th>수리일</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const meta=`장비: ${esc(eqName)} · 유형: ${esc(fType||'전체')} · 기간: ${fFrom||'처음'} ~ ${fTo||'현재'} · 총 ${list.length}건`;
+  downloadFile('정비이력서_'+localToday()+'.html',reportShell('🔧 설비 정비 이력서',meta,body),'text/html');
+  toast('정비 이력서 다운로드 완료');
+}
+
+function exportEqReport(){
+  if(!db.eqs.length){toast('장비 데이터 없음','w');return;}
+  const esc=_rptEsc;
+  const q=(typeof eqSearchQ!=='undefined'?eqSearchQ:'').toLowerCase();
+  const sf=(typeof eqStatusFilter!=='undefined'?eqStatusFilter:'ALL');
+  const list=db.eqs.filter(eq=>{
+    const mStatus=sf==='ALL'||(eq.status||'정상')===sf;
+    if(!mStatus)return false;
+    if(!q)return true;
+    return (eq.name||'').toLowerCase().includes(q)||(eq.serial||'').toLowerCase().includes(q)||(eq.loc||'').toLowerCase().includes(q)||(eq.maker||'').toLowerCase().includes(q)||(eq.power||'').toLowerCase().includes(q);
+  }).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  if(!list.length){toast('해당 조건의 장비 없음','w');return;}
+  const rows=list.map((eq,i)=>{
+    const maints=db.maints.filter(m=>m.eqId===eq.id);
+    const fails=maints.filter(m=>m.type==='고장');
+    const mtbf=calcMTBF(eq.id),mttr=calcMTTR(eq.id);
+    const lastInsp=db.insps.filter(d=>d.eqId===eq.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+    const lastMaint=maints.slice().sort((a,b)=>((b.start||b.date)||'').localeCompare((a.start||a.date)||''))[0];
+    const stTag=eq.status==='고장'?'<span class="tag r">고장</span>':eq.status==='단종'?'<span class="tag m">단종</span>':'<span class="tag g">정상</span>';
+    return `<tr>
+      <td class="c">${i+1}</td>
+      <td>${esc(eq.name)}</td>
+      <td>${esc(eq.serial||'')||'—'}</td>
+      <td>${esc(eq.maker||'')||'—'}</td>
+      <td>${esc(eq.loc||'')||'—'}</td>
+      <td class="c">${esc(eq.grade||'')||'—'}</td>
+      <td class="c">${stTag}</td>
+      <td class="c">${eq.install||'—'}</td>
+      <td class="c">${eq.cycle?eq.cycle+'일':'—'}</td>
+      <td class="num">${mtbf?mtbf.toFixed(0)+'h':'—'}</td>
+      <td class="num">${mttr?mttr.toFixed(1)+'h':'—'}</td>
+      <td class="c">${maints.length} / ${fails.length}</td>
+      <td class="c">${lastInsp?lastInsp.date:'—'}</td>
+      <td class="c">${lastMaint?((lastMaint.start?lastMaint.start.slice(0,10):null)||lastMaint.date):'—'}</td>
+    </tr>`;
+  }).join('');
+  const body=`<div class="sum">
+    <div>대상 장비<b>${list.length}</b></div>
+    <div>고장 상태<b>${list.filter(e=>e.status==='고장').length}</b></div>
+    <div>단종<b>${list.filter(e=>e.status==='단종').length}</b></div>
+  </div>
+  <table><thead><tr><th>No</th><th>장비명</th><th>시리얼</th><th>제작처</th><th>위치</th><th>등급</th><th>상태</th><th>설치일</th><th>점검주기</th><th>MTBF</th><th>MTTR</th><th>정비/고장</th><th>최근점검</th><th>최근정비</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const meta=`검색: ${esc(q||'—')} · 상태: ${esc(sf==='ALL'?'전체':sf)} · 총 ${list.length}대`;
+  downloadFile('설비관리대장_'+localToday()+'.html',reportShell('🏭 설비 관리대장',meta,body),'text/html');
+  toast('설비 관리대장 다운로드 완료');
+}
+
+function exportPartsReport(){
+  if(!db.parts.length){toast('부품 데이터 없음','w');return;}
+  const esc=_rptEsc;
+  const q=(typeof partSearchQ!=='undefined'?partSearchQ:'').toLowerCase();
+  const tf=(typeof partTypeFilter!=='undefined'?partTypeFilter:'ALL');
+  const list=db.parts.filter(p=>{
+    const mq=!q||(p.pn||'').toLowerCase().includes(q)||(p.name||'').toLowerCase().includes(q)||(p.maker||'').toLowerCase().includes(q)||(p.type||'').toLowerCase().includes(q);
+    const mt=tf==='ALL'||p.type===tf;
+    return mq&&mt;
+  }).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  if(!list.length){toast('해당 조건의 부품 없음','w');return;}
+  let totVal=0,shortCnt=0;
+  const rows=list.map((p,i)=>{
+    const val=(+p.price||0)*(+p.qty||0);totVal+=val;
+    const isShort=p.alertOn!==false&&(p.qty||0)<=(p.safe||0);
+    if(isShort)shortCnt++;
+    return `<tr class="${isShort?'danger':''}">
+      <td class="c">${i+1}</td>
+      <td>${esc(p.pn)}</td>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.maker||'')||'—'}</td>
+      <td class="c">${esc(p.type||'')||'—'}</td>
+      <td class="num">${fmtCost(p.price||0)}</td>
+      <td class="num">${p.qty||0}</td>
+      <td class="num">${p.safe||0}</td>
+      <td class="num">${fmtCost(val)}</td>
+      <td class="c">${isShort?'<span class="tag r">부족</span>':(p.alertOn===false?'<span class="tag m">알림해제</span>':'<span class="tag g">정상</span>')}</td>
+    </tr>`;
+  }).join('');
+  const body=`<div class="sum">
+    <div>품목 수<b>${list.length}</b></div>
+    <div>안전재고 미달<b>${shortCnt}</b></div>
+    <div>재고 금액 합계<b>${fmtCost(totVal)}</b></div>
+  </div>
+  <table><thead><tr><th>No</th><th>형번</th><th>부품명</th><th>메이커</th><th>타입</th><th>단가</th><th>현재고</th><th>안전재고</th><th>재고금액</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const meta=`검색: ${esc(q||'—')} · 타입: ${esc(tf==='ALL'?'전체':tf)} · 총 ${list.length}품목`;
+  downloadFile('부품재고현황_'+localToday()+'.html',reportShell('📦 부품 재고 현황표',meta,body),'text/html');
+  toast('부품 재고 현황표 다운로드 완료');
+}
+
+function exportCalibReport(){
+  if(!db.calibs||!db.calibs.length){toast('검교정 데이터 없음','w');return;}
+  const esc=_rptEsc;
+  const today=localToday();
+  let over=0,warn=0,ok=0;
+  const rows=db.calibs.map((c,i)=>{
+    const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
+    const remain=next?Math.ceil((new Date(next)-new Date(today))/86400000):null;
+    let cls='',tag='<span class="tag m">—</span>';
+    if(remain!==null){
+      if(remain<=0){cls='danger';tag='<span class="tag r">초과</span>';over++;}
+      else if(remain<=10){cls='warn';tag=`<span class="tag a">D-${remain}</span>`;warn++;}
+      else{tag='<span class="tag g">정상</span>';ok++;}
+    }
+    return `<tr class="${cls}">
+      <td class="c">${i+1}</td>
+      <td>${esc(c.name||'')||'—'}</td>
+      <td>${esc(c.mgmtNo||'')||'—'}</td>
+      <td>${esc(c.item||'')||'—'}</td>
+      <td>${esc(c.maker||'')||'—'}</td>
+      <td>${esc(c.location||'')||'—'}</td>
+      <td class="c">${c.cycleMon||'—'}</td>
+      <td class="c">${c.lastDate||'—'}</td>
+      <td class="c">${next||'—'}</td>
+      <td class="num">${remain!==null?remain+'일':'—'}</td>
+      <td class="c">${tag}</td>
+      <td>${esc(c.manager||'')||'—'}</td>
+      <td>${esc(c.agency||'')||'—'}</td>
+      <td>${esc(c.note||'')}</td>
+    </tr>`;
+  }).join('');
+  const body=`<div class="sum">
+    <div>총 항목<b>${db.calibs.length}</b></div>
+    <div>초과<b>${over}</b></div>
+    <div>임박(10일)<b>${warn}</b></div>
+    <div>정상<b>${ok}</b></div>
+  </div>
+  <table><thead><tr><th>No</th><th>설비명</th><th>관리번호</th><th>검교정 항목</th><th>Maker/Model</th><th>설치위치</th><th>주기(월)</th><th>최종일</th><th>차기일</th><th>잔여</th><th>상태</th><th>담당자</th><th>기관</th><th>비고</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const meta=`총 ${db.calibs.length}건 · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${today}`;
+  downloadFile('검교정관리대장_'+localToday()+'.html',reportShell('📐 검교정 관리대장',meta,body),'text/html');
+  toast('검교정 관리대장 다운로드 완료');
 }
 
 // ══════ 연간 점검 계획표 ══════
