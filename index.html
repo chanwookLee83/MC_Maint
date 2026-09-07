@@ -5082,11 +5082,11 @@ function exportInspReport(){
   });
 
   let bodyHtml='';
-  const TH='padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:10pt;background:#f1f5f9;color:#334155;';
+  const TH='padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:10pt;background:#f1f5f9;color:#334155;white-space:nowrap;';
   Object.keys(byMonth).sort().reverse().forEach(month=>{
     const [y,mo]=month.split('-');
     bodyHtml+=`<tr><td colspan="8" style="background:#1e293b;color:#fff;padding:10px 14px;font-size:12pt;font-weight:700;letter-spacing:1px;">${y}년 ${mo}월</td></tr>
-    <tr><th style="${TH}">장비명</th><th style="${TH}">날짜</th><th style="${TH}">점검자</th><th style="${TH}">점검 항목</th><th style="${TH}">점검 기준</th><th style="${TH};text-align:center;width:55px;">결과</th><th style="${TH}">특이사항</th><th style="${TH};text-align:center;width:70px;">최종판정</th></tr>`;
+    <tr><th style="${TH}">장비명</th><th style="${TH}">날짜</th><th style="${TH}">점검자</th><th style="${TH}">점검 항목</th><th style="${TH}">점검 기준</th><th style="${TH}text-align:center;">결과</th><th style="${TH}">특이사항</th><th style="${TH}text-align:center;">최종판정</th></tr>`;
 
     byMonth[month].forEach(d=>{
       const hasChk=d.chk&&Object.keys(d.chk).length>0;
@@ -5103,22 +5103,23 @@ function exportInspReport(){
       }
       if(items.length===0){
         const vc=d.verdict==='OK'?'#15803d':d.verdict==='NG'?'#b91c1c':'#64748b';
-        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.date}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};">${d.verdict||''}</td></tr>`;
+        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">${d.date}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;white-space:nowrap;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:normal;min-width:150px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};white-space:nowrap;">${d.verdict||''}</td></tr>`;
         return;
       }
       items.forEach((it,idx)=>{
         const rc=it.result==='ok'?'#15803d':it.result==='ng'?'#b91c1c':'#94a3b8';
         const rt=it.result==='ok'?'✓ OK':it.result==='ng'?'✕ NG':'—';
         const vc=d.verdict==='OK'?'#15803d':d.verdict==='NG'?'#b91c1c':'#64748b';
-        const TD=`border:1px solid #e2e8f0;padding:6px 10px;background:${catBg[it.cat]};`;
+        const TD=`border:1px solid #e2e8f0;padding:6px 10px;background:${catBg[it.cat]};white-space:nowrap;`;
+        const TDW=`border:1px solid #e2e8f0;padding:6px 10px;background:${catBg[it.cat]};white-space:normal;min-width:150px;`;
         bodyHtml+=`<tr>
           <td style="${TD}font-weight:${idx===0?'600':'400'};color:${idx===0?'inherit':'transparent'};">${idx===0?'▶ '+d.eqName:''}</td>
           <td style="${TD}color:${idx===0?'inherit':'transparent'};">${idx===0?d.date:''}</td>
           <td style="${TD}">${d.worker||''}</td>
-          <td style="${TD}"><span style="color:${catFg[it.cat]};font-size:9pt;font-weight:700;margin-right:5px;">[${catLabel[it.cat]}]</span>${it.label}</td>
-          <td style="${TD}font-size:9pt;color:#64748b;">${it.sub}</td>
+          <td style="${TDW}"><span style="color:${catFg[it.cat]};font-size:9pt;font-weight:700;margin-right:5px;">[${catLabel[it.cat]}]</span>${it.label}</td>
+          <td style="${TDW}font-size:9pt;color:#64748b;">${it.sub}</td>
           <td style="${TD}text-align:center;font-weight:700;color:${rc};">${rt}</td>
-          <td style="${TD}">${idx===0?(d.note||''):''}</td>
+          <td style="${TDW}">${idx===0?(d.note||''):''}</td>
           <td style="${TD}text-align:center;font-weight:700;color:${vc};">${idx===0?(d.verdict||''):''}</td>
         </tr>`;
       });
@@ -5132,9 +5133,11 @@ function exportInspReport(){
 h1{font-size:16pt;font-weight:700;margin-bottom:4px;}.meta{font-size:10pt;color:#64748b;margin-bottom:14px;}
 .legend{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;font-size:10pt;align-items:center;}
 .lb{width:48px;height:13px;border-radius:3px;display:inline-block;margin-right:3px;vertical-align:middle;}
-table{border-collapse:collapse;width:100%;}
+.tbl-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{border-collapse:collapse;width:100%;table-layout:auto;}
+th,td{overflow-wrap:normal;word-break:keep-all;}
 .footer{margin-top:16px;font-size:9pt;color:#94a3b8;}
-@media print{body{padding:15px 20px;}}</style></head><body>
+@media print{body{padding:12px 14px;}.tbl-wrap{overflow:visible;}table{font-size:8pt;}th,td{padding:3px 5px !important;}@page{size:landscape;}}</style></head><body>
 <h1>📋 설비 정기점검 이력 보고서</h1>
 <div class="meta">출력일: ${localToday()} &nbsp;|&nbsp; 기간: ${period} &nbsp;|&nbsp; 장비: ${filterEq||'전체'} &nbsp;|&nbsp; 판정: ${filterVerdict||'전체'} &nbsp;|&nbsp; 총 ${list.length}건</div>
 <div class="legend">
@@ -5143,9 +5146,9 @@ table{border-collapse:collapse;width:100%;}
   <span><span class="lb" style="background:#f0fdf4;border:1px solid #bbf7d0;"></span>외관</span>
   <span><span class="lb" style="background:#f5f3ff;border:1px solid #ddd6fe;"></span>F/Proof</span>
 </div>
-<table><colgroup><col style="min-width:130px;"><col style="width:88px;"><col style="width:68px;"><col><col style="width:155px;"><col style="width:58px;"><col style="width:120px;"><col style="width:68px;"></colgroup>
-<tbody>${bodyHtml}</tbody></table>
-<div class="footer">※ 본 보고서는 설비관리 시스템에서 자동 생성되었습니다.</div>
+<div class="tbl-wrap"><table>
+<tbody>${bodyHtml}</tbody></table></div>
+<div class="footer">※ 본 보고서는 설비관리 시스템에서 자동 생성되었습니다. 표는 내용 길이에 맞춰 열 너비가 자동 조정됩니다.</div>
 </body></html>`;
 
   const suffix=(filterMonth||filterEq||filterVerdict)?'_필터적용':'';
