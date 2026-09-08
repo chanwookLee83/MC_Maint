@@ -920,6 +920,18 @@ body.light .ac-item{color:#111827;border-color:#e5e7eb;}
 body.light .ac-item:hover{background:#f3f4f6;color:var(--amber);}
 body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
+/* ── 장비별 MTBF/MTBM/MTTR 콜랩시블 ── */
+.mtbf-eq{background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:7px;overflow:hidden;}
+.mtbf-eq-head{padding:11px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s;user-select:none;}
+.mtbf-eq-head:hover{background:var(--card2);}
+.mtbf-eq-head .info{flex:1;min-width:0;}
+.mtbf-eq-head .nm{font-size:16px;font-weight:600;color:var(--text);}
+.mtbf-eq-head .sm{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:2px;}
+.mtbf-eq-chev{font-size:11px;color:var(--muted);transition:transform .2s;flex-shrink:0;}
+.mtbf-eq.open .mtbf-eq-chev{transform:rotate(180deg);}
+.mtbf-eq-body{display:none;padding:0 11px 11px;}
+.mtbf-eq-body.open{display:block;}
+
 /* ── 월별 MTBF/MTTR 콜랩시블 ── */
 .mtbr-year-group{margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid var(--border);}
 .mtbr-year-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card2);cursor:pointer;user-select:none;transition:background .15s;}
@@ -929,15 +941,28 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 .mtbr-year-hd.open .y-arr{transform:rotate(0deg);}
 .mtbr-year-body{display:none;padding:0 14px;}
 .mtbr-year-body.open{display:block;}
-.mtbr-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.mtbr-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
 .mtbr-row:last-child{border-bottom:none;}
+.mtbr-row:hover{background:var(--card2);}
 .mtbr-mon{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);width:44px;flex-shrink:0;}
 .mtbr-info{flex:1;min-width:88px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .mtbr-info span{font-family:var(--mono);font-size:13px;}
 .mtbr-cell{text-align:center;min-width:58px;flex-shrink:0;}
-.mtbr-cell .lbl{font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;}
-.mtbr-cell .val{font-family:var(--mono);font-size:17px;font-weight:bold;line-height:1.2;}
+.mtbr-cell .lbl{font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--muted2);margin-bottom:2px;}
+.mtbr-cell .val{font-family:var(--mono);font-size:18px;font-weight:bold;line-height:1.2;}
 .mtbr-cell .sub{font-family:var(--mono);font-size:12px;color:var(--muted);}
+.mtbr-chev{font-size:11px;color:var(--muted);margin-left:6px;flex-shrink:0;transition:transform .2s;width:12px;text-align:center;}
+.mtbr-row.open .mtbr-chev{transform:rotate(180deg);}
+.mtbr-detail{display:none;padding:4px 0 10px;border-bottom:1px solid var(--border);}
+.mtbr-detail.open{display:block;}
+.mtbr-year-body>.mtbr-row:nth-last-child(2){border-bottom:none;}
+.mtbr-detail:last-child{border-bottom:none;}
+.mtbr-detail .dh{font-family:var(--cond);font-size:11px;letter-spacing:2px;color:var(--muted);margin:4px 0 4px;font-weight:700;}
+.mtbr-det-row{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:6px;background:var(--bg);margin-bottom:4px;}
+.mtbr-det-row .d{color:var(--muted);flex-shrink:0;}
+.mtbr-det-row .nm{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mtbr-det-row .tp{font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border2);color:var(--muted2);flex-shrink:0;}
+.mtbr-det-row .hr{color:var(--amber);flex-shrink:0;}
 /* ── 연간 점검 계획표 ── */
 .annual-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border);}
 .annual-table{border-collapse:collapse;min-width:600px;width:100%;font-size:12px;}
@@ -1356,7 +1381,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   </div>
   <div class="sec">
     <div class="sec-title">장비별 MTBF / MTBM / MTTR</div>
-    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:-4px 0 8px;line-height:1.6;">MTBF=고장 간격 · MTBM=전체 정비 간격 · MTTR=평균 수리시간 · 선택 기간 기준</div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:-4px 0 8px;line-height:1.6;">MTBF=고장 간격 · MTBM=전체 정비 간격 · MTTR=평균 수리시간 · 선택 기간 기준</div>
     <div class="card amber-t" id="mtbfList"><div class="empty" style="padding:14px;">데이터 없음</div></div>
   </div>
   <div class="sec">
@@ -3334,9 +3359,14 @@ function renderMaintLog(){
       const realIdx=db.maints.indexOf(m);
       const typeColor={'고장':'r','프로그램':'b','기구부':'a','개선':'g','청소':'p','작업자교육':'c'}[m.type]||'';
       const rd=m.start?m.start.slice(0,10):null;
+      const rdEnd=m.end?m.end.slice(0,10):null;
       const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
       const durTxt=fmtDur(durH);
-      const timeRange=(m.start&&m.end)?`${m.start.slice(11,16)}~${m.end.slice(11,16)}`:'';
+      const sameDay=rd&&rdEnd&&rd===rdEnd;
+      const timeRange=(m.start&&m.end)
+        ? (sameDay ? `${m.start.slice(11,16)}~${m.end.slice(11,16)}`
+                   : `${m.start.slice(5,16).replace('T',' ')} ~ ${m.end.slice(5,16).replace('T',' ')}`)
+        : '';
       const partCount=(m.parts||[]).reduce((s,p)=>s+(Number(p.qty)||0),0);
       const partTotal=(m.parts||[]).reduce((s,p)=>s+((Number(p.price)||0)*(Number(p.qty)||0)),0);
       return `
@@ -3344,7 +3374,7 @@ function renderMaintLog(){
         <div class="mlog-head">
           <div class="mlog-head-left">
             <div class="mlog-eq">🏭 ${m.eqName}</div>
-            <div class="mlog-date">${rd?`🔧 수리: <b>${rd}</b> &nbsp;·&nbsp; 📋 등록: ${m.date}`:`📅 ${m.date}`}${m.worker?' | 👤 '+m.worker:''}</div>
+            <div class="mlog-date">${rd?`🔧 수리: <b>${rd}${rdEnd&&rdEnd!==rd?` ~ ${rdEnd}`:''}</b> &nbsp;·&nbsp; 📋 등록: ${m.date}`:`📅 ${m.date}`}${m.worker?' | 👤 '+m.worker:''}</div>
           </div>
           <button class="btn-sm bsm-a" onclick="openMaintEdit(${realIdx})" style="margin-right:4px;">✏️ 수정</button>
           <button class="btn-sm bsm-r" onclick="deleteMaint(${realIdx})">DEL</button>
@@ -3840,7 +3870,25 @@ function renderMonthlyMtbr(filteredMaints){
       const mtbfDays=mtbf!==null?Math.round(mtbf/24):null;
       const mtbmDays=mtbm!==null?Math.round(mtbm/24):null;
       const mttrMin=mttr!==null&&mttr<1?Math.round(mttr*60):null;
-      return `<div class="mtbr-row">
+      // 상세 패널 : 해당 월 정비 내역
+      const getDD=m=>(m.start?m.start.slice(0,10):null)||m.date;
+      const detItems=mAll.slice().sort((a,b)=>getDD(b).localeCompare(getDD(a))).map(m=>{
+        const dd=(getDD(m)||'').slice(5);
+        const durH=(m.start&&m.end)?((new Date(m.end)-new Date(m.start))/3600000):(m.hours||0);
+        const durTxt=durH>0?(durH<1?Math.round(durH*60)+'min':durH.toFixed(1)+'h'):'';
+        const isFail=m.type==='고장';
+        return `<div class="mtbr-det-row">
+          <span class="d">${dd}</span>
+          <span class="nm">${(m.eqName||'').replace(/</g,'&lt;')}</span>
+          <span class="tp"${isFail?' style="border-color:#ef444450;color:var(--red);"':''}>${m.type}</span>
+          ${durTxt?`<span class="hr">⏱ ${durTxt}</span>`:''}
+        </div>`;
+      }).join('');
+      const detail=`<div class="mtbr-detail">
+        <div class="dh">${ym.slice(0,4)}년 ${ym.slice(5)}월 정비 내역 · ${totalCount}건 (고장 ${failCount})</div>
+        ${detItems||'<div style="font-family:var(--mono);font-size:12px;color:var(--muted);padding:6px 8px;">내역 없음</div>'}
+      </div>`;
+      return `<div class="mtbr-row" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
         <div class="mtbr-mon">${ym.slice(5)}월</div>
         <div class="mtbr-info">
           <span style="color:var(--muted);">정비 ${totalCount}건</span>
@@ -3861,7 +3909,8 @@ function renderMonthlyMtbr(filteredMaints){
           <div class="val" style="color:var(--amber);">${mttr!==null?(mttrMin!==null?mttrMin+'min':mttr.toFixed(1)+'h'):'—'}</div>
           ${mttr!==null&&mttrMin===null?`<div class="sub">~${Math.round(mttr*60)}min</div>`:''}
         </div>
-      </div>`;
+        <span class="mtbr-chev">▾</span>
+      </div>${detail}`;
     }).join('');
     return `<div class="mtbr-year-group">
       <div class="mtbr-year-hd${isOpen?' open':''}" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');this.querySelector('.y-arr').textContent=this.classList.contains('open')?'▾':'▸';">
@@ -3938,30 +3987,35 @@ function renderStats(){
         :failCount===1?firstFail
         :`${firstFail} ~ ${lastFail}`;
       const mtbfNote=failCount>0?((fFrom||fTo)?'기간 기준':'전체 기간'):'';
-      return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px;margin-bottom:7px;">
-        <div style="font-size:16px;font-weight:600;color:var(--text);">${eq.name}</div>
-        <div style="font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:2px;">
-          정비 ${totalMaints}건 | 고장 ${failCount}회
+      return `<div class="mtbf-eq">
+        <div class="mtbf-eq-head" onclick="this.parentElement.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
+          <div class="info">
+            <div class="nm">${eq.name}</div>
+            <div class="sm">정비 ${totalMaints}건 | 고장 ${failCount}회</div>
+          </div>
+          <span class="mtbf-eq-chev">▾</span>
         </div>
-        ${failDateStr?`<div style="font-family:var(--mono);font-size:12px;color:var(--red);opacity:.8;margin-top:2px;">🔴 ${failDateStr}</div>`:''}
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;">
+        <div class="mtbf-eq-body">
+        ${failDateStr?`<div style="font-family:var(--mono);font-size:12px;color:var(--red);opacity:.8;margin:4px 0 2px;">🔴 ${failDateStr}</div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
           <div style="flex:1;text-align:center;min-width:70px;background:var(--card2);border-radius:7px;padding:7px 4px;">
-            <div style="font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">MTBF<span style="font-size:9px;letter-spacing:0;"> 고장</span></div>
-            <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--green);">${mtbf?mtbf.toFixed(0)+'h':'—'}</div>
-            ${mtbfDays?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">~${mtbfDays}일</div>`:''}
-            ${mtbfNote?`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);">${mtbfNote}</div>`:''}
+            <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:1px;color:var(--muted2);margin-bottom:2px;">MTBF<span style="font-size:10px;font-weight:400;letter-spacing:0;color:var(--muted);"> 고장</span></div>
+            <div style="font-family:var(--mono);font-size:19px;font-weight:bold;color:var(--green);">${mtbf?mtbf.toFixed(0)+'h':'—'}</div>
+            ${mtbfDays?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted);">~${mtbfDays}일</div>`:''}
+            ${mtbfNote?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">${mtbfNote}</div>`:''}
           </div>
           <div style="flex:1;text-align:center;min-width:70px;background:var(--card2);border-radius:7px;padding:7px 4px;">
-            <div style="font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">MTBM<span style="font-size:9px;letter-spacing:0;"> 전체정비</span></div>
-            <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--blue);">${mtbm?mtbm.toFixed(0)+'h':'—'}</div>
-            ${mtbmDays?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">~${mtbmDays}일</div>`:''}
+            <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:1px;color:var(--muted2);margin-bottom:2px;">MTBM<span style="font-size:10px;font-weight:400;letter-spacing:0;color:var(--muted);"> 전체정비</span></div>
+            <div style="font-family:var(--mono);font-size:19px;font-weight:bold;color:var(--blue);">${mtbm?mtbm.toFixed(0)+'h':'—'}</div>
+            ${mtbmDays?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted);">~${mtbmDays}일</div>`:''}
           </div>
           <div style="flex:1;text-align:center;min-width:70px;background:var(--card2);border-radius:7px;padding:7px 4px;">
-            <div style="font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">MTTR<span style="font-size:9px;letter-spacing:0;"> 수리</span></div>
-            <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--amber);">${mttr?mttr.toFixed(1)+'h':'—'}</div>
-            ${mttr?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">~${Math.round(mttr*60)}min</div>`:''}
-            ${mttrNote?`<div style="font-family:var(--mono);font-size:10px;color:var(--red);">${mttrNote}</div>`:''}
+            <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:1px;color:var(--muted2);margin-bottom:2px;">MTTR<span style="font-size:10px;font-weight:400;letter-spacing:0;color:var(--muted);"> 수리</span></div>
+            <div style="font-family:var(--mono);font-size:19px;font-weight:bold;color:var(--amber);">${mttr?mttr.toFixed(1)+'h':'—'}</div>
+            ${mttr?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted);">~${Math.round(mttr*60)}min</div>`:''}
+            ${mttrNote?`<div style="font-family:var(--mono);font-size:11px;color:var(--red);">${mttrNote}</div>`:''}
           </div>
+        </div>
         </div>
       </div>`}).join('')
       +(onlyWithRecords&&hiddenCount>0?`<div style="text-align:center;padding:8px 0;font-family:var(--mono);font-size:12px;color:var(--muted);">정비 기록 없는 장비 ${hiddenCount}대 숨김</div>`:'');
@@ -5573,12 +5627,14 @@ function exportMaintReport(){
   let totCost=0,totFail=0;
   const rows=list.map(m=>{
     const rd=(m.start?m.start.slice(0,10):null)||m.date;
+    const rdEnd=m.end?m.end.slice(0,10):null;
+    const rdTxt=rd?(rdEnd&&rdEnd!==rd?`${rd}<br>~ ${rdEnd}`:rd):'—';
     const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
     const parts=(m.parts||[]).map(p=>`[${esc(p.pn)}] ${esc(p.name)} ×${p.qty}`).join('<br>')||'—';
     const pc=(m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;
     totCost+=pc; if(m.type==='고장')totFail++;
     return `<tr>
-      <td class="c">${rd||'—'}</td>
+      <td class="c">${rdTxt}</td>
       <td>${esc(m.eqName)}</td>
       <td class="c">${esc(m.type)}</td>
       <td class="c">${durH>0?esc(fmtDur(durH)):'—'}</td>
@@ -5595,7 +5651,7 @@ function exportMaintReport(){
     <div>고장 건수<b>${totFail}</b></div>
     <div>부품비용 합계<b>${fmtCost(totCost)}</b></div>
   </div>
-  <table><thead><tr><th>수리일</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}</tbody></table>`;
+  <table><thead><tr><th>수리기간</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}</tbody></table>`;
   const meta=`장비: ${esc(eqName)} · 유형: ${esc(fType||'전체')} · 기간: ${fFrom||'처음'} ~ ${fTo||'현재'} · 총 ${list.length}건`;
   downloadFile('정비이력서_'+localToday()+'.html',reportShell('🔧 설비 정비 이력서',meta,body),'text/html');
   toast('정비 이력서 다운로드 완료');
