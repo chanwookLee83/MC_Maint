@@ -3713,16 +3713,37 @@ function calcMTTR(eqId){
   if(!count) return null;
   return total/count;
 }
-function calcMTBFFiltered(eqId,maints){
-  const fails=maints.filter(m=>m.eqId===eqId&&m.type==='고장').sort((a,b)=>new Date(a.date)-new Date(b.date));
-  if(fails.length<2) return null;
-  let totalGap=0;
-  for(let i=1;i<fails.length;i++){
-    const prev=fails[i-1].end||fails[i-1].date;
-    const cur=fails[i].date;
-    totalGap+=(new Date(cur)-new Date(prev));
+// 기간 기준 MTBF : (대상 기간 가동시간 − 다운타임) / 기간 내 고장건수
+function periodMTBF(fails,startStr,endStr){
+  const n=fails.length;
+  if(!n||!startStr||!endStr) return null;
+  const start=new Date(startStr+'T00:00:00'), end=new Date(endStr+'T23:59:59');
+  const spanH=(end-start)/3600000;
+  if(spanH<=0) return null;
+  let downH=0;
+  fails.forEach(m=>{
+    if(m.start&&m.end){const d=(new Date(m.end)-new Date(m.start))/3600000;if(d>0)downH+=d;}
+    else if(m.hours>0){downH+=m.hours;}
+  });
+  return Math.max(spanH-downH,0)/n;
+}
+function calcMTBFFiltered(eqId,maints,fFrom,fTo,installDate){
+  const fails=maints.filter(m=>m.eqId===eqId&&m.type==='고장');
+  if(!fails.length) return null;
+  const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
+  const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
+  // 기간 시작 : 필터 시작일 → 없으면 설치일/최초 기록일
+  let startStr=fFrom||'';
+  if(!startStr){
+    const ds=maints.filter(m=>m.eqId===eqId).map(getD).filter(Boolean).sort();
+    startStr=installDate||ds[0]||today;
+  } else if(installDate&&installDate>startStr){
+    startStr=installDate; // 설치 이전 구간은 가동시간에서 제외
   }
-  return totalGap/(fails.length-1)/3600000;
+  // 기간 종료 : 필터 종료일 → 없으면 오늘 (미래로 못 넘어감)
+  let endStr=fTo||today;
+  if(endStr>today) endStr=today;
+  return periodMTBF(fails,startStr,endStr);
 }
 function calcMTTRFiltered(eqId,maints){
   const fails=maints.filter(m=>m.eqId===eqId&&m.type==='고장');
@@ -3768,6 +3789,7 @@ function setYearFilter(year){
 function renderMonthlyMtbr(filteredMaints){
   const el=document.getElementById('monthlyMtbrList');
   if(!el) return;
+  const _today=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
   const monthSet=new Set();
   filteredMaints.forEach(m=>{
     const d=(m.start?m.start.slice(0,10):null)||m.date;
@@ -3797,16 +3819,14 @@ function renderMonthlyMtbr(filteredMaints){
         else if(m.hours>0){total+=m.hours;count++;}
       });
       const mttr=count>0?total/count:null;
-      const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
+      // 월별 MTBF : 해당 월 기간 기준 (월 가동시간 − 다운타임) / 월 고장건수
       let mtbf=null;
-      if(failCount>=2){
-        const sorted=mFails.slice().sort((a,b)=>new Date(getD(a))-new Date(getD(b)));
-        let gap=0;
-        for(let i=1;i<sorted.length;i++){
-          const prev=sorted[i-1].end||getD(sorted[i-1]);
-          gap+=(new Date(getD(sorted[i]))-new Date(prev));
-        }
-        mtbf=gap/(sorted.length-1)/3600000;
+      if(failCount>0){
+        const y=parseInt(ym.slice(0,4)),mo=parseInt(ym.slice(5,7));
+        const lastDay=new Date(y,mo,0).getDate();
+        let monthEnd=ym+'-'+String(lastDay).padStart(2,'0');
+        if(monthEnd>_today) monthEnd=_today;
+        mtbf=periodMTBF(mFails,ym+'-01',monthEnd);
       }
       const mtbfDays=mtbf!==null?Math.round(mtbf/24):null;
       const mttrMin=mttr!==null&&mttr<1?Math.round(mttr*60):null;
@@ -3886,7 +3906,7 @@ function renderStats(){
     mtEl.innerHTML=activeEqs.map(eq=>{
       const fails=filteredMaints.filter(m=>m.eqId===eq.id&&m.type==='고장');
       const allMaints=filteredMaints.filter(m=>m.eqId===eq.id);
-      const mtbf=calcMTBFFiltered(eq.id,filteredMaints),mttr=calcMTTRFiltered(eq.id,filteredMaints);
+      const mtbf=calcMTBFFiltered(eq.id,filteredMaints,fFrom,fTo,eq.install),mttr=calcMTTRFiltered(eq.id,filteredMaints);
       const failCount=fails.length;
       const totalMaints=allMaints.length;
       const hasHours=fails.some(m=>m.hours>0||(m.start&&m.end));
@@ -3900,7 +3920,7 @@ function renderStats(){
       const failDateStr=failCount===0?''
         :failCount===1?firstFail
         :`${firstFail} ~ ${lastFail}`;
-      const mtbfNote=failCount===1?'설치일 기준':'';
+      const mtbfNote=failCount>0?((fFrom||fTo)?'기간 기준':'전체 기간'):'';
       return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px;margin-bottom:7px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="flex:1;min-width:0;">
@@ -5314,7 +5334,7 @@ function getStatsExportData(){
       name:eq.name,
       maints:all.length,
       fails:all.filter(m=>m.type==='고장').length,
-      mtbf:calcMTBFFiltered(eq.id,fm),
+      mtbf:calcMTBFFiltered(eq.id,fm,fFrom,fTo,eq.install),
       mttr:calcMTTRFiltered(eq.id,fm),
       cost:all.reduce((s,m)=>s+(m.partCost||0),0)
     };
