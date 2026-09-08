@@ -441,7 +441,9 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .grade-none{background:var(--border);border:1px solid var(--border2);color:var(--muted);}
 
 /* 등급 기준표 모달 */
+#gradeGuideModal .modal{max-width:820px;}
 .grade-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+.grade-table td:nth-child(2){white-space:nowrap;}
 .grade-table th{font-family:var(--cond);font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;}
 .grade-table td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5;}
 .grade-table tr:last-child td{border-bottom:none;}
@@ -1019,13 +1021,23 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </div>
 
       <!-- 장비 등급 -->
-      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 관리 우선순위 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
       <input type="hidden" id="eqGrade" value="">
       <div class="grade-selector">
         <div class="grade-btn" id="gbtn-S" onclick="selectGrade('eqGrade','S')">S<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">최우선</div></div>
         <div class="grade-btn" id="gbtn-A" onclick="selectGrade('eqGrade','A')">A<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">중요</div></div>
         <div class="grade-btn" id="gbtn-B" onclick="selectGrade('eqGrade','B')">B<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">일반</div></div>
         <div class="grade-btn" id="gbtn-C" onclick="selectGrade('eqGrade','C')">C<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">저우선</div></div>
+      </div>
+
+      <!-- 설비 상태 등급 -->
+      <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🩺 설비 상태 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
+      <input type="hidden" id="eqCond" value="">
+      <div class="grade-selector">
+        <div class="grade-btn" id="cbtn-S" onclick="selectGrade('eqCond','S')">S<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">양호</div></div>
+        <div class="grade-btn" id="cbtn-A" onclick="selectGrade('eqCond','A')">A<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">정상</div></div>
+        <div class="grade-btn" id="cbtn-B" onclick="selectGrade('eqCond','B')">B<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">경년</div></div>
+        <div class="grade-btn" id="cbtn-C" onclick="selectGrade('eqCond','C')">C<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">노후</div></div>
       </div>
 
       <!-- 전기 / 공압 사양 -->
@@ -1900,13 +1912,22 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </div>
     </div>
 
-    <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 장비 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
+    <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🏅 관리 우선순위 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
     <input type="hidden" id="eEqGrade" value="">
     <div class="grade-selector">
       <div class="grade-btn" id="egbtn-S" onclick="selectGrade('eEqGrade','S')">S<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">최우선</div></div>
       <div class="grade-btn" id="egbtn-A" onclick="selectGrade('eEqGrade','A')">A<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">중요</div></div>
       <div class="grade-btn" id="egbtn-B" onclick="selectGrade('eEqGrade','B')">B<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">일반</div></div>
       <div class="grade-btn" id="egbtn-C" onclick="selectGrade('eEqGrade','C')">C<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">저우선</div></div>
+    </div>
+
+    <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">🩺 설비 상태 등급<span style="flex:1;height:1px;background:var(--border);display:block;"></span><button onclick="openGradeGuide()" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);font-family:var(--cond);font-size:9px;font-weight:700;padding:2px 8px;cursor:pointer;letter-spacing:1px;">기준표 ▸</button></div>
+    <input type="hidden" id="eEqCond" value="">
+    <div class="grade-selector">
+      <div class="grade-btn" id="ecbtn-S" onclick="selectGrade('eEqCond','S')">S<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">양호</div></div>
+      <div class="grade-btn" id="ecbtn-A" onclick="selectGrade('eEqCond','A')">A<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">정상</div></div>
+      <div class="grade-btn" id="ecbtn-B" onclick="selectGrade('eEqCond','B')">B<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">경년</div></div>
+      <div class="grade-btn" id="ecbtn-C" onclick="selectGrade('eEqCond','C')">C<div style="font-size:8px;font-weight:400;margin-top:2px;letter-spacing:0;">노후</div></div>
     </div>
 
     <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">⚡ 전기 사양<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
@@ -1935,14 +1956,23 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 <div class="modal-bg" id="gradeGuideModal" onclick="closeModal('gradeGuideModal',event)">
   <div class="modal">
     <div class="modal-title">🏅 장비 등급 기준표 <button class="modal-close" onclick="closeModal('gradeGuideModal')">✕</button></div>
-    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.7;">생산 영향도 <span style="color:var(--amber);">×</span> 고장 빈도/수리비용 복합 평가로 등급을 결정합니다.</div>
+    <div style="background:#f59e0b12;border:1px solid #f59e0b40;border-radius:8px;padding:9px 11px;margin-bottom:14px;font-size:11px;color:var(--muted2);line-height:1.7;">
+      등급은 <b>서로 다른 두 가지</b>를 봅니다. 혼동하지 마세요.<br>
+      <b style="color:var(--amber);">①&nbsp;관리 우선순위 등급</b> = 얼마나 집중 관리해야 하는가 (고장 시 피해가 클수록 <b style="color:#ff4d4d;">S</b>)<br>
+      <b style="color:var(--blue);">②&nbsp;설비 상태 등급</b> = 설비가 얼마나 새것·건전한가 (신품·양호일수록 <b style="color:#ff4d4d;">S</b>, 노후·고장多일수록 <b style="color:var(--green);">C</b>)<br>
+      <span style="color:var(--muted);">→ 신품 설비라도 중요 공정이면 ①은 S가 될 수 있습니다. 두 등급은 독립입니다.</span>
+    </div>
+
+    <div style="font-family:var(--cond);font-size:14px;font-weight:800;letter-spacing:1px;color:var(--amber);margin:4px 0 6px;">① 관리 우선순위 등급 <span style="color:var(--muted);font-weight:400;font-size:11px;letter-spacing:0;">— 얼마나 집중 관리할지</span></div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.7;">자동차부품 업계(IATF 16949 · TPM) 설비 중요도 평가 기준. <span style="color:var(--amber);">안전·환경(S) / 품질(Q) / 생산·가동(P) / 납기(D) / 원가(C)</span> 항목을 평가해 등급을 결정합니다.</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.7;">각 항목 중 <b style="color:var(--amber);">가장 높은 등급을 최종 등급으로 채택</b>합니다(최고치 우선).</div>
 
     <table class="grade-table">
       <thead>
         <tr>
           <th style="width:36px;">등급</th>
           <th>명칭</th>
-          <th>판정 기준</th>
+          <th>판정 기준 (자동차부품 · IATF 16949 / TPM)</th>
         </tr>
       </thead>
       <tbody>
@@ -1950,43 +1980,48 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
           <td class="gt-grade grade-S" style="color:#ff4d4d;">S</td>
           <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:#ff4d4d;">최우선 관리</td>
           <td class="gt-criteria">
-            <div>· 고장 시 <b>라인 전체 정지</b> (생산 직결)</div>
-            <div>· 대체 설비 없음 / 단독 공정</div>
-            <div>· 연간 수리비 <b>500만원 이상</b> 또는</div>
-            <div>· 고장 빈도 <b>월 1회 이상</b></div>
-            <div class="gt-desc" style="margin-top:4px;">→ 예방정비 최우선, 점검주기 최단</div>
+            <div>· <b>안전/환경(S)</b> : 고장 시 인적 재해·중대 환경사고 우려, 안전장치 직결 설비</div>
+            <div>· <b>품질(Q)</b> : 고객 <b>중요특성(CC/SC)</b> 가공·검출 설비, 오류 시 유출·리콜 위험, 양산 승인(PPAP) 연계</div>
+            <div>· <b>생산(P)</b> : 고장 시 <b>라인·셀 전체 즉시 정지</b> + <b>완충재고(버퍼) 없음</b> + 예비품·예비유닛 미보유로 <b>당일 복구 불가</b>, Bottleneck 공정 (※ 단독 설비라도 세 조건이 겹칠 때만 S)</div>
+            <div>· <b>납기(D)</b> : 고객 직납·JIT 라인, 정지 시 <b>고객 라인 정지(챠지)</b> 가능</div>
+            <div>· <b>원가(C)</b> : 연간 수리비 <b>500만원 이상</b> 또는 고장 빈도 <b>월 1회 이상</b></div>
+            <div>· 법정 <b>검교정 대상</b> 계측·시험 설비, 단종/단종예정, 월 가동 상위, 노후 심화 설비 포함</div>
+            <div class="gt-desc" style="margin-top:4px;">→ 예방정비(PM) 최우선, 점검주기 최단, 예비품 상시 확보, 단종 전환관리</div>
           </td>
         </tr>
         <tr style="background:#f59e0b08;">
           <td class="gt-grade grade-A" style="color:var(--amber);">A</td>
           <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:var(--amber);">중요 관리</td>
           <td class="gt-criteria">
-            <div>· 고장 시 <b>해당 공정 부분 정지</b></div>
-            <div>· 대체 가능하나 대기시간 발생</div>
-            <div>· 연간 수리비 <b>100~500만원</b> 또는</div>
-            <div>· 고장 빈도 <b>분기 1회 이상</b></div>
-            <div class="gt-desc" style="margin-top:4px;">→ 정기점검 철저, 소모품 선제 교체</div>
+            <div>· <b>안전/환경(S)</b> : 국부적 안전·환경 영향, 보호구·방호로 통제 가능</div>
+            <div>· <b>품질(Q)</b> : 일반특성 가공, 불량 시 공정 내 <b>검출 가능</b>(후공정 유출 낮음)</div>
+            <div>· <b>생산(P)</b> : 고장 시 <b>해당 스테이션·공정만 정지</b>, 또는 <b>단독 설비</b>라도 완충재고로 대응 / 예비품·예비유닛으로 <b>당일 복구</b> / 병렬 셀로 물량 재배분 가능</div>
+            <div>· <b>납기(D)</b> : 정지 시 재고로 단기 대응 가능하나 장기화 시 납기 차질</div>
+            <div>· <b>원가(C)</b> : 연간 수리비 <b>100~500만원</b> 또는 고장 빈도 <b>분기 1회 이상</b></div>
+            <div class="gt-desc" style="margin-top:4px;">→ 정기점검 철저, 소모품 선제 교체, 상태기반보전(CBM) 적용</div>
           </td>
         </tr>
         <tr style="background:#3b82f608;">
           <td class="gt-grade grade-B" style="color:var(--blue);">B</td>
           <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:var(--blue);">일반 관리</td>
           <td class="gt-criteria">
-            <div>· 고장 시 <b>품질 저하 또는 속도 감소</b></div>
-            <div>· 대체 설비 보유 / 즉시 전환 가능</div>
-            <div>· 연간 수리비 <b>100만원 미만</b> 또는</div>
-            <div>· 고장 빈도 <b>반기 1회 이하</b></div>
-            <div class="gt-desc" style="margin-top:4px;">→ 계획 정비, 표준 점검주기 적용</div>
+            <div>· <b>안전/환경(S)</b> : 안전·환경 영향 미미</div>
+            <div>· <b>품질(Q)</b> : 품질 영향 경미, 외관·속도 저하 수준</div>
+            <div>· <b>생산(P)</b> : 고장 시 속도 감소·부분 지연, <b>대체 설비 보유 / 즉시 전환</b> 가능</div>
+            <div>· <b>납기(D)</b> : 납기 영향 거의 없음</div>
+            <div>· <b>원가(C)</b> : 연간 수리비 <b>100만원 미만</b> 또는 고장 빈도 <b>반기 1회 이하</b></div>
+            <div class="gt-desc" style="margin-top:4px;">→ 계획 정비(TBM), 표준 점검주기 적용</div>
           </td>
         </tr>
         <tr style="background:#10b98108;">
           <td class="gt-grade grade-C" style="color:var(--green);">C</td>
           <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:var(--green);">저우선 관리</td>
           <td class="gt-criteria">
-            <div>· 고장 시 <b>생산에 영향 없음</b></div>
-            <div>· 보조 설비 / 유틸리티 장비</div>
-            <div>· 연간 수리비 <b>30만원 미만</b></div>
-            <div>· 고장 빈도 <b>연 1회 이하</b></div>
+            <div>· <b>안전/환경(S)</b> : 영향 없음</div>
+            <div>· <b>품질(Q)</b> : 품질 무관</div>
+            <div>· <b>생산(P)</b> : 고장 시 <b>생산에 영향 없음</b>, 보조 설비 / 유틸리티 장비</div>
+            <div>· <b>납기(D)</b> : 영향 없음</div>
+            <div>· <b>원가(C)</b> : 연간 수리비 <b>30만원 미만</b> 또는 고장 빈도 <b>연 1회 이하</b></div>
             <div class="gt-desc" style="margin-top:4px;">→ 사후 정비(BM) 위주, 점검주기 완화</div>
           </td>
         </tr>
@@ -1994,11 +2029,83 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </table>
 
     <div style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-top:12px;">
-      <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:6px;">📌 복합 판정 원칙</div>
+      <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:6px;">📌 복합 판정 원칙 (자동차부품)</div>
       <div style="font-size:11px;color:var(--muted2);line-height:1.8;">
-        생산 영향도와 고장 이력 중 <span style="color:var(--amber);font-weight:700;">더 높은 등급 기준을 우선 적용</span>합니다.<br>
-        예) 생산 영향도 B등급이라도 월 1회 고장 반복 → <span style="color:#ff4d4d;font-weight:700;">S등급</span> 부여<br>
-        등급은 분기 1회 정기 검토하여 실적 반영을 권장합니다.
+        S·Q·P·D·C 5개 항목을 각각 평가한 뒤 <span style="color:var(--amber);font-weight:700;">가장 높은 등급을 최종 등급</span>으로 부여합니다.<br>
+        예) 생산 영향도가 B라도 <b>고객 중요특성(CC/SC)</b> 가공 설비이거나 <b>법정 검교정 대상</b> → <span style="color:#ff4d4d;font-weight:700;">S등급</span><br>
+        예) <b>단종/단종 예정</b>, <b>월 가동량 상위</b>, <b>노후화 심화</b> 설비 → S등급으로 상향, 분기별 정기 검토 권장<br>
+        <b style="color:var(--amber);">조립 등 단독 설비가 많은 공정</b> : '단독'이라는 이유만으로 전부 S로 두지 않습니다. ① 라인·셀이 <b>즉시 전체 정지</b>되는가 ② <b>완충재고(버퍼)</b>로 버틸 수 있는가 ③ <b>예비품·예비유닛</b>으로 당일 복구되는가 를 함께 보고, <b>①즉시 전체정지 + ②버퍼 없음 + ③당일 복구 불가</b>가 겹칠 때만 S, 그 외 단독 설비는 <b style="color:var(--amber);">A</b>로 관리합니다. (예비유닛·예비품 확보로 등급을 낮출 수 있음)<br>
+        <span style="color:var(--muted);">※ 등급 재평가 주기 : 연 1회 정기 + 설비 신규 도입 / 공정 변경 / 고객 요구 변경 시 수시</span>
+      </div>
+    </div>
+
+    <div style="font-family:var(--cond);font-size:14px;font-weight:800;letter-spacing:1px;color:var(--blue);margin:22px 0 6px;">② 설비 상태 등급 <span style="color:var(--muted);font-weight:400;font-size:11px;letter-spacing:0;">— 설비가 얼마나 새것·건전한지</span></div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.7;">설비 자체의 <span style="color:var(--blue);">신품도·건전성</span>을 나타냅니다. <span style="color:var(--blue);">경과년수</span> <b style="color:var(--amber);">×</b> <span style="color:var(--blue);">고장 빈도</span> <b style="color:var(--amber);">×</b> 노후·단종 상태로 판정하며, 신규 설비일수록 S, 노후·고장이 잦을수록 C입니다.</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;line-height:1.7;">경과년수와 고장 빈도 중 <b style="color:var(--amber);">더 낮은(나쁜) 등급을 최종 상태 등급으로 채택</b>합니다.</div>
+
+    <table class="grade-table">
+      <thead>
+        <tr>
+          <th style="width:36px;">등급</th>
+          <th>명칭</th>
+          <th>판정 기준 (경과년수 · 고장 빈도 · 노후 상태)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#ff4d4d08;">
+          <td class="gt-grade grade-S" style="color:#ff4d4d;">S</td>
+          <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:#ff4d4d;">양호 / 신품</td>
+          <td class="gt-criteria">
+            <div>· 도입 <b>3년 미만</b> (신규 설비 · 최신 사양)</div>
+            <div>· 고장 <b>거의 없음</b> (연 0~1회, 경미)</div>
+            <div>· 정밀도·정도(精度) 규격 내, 외관·누유 이상 없음</div>
+            <div>· 예비품·소모품 정상 공급, 단종 부품 없음</div>
+            <div class="gt-desc" style="margin-top:4px;">→ 초기 유동관리(길들이기) 후 표준 예방정비 유지</div>
+          </td>
+        </tr>
+        <tr style="background:#f59e0b08;">
+          <td class="gt-grade grade-A" style="color:var(--amber);">A</td>
+          <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:var(--amber);">정상</td>
+          <td class="gt-criteria">
+            <div>· 도입 <b>3~7년</b></div>
+            <div>· 고장 빈도 <b>연 1~2회</b></div>
+            <div>· 주요 부품 교체 이력 적음, 성능 저하 미미</div>
+            <div>· 단종 부품 일부 존재하나 대체품 확보 가능</div>
+            <div class="gt-desc" style="margin-top:4px;">→ 예방정비 + 소모품 주기 교체, 정도 정기 점검</div>
+          </td>
+        </tr>
+        <tr style="background:#3b82f608;">
+          <td class="gt-grade grade-B" style="color:var(--blue);">B</td>
+          <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:var(--blue);">경년 / 주의</td>
+          <td class="gt-criteria">
+            <div>· 도입 <b>7~12년</b> (노후 진행 단계)</div>
+            <div>· 고장 빈도 <b>분기 1회 내외</b></div>
+            <div>· 정밀도 저하·간헐 트러블, <b>오버홀(대수리) 시점</b> 도래</div>
+            <div>· 핵심 부품 <b>단종 조짐</b>, 예비품 선제 확보 필요</div>
+            <div class="gt-desc" style="margin-top:4px;">→ 오버홀 계획 수립, 단종 부품 재고 확보, 갱신 검토 착수</div>
+          </td>
+        </tr>
+        <tr style="background:#10b98108;">
+          <td class="gt-grade grade-C" style="color:var(--green);">C</td>
+          <td style="font-family:var(--cond);font-weight:700;font-size:12px;color:var(--green);">노후 / 교체 검토</td>
+          <td class="gt-criteria">
+            <div>· 도입 <b>12년 이상</b> (내용연수 초과)</div>
+            <div>· 고장 빈도 <b>월 1회 이상</b>, 수리비 급증</div>
+            <div>· 정밀도·안전 기능 저하, 잦은 임시 조치로 가동</div>
+            <div>· 핵심 부품 <b>단종</b> / 제작사 지원 종료</div>
+            <div class="gt-desc" style="margin-top:4px;">→ 대수선 또는 <b>설비 갱신(대체 투자)</b> 품의, 단종 전환관리</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-top:12px;">
+      <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:6px;">📌 상태 등급 판정 원칙</div>
+      <div style="font-size:11px;color:var(--muted2);line-height:1.8;">
+        경과년수 등급과 고장 빈도 등급 중 <span style="color:var(--amber);font-weight:700;">더 나쁜 쪽을 최종 상태 등급</span>으로 부여합니다.<br>
+        예) 도입 4년(경과년수 A)이라도 <b>월 1회 이상 고장</b> 또는 <b>핵심 부품 단종</b> → <span style="color:var(--green);font-weight:700;">C</span><br>
+        예) 도입 10년이라도 <b>고장 이력 거의 없고</b> 정밀도 규격 내면 → <span style="color:var(--amber);font-weight:700;">A</span> 유지 가능<br>
+        <span style="color:var(--muted);">※ 경과년수 기준은 사내 표준 내용연수에 맞춰 조정하세요 (정밀가공·전자설비는 더 짧게).</span>
       </div>
     </div>
   </div>
@@ -2691,8 +2798,9 @@ function eqAcPick(eqId, eqName){
 }
 
 // ══════ 장비 등급 ══════
+const GRADE_BTN_PREFIX={eqGrade:'gbtn-',eEqGrade:'egbtn-',eqCond:'cbtn-',eEqCond:'ecbtn-'};
 function selectGrade(inputId, grade, silent=false){
-  const prefix = inputId==='eqGrade' ? 'gbtn-' : 'egbtn-';
+  const prefix = GRADE_BTN_PREFIX[inputId] || 'gbtn-';
   ['S','A','B','C'].forEach(g=>{
     const b=document.getElementById(prefix+g);
     if(!b)return;
@@ -2708,6 +2816,8 @@ function gradeBadgeHtml(g){
   if(!g)return '';
   return `<span class="grade-badge grade-${g||'none'}">${g||'—'}</span>`;
 }
+function gradeLabel(g){return g==='S'?'최우선 관리':g==='A'?'중요 관리':g==='B'?'일반 관리':g==='C'?'저우선 관리':'';}
+function condLabel(g){return g==='S'?'양호 / 신품':g==='A'?'정상':g==='B'?'경년 / 주의':g==='C'?'노후 / 교체검토':'';}
 
 function registerEq(){
   const name=document.getElementById('eqName').value.trim();
@@ -2728,18 +2838,22 @@ function registerEq(){
     airPres:document.getElementById('eqAirPres').value,
     // 등급
     grade:document.getElementById('eqGrade').value,
+    cond:document.getElementById('eqCond').value,
     date:localToday()
   });
   save();clearEqForm();renderEqList();populateEqSelects();
   toast('장비 등록 완료: '+name);
 }
 function clearEqForm(){
-  ['eqName','eqSerial','eqMaker','eqInstall','eqLoc','eqInspCycle','eqMemo','eqAirPres','eqGrade'].forEach(id=>{
+  ['eqName','eqSerial','eqMaker','eqInstall','eqLoc','eqInspCycle','eqMemo','eqAirPres','eqGrade','eqCond'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
   const pw=document.getElementById('eqPower');if(pw)pw.value='';
   const st=document.getElementById('eqStatus');if(st)st.value='정상';
-  ['S','A','B','C'].forEach(g=>{const b=document.getElementById('gbtn-'+g);if(b)b.className='grade-btn';});
+  ['S','A','B','C'].forEach(g=>{
+    const b=document.getElementById('gbtn-'+g);if(b)b.className='grade-btn';
+    const c=document.getElementById('cbtn-'+g);if(c)c.className='grade-btn';
+  });
 }
 function renderEqList(){
   const el=document.getElementById('eqList');
@@ -2793,12 +2907,15 @@ function renderEqList(){
         <div class="eq-info">
           <div style="display:flex;align-items:center;gap:7px;">
             <div class="eq-name">${hlText(eq.name,eqSearchQ)}</div>
-            ${eq.grade?gradeBadgeHtml(eq.grade):''}
           </div>
           <div class="eq-serial">S/N: ${hlText(eq.serial||'미등록',eqSearchQ)}</div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;">
             ${eq.maker?`<span style="color:var(--muted2);">${hlText(eq.maker,eqSearchQ)}</span>`:''}
           </div>
+          ${(eq.grade||eq.cond)?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;">
+            ${eq.grade?`<span style="display:inline-flex;align-items:center;gap:4px;font-family:var(--cond);font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;border:1px solid ${gradeColor(eq.grade)};color:${gradeColor(eq.grade)};background:transparent;">🏅 관리 우선순위 등급 : ${eq.grade}</span>`:''}
+            ${eq.cond?`<span style="display:inline-flex;align-items:center;gap:4px;font-family:var(--cond);font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;border:1px solid ${gradeColor(eq.cond)};color:${gradeColor(eq.cond)};background:transparent;">🩺 설비 상태 등급 : ${eq.cond}</span>`:''}
+          </div>`:''}
           <div class="eq-meta">
             ${eq.loc?`<span class="badge badge-gray">📍 ${hlText(eq.loc,eqSearchQ)}</span>`:''}
             ${eq.status==='고장'?`<span class="badge badge-red">🔴 고장</span>`:eq.status==='단종'?`<span class="badge" style="background:#33333318;border-color:#55555560;color:#aaa;">⚫ 단종</span>`:`<span class="badge badge-green">🟢 정상</span>`}
@@ -2843,10 +2960,17 @@ function renderEqList(){
           </div>
           ${lastInsp&&lastInsp.worker?`<div class="eq-info-cell full"><div class="eq-info-cell-label">최근 점검자</div><div class="eq-info-cell-val">👤 ${lastInsp.worker}</div></div>`:''}
           ${eq.grade?`<div class="eq-info-cell full">
-            <div class="eq-info-cell-label">장비 등급</div>
+            <div class="eq-info-cell-label">🏅 관리 우선순위 등급</div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
               ${gradeBadgeHtml(eq.grade)}
-              <span style="font-family:var(--cond);font-size:12px;font-weight:700;color:${gradeColor(eq.grade)};">${eq.grade==='S'?'최우선 관리':eq.grade==='A'?'중요 관리':eq.grade==='B'?'일반 관리':'저우선 관리'}</span>
+              <span style="font-family:var(--cond);font-size:12px;font-weight:700;color:${gradeColor(eq.grade)};">${gradeLabel(eq.grade)}</span>
+            </div>
+          </div>`:''}
+          ${eq.cond?`<div class="eq-info-cell full">
+            <div class="eq-info-cell-label">🩺 설비 상태 등급</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+              ${gradeBadgeHtml(eq.cond)}
+              <span style="font-family:var(--cond);font-size:12px;font-weight:700;color:${gradeColor(eq.cond)};">${condLabel(eq.cond)}</span>
             </div>
           </div>`:''}
         </div>
@@ -2930,6 +3054,7 @@ function openEqEdit(i){
   document.getElementById('eEqAirPres').value=eq.airPres||'';
   // 등급
   selectGrade('eEqGrade', eq.grade||'', true);
+  selectGrade('eEqCond', eq.cond||'', true);
   openModal('eqModal');
 }
 function saveEqEdit(){
@@ -2946,6 +3071,7 @@ function saveEqEdit(){
     power:document.getElementById('eEqPower').value,
     airPres:document.getElementById('eEqAirPres').value,
     grade:document.getElementById('eEqGrade').value,
+    cond:document.getElementById('eEqCond').value,
   };
   save();closeModal('eqModal');renderEqList();populateEqSelects();toast('수정 완료');
 }
@@ -5449,6 +5575,7 @@ function exportEqReport(){
       <td>${esc(eq.maker||'')||'—'}</td>
       <td>${esc(eq.loc||'')||'—'}</td>
       <td class="c">${esc(eq.grade||'')||'—'}</td>
+      <td class="c">${esc(eq.cond||'')||'—'}</td>
       <td class="c">${stTag}</td>
       <td class="c">${eq.install||'—'}</td>
       <td class="c">${eq.cycle?eq.cycle+'일':'—'}</td>
@@ -5464,7 +5591,7 @@ function exportEqReport(){
     <div>고장 상태<b>${list.filter(e=>e.status==='고장').length}</b></div>
     <div>단종<b>${list.filter(e=>e.status==='단종').length}</b></div>
   </div>
-  <table><thead><tr><th>No</th><th>장비명</th><th>시리얼</th><th>제작처</th><th>위치</th><th>등급</th><th>상태</th><th>설치일</th><th>점검주기</th><th>MTBF</th><th>MTTR</th><th>정비/고장</th><th>최근점검</th><th>최근정비</th></tr></thead><tbody>${rows}</tbody></table>`;
+  <table><thead><tr><th>No</th><th>장비명</th><th>시리얼</th><th>제작처</th><th>위치</th><th>관리등급</th><th>상태등급</th><th>상태</th><th>설치일</th><th>점검주기</th><th>MTBF</th><th>MTTR</th><th>정비/고장</th><th>최근점검</th><th>최근정비</th></tr></thead><tbody>${rows}</tbody></table>`;
   const meta=`검색: ${esc(q||'—')} · 상태: ${esc(sf==='ALL'?'전체':sf)} · 총 ${list.length}대`;
   downloadFile('설비관리대장_'+localToday()+'.html',reportShell('🏭 설비 관리대장',meta,body),'text/html');
   toast('설비 관리대장 다운로드 완료');
