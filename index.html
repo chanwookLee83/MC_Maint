@@ -931,12 +931,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 .mtbr-year-body.open{display:block;}
 .mtbr-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
 .mtbr-row:last-child{border-bottom:none;}
-.mtbr-mon{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text);width:52px;flex-shrink:0;}
-.mtbr-info{flex:1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-.mtbr-info span{font-family:var(--mono);font-size:14px;}
-.mtbr-cell{text-align:center;min-width:76px;flex-shrink:0;}
-.mtbr-cell .lbl{font-family:var(--cond);font-size:12px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;}
-.mtbr-cell .val{font-family:var(--mono);font-size:19px;font-weight:bold;line-height:1.2;}
+.mtbr-mon{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);width:44px;flex-shrink:0;}
+.mtbr-info{flex:1;min-width:88px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.mtbr-info span{font-family:var(--mono);font-size:13px;}
+.mtbr-cell{text-align:center;min-width:58px;flex-shrink:0;}
+.mtbr-cell .lbl{font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;}
+.mtbr-cell .val{font-family:var(--mono);font-size:17px;font-weight:bold;line-height:1.2;}
 .mtbr-cell .sub{font-family:var(--mono);font-size:12px;color:var(--muted);}
 /* ── 연간 점검 계획표 ── */
 .annual-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border);}
@@ -1355,11 +1355,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
   </div>
   <div class="sec">
-    <div class="sec-title">장비별 MTBF / MTTR</div>
+    <div class="sec-title">장비별 MTBF / MTBM / MTTR</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:-4px 0 8px;line-height:1.6;">MTBF=고장 간격 · MTBM=전체 정비 간격 · MTTR=평균 수리시간 · 선택 기간 기준</div>
     <div class="card amber-t" id="mtbfList"><div class="empty" style="padding:14px;">데이터 없음</div></div>
   </div>
   <div class="sec">
-    <div class="sec-title">월별 MTBF / MTTR 내역</div>
+    <div class="sec-title">월별 MTBF / MTBM / MTTR 내역</div>
     <div class="card blue-t" id="monthlyMtbrList"><div class="empty" style="padding:14px;">데이터 없음</div></div>
   </div>
   <div class="sec">
@@ -3727,15 +3728,15 @@ function periodMTBF(fails,startStr,endStr){
   });
   return Math.max(spanH-downH,0)/n;
 }
-function calcMTBFFiltered(eqId,maints,fFrom,fTo,installDate){
-  const fails=maints.filter(m=>m.eqId===eqId&&m.type==='고장');
-  if(!fails.length) return null;
+// records: 계산 대상 이벤트(기간 필터 적용됨), refMaints: 기간 시작 추정용 해당 장비 전체 이벤트
+function _mtbxPeriod(records,refMaints,fFrom,fTo,installDate){
+  if(!records.length) return null;
   const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
   const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
   // 기간 시작 : 필터 시작일 → 없으면 설치일/최초 기록일
   let startStr=fFrom||'';
   if(!startStr){
-    const ds=maints.filter(m=>m.eqId===eqId).map(getD).filter(Boolean).sort();
+    const ds=refMaints.map(getD).filter(Boolean).sort();
     startStr=installDate||ds[0]||today;
   } else if(installDate&&installDate>startStr){
     startStr=installDate; // 설치 이전 구간은 가동시간에서 제외
@@ -3743,7 +3744,17 @@ function calcMTBFFiltered(eqId,maints,fFrom,fTo,installDate){
   // 기간 종료 : 필터 종료일 → 없으면 오늘 (미래로 못 넘어감)
   let endStr=fTo||today;
   if(endStr>today) endStr=today;
-  return periodMTBF(fails,startStr,endStr);
+  return periodMTBF(records,startStr,endStr);
+}
+// MTBF : 고장(BM)만
+function calcMTBFFiltered(eqId,maints,fFrom,fTo,installDate){
+  const all=maints.filter(m=>m.eqId===eqId);
+  return _mtbxPeriod(all.filter(m=>m.type==='고장'),all,fFrom,fTo,installDate);
+}
+// MTBM : 모든 정비(고장+계획정비+개선+청소 등)
+function calcMTBMFiltered(eqId,maints,fFrom,fTo,installDate){
+  const all=maints.filter(m=>m.eqId===eqId);
+  return _mtbxPeriod(all,all,fFrom,fTo,installDate);
 }
 function calcMTTRFiltered(eqId,maints){
   const fails=maints.filter(m=>m.eqId===eqId&&m.type==='고장');
@@ -3819,16 +3830,15 @@ function renderMonthlyMtbr(filteredMaints){
         else if(m.hours>0){total+=m.hours;count++;}
       });
       const mttr=count>0?total/count:null;
-      // 월별 MTBF : 해당 월 기간 기준 (월 가동시간 − 다운타임) / 월 고장건수
-      let mtbf=null;
-      if(failCount>0){
-        const y=parseInt(ym.slice(0,4)),mo=parseInt(ym.slice(5,7));
-        const lastDay=new Date(y,mo,0).getDate();
-        let monthEnd=ym+'-'+String(lastDay).padStart(2,'0');
-        if(monthEnd>_today) monthEnd=_today;
-        mtbf=periodMTBF(mFails,ym+'-01',monthEnd);
-      }
+      // 월별 MTBF/MTBM : 해당 월 기간 기준 (월 가동시간 − 다운타임) / 건수
+      const y=parseInt(ym.slice(0,4)),mo=parseInt(ym.slice(5,7));
+      const lastDay=new Date(y,mo,0).getDate();
+      let monthEnd=ym+'-'+String(lastDay).padStart(2,'0');
+      if(monthEnd>_today) monthEnd=_today;
+      const mtbf=failCount>0?periodMTBF(mFails,ym+'-01',monthEnd):null;
+      const mtbm=totalCount>0?periodMTBF(mAll,ym+'-01',monthEnd):null;
       const mtbfDays=mtbf!==null?Math.round(mtbf/24):null;
+      const mtbmDays=mtbm!==null?Math.round(mtbm/24):null;
       const mttrMin=mttr!==null&&mttr<1?Math.round(mttr*60):null;
       return `<div class="mtbr-row">
         <div class="mtbr-mon">${ym.slice(5)}월</div>
@@ -3840,6 +3850,11 @@ function renderMonthlyMtbr(filteredMaints){
           <div class="lbl">MTBF</div>
           <div class="val" style="color:var(--green);">${mtbf!==null?mtbf.toFixed(0)+'h':'—'}</div>
           ${mtbfDays!==null?`<div class="sub">~${mtbfDays}일</div>`:''}
+        </div>
+        <div class="mtbr-cell">
+          <div class="lbl">MTBM</div>
+          <div class="val" style="color:var(--blue);">${mtbm!==null?mtbm.toFixed(0)+'h':'—'}</div>
+          ${mtbmDays!==null?`<div class="sub">~${mtbmDays}일</div>`:''}
         </div>
         <div class="mtbr-cell">
           <div class="lbl">MTTR</div>
@@ -3907,11 +3922,13 @@ function renderStats(){
       const fails=filteredMaints.filter(m=>m.eqId===eq.id&&m.type==='고장');
       const allMaints=filteredMaints.filter(m=>m.eqId===eq.id);
       const mtbf=calcMTBFFiltered(eq.id,filteredMaints,fFrom,fTo,eq.install),mttr=calcMTTRFiltered(eq.id,filteredMaints);
+      const mtbm=calcMTBMFiltered(eq.id,filteredMaints,fFrom,fTo,eq.install);
       const failCount=fails.length;
       const totalMaints=allMaints.length;
       const hasHours=fails.some(m=>m.hours>0||(m.start&&m.end));
       const mttrNote=!hasHours&&failCount>0?'시간미입력':'';
       const mtbfDays=mtbf?Math.round(mtbf/24):null;
+      const mtbmDays=mtbm?Math.round(mtbm/24):null;
       // 고장 날짜 정렬
       const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
       const failDates=fails.map(getD).filter(Boolean).sort();
@@ -3922,25 +3939,28 @@ function renderStats(){
         :`${firstFail} ~ ${lastFail}`;
       const mtbfNote=failCount>0?((fFrom||fTo)?'기간 기준':'전체 기간'):'';
       return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px;margin-bottom:7px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:16px;font-weight:600;color:var(--text);">${eq.name}</div>
-            <div style="font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:2px;">
-              정비 ${totalMaints}건 | 고장 ${failCount}회
-            </div>
-            ${failDateStr?`<div style="font-family:var(--mono);font-size:12px;color:var(--red);opacity:.8;margin-top:2px;">🔴 ${failDateStr}</div>`:''}
+        <div style="font-size:16px;font-weight:600;color:var(--text);">${eq.name}</div>
+        <div style="font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:2px;">
+          정비 ${totalMaints}건 | 고장 ${failCount}회
+        </div>
+        ${failDateStr?`<div style="font-family:var(--mono);font-size:12px;color:var(--red);opacity:.8;margin-top:2px;">🔴 ${failDateStr}</div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;">
+          <div style="flex:1;text-align:center;min-width:70px;background:var(--card2);border-radius:7px;padding:7px 4px;">
+            <div style="font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">MTBF<span style="font-size:9px;letter-spacing:0;"> 고장</span></div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--green);">${mtbf?mtbf.toFixed(0)+'h':'—'}</div>
+            ${mtbfDays?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">~${mtbfDays}일</div>`:''}
+            ${mtbfNote?`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);">${mtbfNote}</div>`:''}
           </div>
-          <div style="text-align:center;min-width:74px;">
-            <div style="font-family:var(--cond);font-size:12px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTBF</div>
-            <div style="font-family:var(--mono);font-size:19px;font-weight:bold;color:var(--green);">${mtbf?mtbf.toFixed(0)+'h':'—'}</div>
-            ${mtbfDays?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted);">~${mtbfDays}일</div>`:''}
-            ${mtbfNote?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted);">${mtbfNote}</div>`:''}
+          <div style="flex:1;text-align:center;min-width:70px;background:var(--card2);border-radius:7px;padding:7px 4px;">
+            <div style="font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">MTBM<span style="font-size:9px;letter-spacing:0;"> 전체정비</span></div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--blue);">${mtbm?mtbm.toFixed(0)+'h':'—'}</div>
+            ${mtbmDays?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">~${mtbmDays}일</div>`:''}
           </div>
-          <div style="text-align:center;min-width:74px;">
-            <div style="font-family:var(--cond);font-size:12px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;">MTTR</div>
-            <div style="font-family:var(--mono);font-size:19px;font-weight:bold;color:var(--amber);">${mttr?mttr.toFixed(1)+'h':'—'}</div>
-            ${mttr?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted);">~${Math.round(mttr*60)}min</div>`:''}
-            ${mttrNote?`<div style="font-family:var(--mono);font-size:12px;color:var(--red);">${mttrNote}</div>`:''}
+          <div style="flex:1;text-align:center;min-width:70px;background:var(--card2);border-radius:7px;padding:7px 4px;">
+            <div style="font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">MTTR<span style="font-size:9px;letter-spacing:0;"> 수리</span></div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:bold;color:var(--amber);">${mttr?mttr.toFixed(1)+'h':'—'}</div>
+            ${mttr?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">~${Math.round(mttr*60)}min</div>`:''}
+            ${mttrNote?`<div style="font-family:var(--mono);font-size:10px;color:var(--red);">${mttrNote}</div>`:''}
           </div>
         </div>
       </div>`}).join('')
@@ -5335,12 +5355,14 @@ function getStatsExportData(){
       maints:all.length,
       fails:all.filter(m=>m.type==='고장').length,
       mtbf:calcMTBFFiltered(eq.id,fm,fFrom,fTo,eq.install),
+      mtbm:calcMTBMFiltered(eq.id,fm,fFrom,fTo,eq.install),
       mttr:calcMTTRFiltered(eq.id,fm),
       cost:all.reduce((s,m)=>s+(m.partCost||0),0)
     };
   }).filter(Boolean).sort((a,b)=>b.fails-a.fails||b.maints-a.maints);
   const monthSet=new Set();
   fm.forEach(m=>{const d=(m.start?m.start.slice(0,10):null)||m.date;if(d)monthSet.add(d.slice(0,7));});
+  const _exToday=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
   const perMonth=[...monthSet].sort().map(ym=>{
     const mAll=fm.filter(m=>{const d=(m.start?m.start.slice(0,10):null)||m.date;return d&&d.startsWith(ym);});
     const mFail=mAll.filter(m=>m.type==='고장');
@@ -5349,7 +5371,13 @@ function getStatsExportData(){
       if(m.start&&m.end){const df=(new Date(m.end)-new Date(m.start))/3600000;if(df>0){t+=df;c++;}}
       else if(m.hours>0){t+=m.hours;c++;}
     });
-    return {month:ym,maints:mAll.length,fails:mFail.length,mttr:c?t/c:null,cost:mAll.reduce((s,m)=>s+(m.partCost||0),0)};
+    const y=parseInt(ym.slice(0,4)),mo=parseInt(ym.slice(5,7));
+    let mEnd=ym+'-'+String(new Date(y,mo,0).getDate()).padStart(2,'0');
+    if(mEnd>_exToday) mEnd=_exToday;
+    return {month:ym,maints:mAll.length,fails:mFail.length,
+      mtbf:mFail.length?periodMTBF(mFail,ym+'-01',mEnd):null,
+      mtbm:mAll.length?periodMTBF(mAll,ym+'-01',mEnd):null,
+      mttr:c?t/c:null,cost:mAll.reduce((s,m)=>s+(m.partCost||0),0)};
   });
   const types=['고장','프로그램','기구부','개선','청소','작업자교육','대기'];
   const perType=types.map(t=>({type:t,count:fm.filter(m=>m.type===t).length})).filter(x=>x.count>0);
@@ -5386,13 +5414,13 @@ function exportStatsReport(){
 
   const eqRows=d.perEq.length?d.perEq.map(e=>`<tr>
     <td>${esc(e.name)}</td><td class="num">${e.maints}</td><td class="num">${e.fails}</td>
-    <td class="num">${mtbfTxt(e.mtbf)}</td><td class="num">${mttrTxt(e.mttr)}</td><td class="num">${fmtCost(e.cost)}</td>
-  </tr>`).join(''):`<tr><td colspan="6" class="empty">해당 기간 정비 기록 있는 장비 없음</td></tr>`;
+    <td class="num">${mtbfTxt(e.mtbf)}</td><td class="num">${mtbfTxt(e.mtbm)}</td><td class="num">${mttrTxt(e.mttr)}</td><td class="num">${fmtCost(e.cost)}</td>
+  </tr>`).join(''):`<tr><td colspan="7" class="empty">해당 기간 정비 기록 있는 장비 없음</td></tr>`;
 
   const monthRows=d.perMonth.length?d.perMonth.map(m=>`<tr>
     <td>${m.month}</td><td class="num">${m.maints}</td><td class="num">${m.fails}</td>
-    <td class="num">${m.mttr==null?'—':m.mttr.toFixed(1)+'h'}</td><td class="num">${fmtCost(m.cost)}</td>
-  </tr>`).join(''):`<tr><td colspan="5" class="empty">데이터 없음</td></tr>`;
+    <td class="num">${m.mtbf==null?'—':m.mtbf.toFixed(0)+'h'}</td><td class="num">${m.mtbm==null?'—':m.mtbm.toFixed(0)+'h'}</td><td class="num">${m.mttr==null?'—':m.mttr.toFixed(1)+'h'}</td><td class="num">${fmtCost(m.cost)}</td>
+  </tr>`).join(''):`<tr><td colspan="7" class="empty">데이터 없음</td></tr>`;
 
   const typeRows=d.perType.length?d.perType.map(t=>{
     const pct=d.kpi.maintCount?Math.round(t.count/d.kpi.maintCount*100):0;
@@ -5430,11 +5458,12 @@ td.empty{text-align:center;color:#94a3b8;}
 <h2>전체 KPI</h2>
 ${kpiCards}
 
-<h2>장비별 MTBF / MTTR</h2>
-<table><thead><tr><th>장비명</th><th>정비건</th><th>고장</th><th>MTBF</th><th>MTTR</th><th>정비비용</th></tr></thead><tbody>${eqRows}</tbody></table>
+<h2>장비별 MTBF / MTBM / MTTR</h2>
+<div style="font-size:8.5pt;color:#94a3b8;margin-bottom:4px;">MTBF=고장 간격 · MTBM=전체 정비 간격 · MTTR=평균 수리시간 · 대상 기간 기준</div>
+<table><thead><tr><th>장비명</th><th>정비건</th><th>고장</th><th>MTBF</th><th>MTBM</th><th>MTTR</th><th>정비비용</th></tr></thead><tbody>${eqRows}</tbody></table>
 
 <h2>월별 추이</h2>
-<table><thead><tr><th>월</th><th>정비건수</th><th>고장건수</th><th>평균 MTTR</th><th>정비비용</th></tr></thead><tbody>${monthRows}</tbody></table>
+<table><thead><tr><th>월</th><th>정비건수</th><th>고장건수</th><th>MTBF</th><th>MTBM</th><th>평균 MTTR</th><th>정비비용</th></tr></thead><tbody>${monthRows}</tbody></table>
 ${img1?`<div class="chart"><img src="${img1}" alt="월별 정비 건수"></div>`:''}
 
 <h2>정비 유형 분포</h2>
@@ -5471,14 +5500,17 @@ function exportStatsXLSX(){
   ];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),'요약');
 
-  const eqAoa=[['장비명','정비건','고장','MTBF(h)','MTBF(일)','MTTR(h)','MTTR(분)','정비비용(원)']];
+  const eqAoa=[['장비명','정비건','고장','MTBF(h)','MTBF(일)','MTBM(h)','MTBM(일)','MTTR(h)','MTTR(분)','정비비용(원)']];
   d.perEq.forEach(e=>eqAoa.push([e.name,e.maints,e.fails,
     e.mtbf==null?'':+e.mtbf.toFixed(1), e.mtbf==null?'':Math.round(e.mtbf/24),
+    e.mtbm==null?'':+e.mtbm.toFixed(1), e.mtbm==null?'':Math.round(e.mtbm/24),
     e.mttr==null?'':+e.mttr.toFixed(2), e.mttr==null?'':Math.round(e.mttr*60), e.cost]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(eqAoa),'장비별 MTBF·MTTR');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(eqAoa),'장비별 MTBF·MTBM·MTTR');
 
-  const mAoa=[['월','정비건수','고장건수','평균 MTTR(h)','정비비용(원)']];
-  d.perMonth.forEach(m=>mAoa.push([m.month,m.maints,m.fails,m.mttr==null?'':+m.mttr.toFixed(2),m.cost]));
+  const mAoa=[['월','정비건수','고장건수','MTBF(h)','MTBM(h)','평균 MTTR(h)','정비비용(원)']];
+  d.perMonth.forEach(m=>mAoa.push([m.month,m.maints,m.fails,
+    m.mtbf==null?'':+m.mtbf.toFixed(1), m.mtbm==null?'':+m.mtbm.toFixed(1),
+    m.mttr==null?'':+m.mttr.toFixed(2),m.cost]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(mAoa),'월별 추이');
 
   const tAoa=[['유형','건수','비율(%)']];
