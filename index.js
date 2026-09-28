@@ -12,6 +12,8 @@ const { logger }     = require('firebase-functions');
 const admin          = require('firebase-admin');
 
 const REGION = 'asia-northeast3';
+// 앱 호스팅 주소 (GitHub Pages) - 푸시 아이콘/링크는 이 기준의 절대 URL이어야 함
+const APP_URL = 'https://chanwooklee83.github.io/MC_Maint/';
 
 admin.initializeApp();
 const db  = admin.firestore();
@@ -68,8 +70,8 @@ async function sendToAllTokens(title, body, data = {}) {
       },
       webpush: {
         headers: { Urgency: 'high', TTL: '86400' },
-        notification: { icon: '/icon-192.png', badge: '/icon-192.png', tag: data.tag || 'mms' },
-        fcmOptions: { link: data.tab ? `/?tab=${data.tab}` : '/' }
+        notification: { icon: APP_URL + 'icon-192.png', badge: APP_URL + 'badge-96.png', tag: data.tag || 'mms' },
+        fcmOptions: { link: data.tab ? `${APP_URL}?tab=${data.tab}` : APP_URL }
       }
     });
 

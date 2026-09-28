@@ -23,7 +23,7 @@ messaging.onBackgroundMessage(payload => {
   return self.registration.showNotification(title, {
     body: body,
     icon: './icon-192.png',
-    badge: './icon-192.png',
+    badge: './badge-96.png',
     vibrate: [200, 100, 200],
     tag: d.tag || 'mms-push',
     renotify: true,
@@ -58,7 +58,7 @@ self.addEventListener('message', event => {
       self.registration.showNotification(event.data.title, {
         body: event.data.body,
         icon: './icon-192.png',
-        badge: './icon-192.png',
+        badge: './badge-96.png',
         vibrate: [200, 100, 200],
         tag: event.data.tag || 'mms-scheduled',
         data: event.data.notifData || {}
@@ -68,11 +68,12 @@ self.addEventListener('message', event => {
 });
 
 // ── 캐시 (버전 올림) ──
-const CACHE = 'mms-v118';
+const CACHE = 'mms-v119';
 const ASSETS = [
   './index.html',
   './manifest.json',
   './icon-192.png',
+  './badge-96.png',
   './icon-512.png'
 ];
 
