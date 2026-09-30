@@ -592,7 +592,7 @@ canvas{display:block;width:100%!important;}
 /* TOAST */
 .toast{position:fixed;bottom:calc(var(--sb)+14px);left:50%;transform:translateX(-50%) translateY(12px);background:var(--green);color:#fff;font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;padding:10px 22px;border-radius:8px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:9999;white-space:nowrap;box-shadow:0 6px 24px #00000055;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.toast.tw{background:var(--amber);color:#ffff;}
+.toast.tw{background:var(--amber);color:#fff;}
 .toast.te{background:var(--red);}
 
 
@@ -733,6 +733,16 @@ body.light .sec-title::after{background:#d4d9e2;}
 .ev-meta{font-family:var(--mono);font-size:12px;color:#94a3b8;}
 .ev-content{font-size:13px;color:var(--muted2);margin-top:6px;line-height:1.6;border-top:1px solid var(--border);padding-top:6px;}
 .ev-actions{display:flex;gap:6px;margin-top:8px;}
+
+/* ── 단위 환산 / 실린더 계산 ── */
+.calc-list{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+.calc-group{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--muted2);background:var(--card2);padding:8px 14px;border-bottom:1px solid var(--border);}
+.calc-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);}
+.calc-row:last-child{border-bottom:none;}
+.calc-row.sel{background:var(--card2);}
+.calc-unit{font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:1px;color:var(--muted2);flex-shrink:0;}
+.calc-val{font-family:var(--mono);font-size:16px;color:var(--text);text-align:right;word-break:break-all;}
+.calc-note{font-size:12px;color:var(--muted2);line-height:1.6;margin-top:4px;}
 
 /* ── BOM 트리 ── */
 .bom-eq-group{background:var(--card);border:1px solid var(--border);border-radius:13px;margin-bottom:11px;overflow:hidden;}
@@ -1016,6 +1026,8 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="tab" onclick="gotoTab('annual')" id="tab-annual"><span class="tab-icon">📅</span>연간계획</div>
   <div class="tab" onclick="gotoTab('bom')"    id="tab-bom">   <span class="tab-icon">🔩</span>파트</div>
   <div class="tab" onclick="gotoTab('event')"  id="tab-event"> <span class="tab-icon">📅</span>일정<div class="tbadge" id="evBadge"></div></div>
+  <div class="tab" onclick="gotoTab('conv')"   id="tab-conv">  <span class="tab-icon">🔄</span>환산</div>
+  <div class="tab" onclick="gotoTab('cyl')"    id="tab-cyl">   <span class="tab-icon">🧮</span>실린더</div>
   <div class="tab" onclick="gotoTab('share')"  id="tab-share"> <span class="tab-icon">📤</span>공유</div>
 </div>
 
@@ -1587,6 +1599,62 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </div>
     </div>
     <div id="evList"><div class="empty"><span class="empty-icon">📅</span>등록된 일정 없음</div></div>
+  </div>
+</div>
+
+<!-- ══════ 단위 환산 ══════ -->
+<div class="page" id="page-conv">
+  <div class="sec" style="margin-top:4px;">
+    <div class="sec-title">단위 환산</div>
+    <div class="card" style="border-top:2px solid var(--purple);">
+      <div class="field"><label class="flabel">구분</label>
+        <div class="fselect-w"><select class="fselect" id="convCat" onchange="onConvCatChange()"></select></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">값</label><input class="finput" id="convVal" type="number" inputmode="decimal" value="1" oninput="renderConv()"></div>
+        <div class="field"><label class="flabel">단위</label>
+          <div class="fselect-w"><select class="fselect" id="convUnit" onchange="renderConv()"></select></div>
+        </div>
+      </div>
+    </div>
+    <div id="convResult"></div>
+  </div>
+</div>
+
+<!-- ══════ 실린더 용량 계산 ══════ -->
+<div class="page" id="page-cyl">
+  <div class="sec" style="margin-top:4px;">
+    <div class="sec-title">실린더 용량 계산</div>
+    <div class="card" style="border-top:2px solid var(--green);">
+      <div class="frow">
+        <div class="field"><label class="flabel">튜브 내경 (mm) *</label><input class="finput" id="cylBore" type="number" inputmode="decimal" list="cylBoreList" placeholder="예) 40" min="0" oninput="renderCyl()"></div>
+        <div class="field"><label class="flabel">로드 경 (mm)</label><input class="finput" id="cylRod" type="number" inputmode="decimal" placeholder="예) 16" min="0" oninput="renderCyl()"></div>
+      </div>
+      <datalist id="cylBoreList">
+        <option value="6"><option value="10"><option value="12"><option value="16"><option value="20"><option value="25"><option value="32"><option value="40"><option value="50"><option value="63"><option value="80"><option value="100"><option value="125"><option value="140"><option value="160"><option value="180"><option value="200"><option value="250"><option value="300">
+      </datalist>
+      <div class="frow">
+        <div class="field"><label class="flabel">사용 압력</label><input class="finput" id="cylP" type="number" inputmode="decimal" value="0.5" min="0" oninput="renderCyl()"></div>
+        <div class="field"><label class="flabel">압력 단위</label>
+          <div class="fselect-w"><select class="fselect" id="cylPU" onchange="renderCyl()">
+            <option value="1">MPa</option>
+            <option value="0.1">bar</option>
+            <option value="0.0980665">kgf/cm²</option>
+            <option value="0.006894757">psi</option>
+          </select></div>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">스트로크 (mm)</label><input class="finput" id="cylStroke" type="number" inputmode="decimal" placeholder="예) 100" min="0" oninput="renderCyl()"></div>
+        <div class="field"><label class="flabel">부하율 (%)</label><input class="finput" id="cylEff" type="number" inputmode="decimal" value="70" min="0" max="100" oninput="renderCyl()"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">분당 왕복 횟수</label><input class="finput" id="cylCpm" type="number" inputmode="decimal" placeholder="예) 10" min="0" oninput="renderCyl()"></div>
+        <div class="field"><label class="flabel">실린더 수량</label><input class="finput" id="cylCount" type="number" inputmode="numeric" value="1" min="1" oninput="renderCyl()"></div>
+      </div>
+      <button class="btn-ghost" onclick="clearCyl()">↺ 초기화</button>
+    </div>
+    <div id="cylResult"></div>
   </div>
 </div>
 
@@ -2302,7 +2370,7 @@ function save(){
 // ── 탭 ──
 let _gotoTabFromPop=false;
 function gotoTab(n){
-  ['eq','maint','parts','calib','stats','insp','annual','bom','event','share','req'].forEach(t=>{
+  ['eq','maint','parts','calib','stats','insp','annual','bom','event','conv','cyl','share','req'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active',t===n);
     document.getElementById('tab-'+t).classList.toggle('active',t===n);
   });
@@ -2314,6 +2382,8 @@ function gotoTab(n){
   if(n==='calib') renderCalib();
   if(n==='bom')   {populateBomEqSel();renderBomTree();}
   if(n==='event') renderEvents();
+  if(n==='conv')  initConv();
+  if(n==='cyl')   renderCyl();
   if(n==='req')   {initReqForm();renderReqLog();}
   checkAlarms();
   if(!_gotoTabFromPop) history.pushState({tab:n},'','#'+n);
@@ -6171,6 +6241,99 @@ function toast(msg,type='ok'){
   const el=document.getElementById('toast');
   el.textContent=msg;el.className='toast show'+(type==='w'?' tw':type==='e'?' te':'');
   clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ══════ 단위 환산 ══════
+// 각 단위의 값 = 기준단위 환산계수 (온도는 별도 처리)
+const CONV_UNITS={
+  '길이':{'mm':0.001,'cm':0.01,'m':1,'km':1000,'μm':1e-6,'inch':0.0254,'ft':0.3048,'yd':0.9144,'mile':1609.344},
+  '압력':{'MPa':1e6,'kPa':1e3,'Pa':1,'bar':1e5,'mbar':100,'kgf/cm²':98066.5,'psi':6894.757,'atm':101325,'mmHg':133.3224,'mmH₂O':9.80665,'inHg':3386.389},
+  '힘':{'N':1,'kN':1000,'kgf':9.80665,'tf':9806.65,'lbf':4.448222},
+  '토크':{'N·m':1,'N·cm':0.01,'kgf·m':9.80665,'kgf·cm':0.0980665,'lbf·ft':1.355818,'lbf·in':0.1129848},
+  '무게':{'g':0.001,'kg':1,'t':1000,'lb':0.45359237,'oz':0.028349523},
+  '부피':{'mL (cc)':0.001,'L':1,'m³':1000,'gal (US)':3.785411784,'in³':0.016387064,'ft³':28.316846592},
+  '유량':{'L/min':1,'L/s':60,'m³/h':1000/60,'m³/min':1000,'GPM (US)':3.785411784,'CFM':28.316846592},
+  '속도':{'m/s':1,'mm/s':0.001,'m/min':1/60,'km/h':1/3.6},
+  '동력':{'W':1,'kW':1000,'HP':745.6999,'PS':735.49875},
+  '면적':{'mm²':1e-6,'cm²':1e-4,'m²':1,'in²':0.00064516,'ft²':0.09290304,'평':3.305785},
+  '온도':{'℃':null,'℉':null,'K':null}
+};
+function calcFmt(n,maxFrac=6){
+  if(!isFinite(n))return '—';
+  if(n!==0&&(Math.abs(n)>=1e9||Math.abs(n)<1e-5))return n.toExponential(4);
+  return Number(n.toPrecision(7)).toLocaleString('ko-KR',{maximumFractionDigits:maxFrac});
+}
+function toCelsius(v,u){return u==='℉'?(v-32)*5/9:u==='K'?v-273.15:v;}
+function fromCelsius(c,u){return u==='℉'?c*9/5+32:u==='K'?c+273.15:c;}
+function initConv(){
+  const cat=document.getElementById('convCat');
+  if(!cat.options.length){
+    cat.innerHTML=Object.keys(CONV_UNITS).map(k=>`<option value="${k}">${k}</option>`).join('');
+    onConvCatChange();
+  }
+}
+function onConvCatChange(){
+  const units=Object.keys(CONV_UNITS[document.getElementById('convCat').value]);
+  document.getElementById('convUnit').innerHTML=units.map(u=>`<option value="${u}">${u}</option>`).join('');
+  renderConv();
+}
+function renderConv(){
+  const cat=document.getElementById('convCat').value;
+  const from=document.getElementById('convUnit').value;
+  const v=parseFloat(document.getElementById('convVal').value);
+  const el=document.getElementById('convResult');
+  if(isNaN(v)){el.innerHTML='<div class="empty"><span class="empty-icon">🔄</span>값을 입력하세요</div>';return;}
+  const units=CONV_UNITS[cat];
+  const rows=Object.keys(units).map(u=>{
+    const r=cat==='온도'?fromCelsius(toCelsius(v,from),u):v*units[from]/units[u];
+    return `<div class="calc-row${u===from?' sel':''}"><span class="calc-unit">${u}</span><span class="calc-val">${calcFmt(r)}</span></div>`;
+  }).join('');
+  el.innerHTML=`<div class="calc-list"><div class="calc-group">${cat} 환산 결과</div>${rows}</div>`;
+}
+
+// ══════ 실린더 용량 계산 ══════
+function renderCyl(){
+  const num=id=>parseFloat(document.getElementById(id).value);
+  const D=num('cylBore'), dRaw=num('cylRod'), L=num('cylStroke'), cpm=num('cylCpm');
+  const P=num('cylP')*parseFloat(document.getElementById('cylPU').value); // MPa(게이지)
+  const eff=isNaN(num('cylEff'))?100:num('cylEff');
+  const cnt=Math.max(1,num('cylCount')||1);
+  const el=document.getElementById('cylResult');
+  if(!(D>0)){el.innerHTML='<div class="empty"><span class="empty-icon">🧮</span>튜브 내경을 입력하세요</div>';return;}
+  const d=dRaw>0?dRaw:0;
+  if(d>=D){el.innerHTML='<div class="empty"><span class="empty-icon">⚠️</span>로드 경이 튜브 내경보다 작아야 합니다</div>';return;}
+  const G=9.80665, ATM=0.101325;
+  const A1=Math.PI*D*D/4, A2=Math.PI*(D*D-d*d)/4;   // mm²
+  const row=(k,v)=>`<div class="calc-row"><span class="calc-unit">${k}</span><span class="calc-val">${v}</span></div>`;
+  const force=a=>{const N=P*a;return `${calcFmt(N,1)} N · ${calcFmt(N/G,1)} kgf`;};
+  let h='';
+  if(P>0){
+    h+=`<div class="calc-list"><div class="calc-group">이론 출력</div>${row('전진 (PUSH)',force(A1))}${row('후진 (PULL)',force(A2))}</div>`;
+    h+=`<div class="calc-list"><div class="calc-group">부하율 ${calcFmt(eff,1)}% 적용 출력</div>${row('전진 (PUSH)',force(A1*eff/100))}${row('후진 (PULL)',force(A2*eff/100))}</div>`;
+  }
+  h+=`<div class="calc-list"><div class="calc-group">수압 면적 / 체적</div>${row('전진측 면적',calcFmt(A1/100,2)+' cm²')}${row('후진측 면적',calcFmt(A2/100,2)+' cm²')}`;
+  if(L>0) h+=row('전진측 체적',calcFmt(A1*L/1000,2)+' cm³')+row('후진측 체적',calcFmt(A2*L/1000,2)+' cm³');
+  h+='</div>';
+  if(L>0&&P>0){
+    const perCycle=(A1+A2)*L/1e6*(P+ATM)/ATM;   // L(ANR) / 1왕복 / 1개
+    h+=`<div class="calc-list"><div class="calc-group">공기 소비량 (ANR, 배관 제외)</div>${row('1왕복 (1개)',calcFmt(perCycle,3)+' L')}`;
+    if(cpm>0){
+      const perMin=perCycle*cpm*cnt;
+      h+=row(`분당 (${cnt}개 × ${calcFmt(cpm)}회)`,calcFmt(perMin,2)+' L/min')+row('',calcFmt(perMin/1000,4)+' m³/min');
+    }
+    h+='</div>';
+  }
+  if(!d) h+='<div class="calc-note">※ 로드 경 미입력 → 후진측을 로드 없이 계산했습니다.</div>';
+  h+='<div class="calc-note">※ 출력 = 압력 × 면적 · 공기소비량 = 체적 × (압력+0.1013)/0.1013 · 부하율은 동작 시 여유율(일반적으로 50~70%)</div>';
+  el.innerHTML=h;
+}
+function clearCyl(){
+  ['cylBore','cylRod','cylStroke','cylCpm'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cylP').value='0.5';
+  document.getElementById('cylPU').value='1';
+  document.getElementById('cylEff').value='70';
+  document.getElementById('cylCount').value='1';
+  renderCyl();
 }
 
 // ── 정기 알림 스케줄러 (클라이언트 사이드) ──
