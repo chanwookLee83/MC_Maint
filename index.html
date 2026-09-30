@@ -1619,6 +1619,16 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
     <div id="convResult"></div>
   </div>
+  <div class="sec">
+    <div class="sec-title">공학 공식 계산</div>
+    <div class="card" style="border-top:2px solid var(--amber);">
+      <div class="field"><label class="flabel">공식</label>
+        <div class="fselect-w"><select class="fselect" id="fxSel" onchange="renderFxInputs()"></select></div>
+      </div>
+      <div id="fxInputs"></div>
+    </div>
+    <div id="fxResult"></div>
+  </div>
 </div>
 
 <!-- ══════ 실린더 용량 계산 ══════ -->
@@ -6254,7 +6264,12 @@ const CONV_UNITS={
   '부피':{'mL (cc)':0.001,'L':1,'m³':1000,'gal (US)':3.785411784,'in³':0.016387064,'ft³':28.316846592},
   '유량':{'L/min':1,'L/s':60,'m³/h':1000/60,'m³/min':1000,'GPM (US)':3.785411784,'CFM':28.316846592},
   '속도':{'m/s':1,'mm/s':0.001,'m/min':1/60,'km/h':1/3.6},
-  '동력':{'W':1,'kW':1000,'HP':745.6999,'PS':735.49875},
+  '동력':{'mW':0.001,'W':1,'kW':1000,'MW':1e6,'HP':745.6999,'PS':735.49875,'kcal/h':1.163},
+  '전압':{'μV':1e-6,'mV':0.001,'V':1,'kV':1000},
+  '전류':{'μA':1e-6,'mA':0.001,'A':1,'kA':1000},
+  '저항':{'mΩ':0.001,'Ω':1,'kΩ':1000,'MΩ':1e6},
+  '정전용량':{'pF':1e-12,'nF':1e-9,'μF':1e-6,'mF':0.001,'F':1},
+  '전력량/열량':{'J':1,'kJ':1000,'Wh':3600,'kWh':3.6e6,'cal':4.184,'kcal':4184},
   '면적':{'mm²':1e-6,'cm²':1e-4,'m²':1,'in²':0.00064516,'ft²':0.09290304,'평':3.305785},
   '온도':{'℃':null,'℉':null,'K':null}
 };
@@ -6271,6 +6286,131 @@ function initConv(){
     cat.innerHTML=Object.keys(CONV_UNITS).map(k=>`<option value="${k}">${k}</option>`).join('');
     onConvCatChange();
   }
+  const fx=document.getElementById('fxSel');
+  if(!fx.options.length){
+    fx.innerHTML=FORMULAS.map((f,i)=>`<option value="${i}">${f.name}</option>`).join('');
+    renderFxInputs();
+  }
+}
+
+// ══════ 공학 공식 계산 ══════
+// inputs: [id, 라벨, 기본값(선택)] · calc(v) → [[항목, 결과], ...] 또는 안내 문자열
+const DEG=Math.PI/180, G0=9.80665;
+const FORMULAS=[
+  {name:'⚡ 옴의 법칙 (V · I · R · P)',hint:'아무 값이나 2개 입력 → 나머지 계산',
+   inputs:[['V','전압 V (V)'],['I','전류 I (A)'],['R','저항 R (Ω)'],['P','전력 P (W)']],
+   calc(v){
+     const k=['V','I','R','P'].filter(x=>!isNaN(v[x]));
+     if(k.length<2) return '두 값을 입력하세요';
+     let {V,I,R,P}=v; const s=k.slice(0,2).join('');
+     if(s==='VI'){R=V/I;P=V*I;}
+     else if(s==='VR'){I=V/R;P=V*V/R;}
+     else if(s==='VP'){I=P/V;R=V*V/P;}
+     else if(s==='IR'){V=I*R;P=I*I*R;}
+     else if(s==='IP'){V=P/I;R=P/(I*I);}
+     else {I=Math.sqrt(P/R);V=Math.sqrt(P*R);}
+     const r=[['전압 V',calcFmt(V)+' V'],['전류 I',calcFmt(I)+' A'],['저항 R',calcFmt(R)+' Ω'],['전력 P',calcFmt(P)+' W']];
+     if(k.length>2) r.push(['※','앞의 두 값('+k.slice(0,2).join(', ')+')만 사용']);
+     return r;
+   },note:'V = I × R · P = V × I = I²R = V²/R'},
+  {name:'🔌 전력 (단상 / 3상)',hint:'전압 · 전류 · 역률 입력',
+   inputs:[['V','전압 (V)',380],['I','전류 (A)'],['pf','역률 cosφ',0.85]],
+   calc(v){
+     if(!(v.V>0&&v.I>0)) return '전압과 전류를 입력하세요';
+     const pf=isNaN(v.pf)?1:v.pf, s3=Math.sqrt(3)*v.V*v.I, s1=v.V*v.I;
+     return [['3상 유효전력',calcFmt(s3*pf/1000,3)+' kW'],['3상 피상전력',calcFmt(s3/1000,3)+' kVA'],
+             ['단상 유효전력',calcFmt(s1*pf/1000,3)+' kW'],['단상 피상전력',calcFmt(s1/1000,3)+' kVA']];
+   },note:'3상 P = √3 × V × I × cosφ · 단상 P = V × I × cosφ'},
+  {name:'🔗 저항 직렬 / 병렬',hint:'저항값을 쉼표로 구분 (예: 100, 220, 470)',
+   inputs:[['list','저항 목록 (Ω)',null,'text']],
+   calc(v){
+     const a=String(v.list||'').split(/[,\s]+/).map(parseFloat).filter(x=>x>0);
+     if(!a.length) return '저항값을 입력하세요';
+     return [['직렬 합성',calcFmt(a.reduce((s,x)=>s+x,0))+' Ω'],['병렬 합성',calcFmt(1/a.reduce((s,x)=>s+1/x,0))+' Ω'],['개수',a.length+'개']];
+   },note:'직렬 R = R1+R2+… · 병렬 1/R = 1/R1+1/R2+…'},
+  {name:'📐 피타고라스 (직각삼각형)',hint:'세 변 중 2개 입력 → 나머지 계산',
+   inputs:[['a','밑변 a'],['b','높이 b'],['c','빗변 c']],
+   calc(v){
+     let {a,b,c}=v; const k=['a','b','c'].filter(x=>!isNaN(v[x])&&v[x]>0);
+     if(k.length<2) return '두 변을 입력하세요';
+     const s=k.slice(0,2).join('');
+     if(s==='ab') c=Math.hypot(a,b);
+     else { if(!(c>Math.max(s==='ac'?a:b,0))) return '빗변 c가 가장 길어야 합니다';
+       if(s==='ac') b=Math.sqrt(c*c-a*a); else a=Math.sqrt(c*c-b*b); }
+     return [['밑변 a',calcFmt(a)],['높이 b',calcFmt(b)],['빗변 c',calcFmt(c)],
+             ['각도 θ (a와 c 사이)',calcFmt(Math.atan2(b,a)/DEG,3)+'°'],['면적',calcFmt(a*b/2)]];
+   },note:'c² = a² + b²'},
+  {name:'📏 삼각함수 (빗변 · 각도)',hint:'빗변과 각도로 밑변·높이 계산',
+   inputs:[['c','빗변 c'],['t','각도 θ (°)']],
+   calc(v){
+     if(isNaN(v.t)) return '각도를 입력하세요';
+     const r=v.t*DEG, out=[['sin θ',calcFmt(Math.sin(r))],['cos θ',calcFmt(Math.cos(r))],['tan θ',calcFmt(Math.tan(r))],['라디안',calcFmt(r)]];
+     if(v.c>0) out.unshift(['밑변 a = c·cosθ',calcFmt(v.c*Math.cos(r))],['높이 b = c·sinθ',calcFmt(v.c*Math.sin(r))]);
+     return out;
+   },note:'sin = 높이/빗변 · cos = 밑변/빗변 · tan = 높이/밑변'},
+  {name:'📉 경사 (구배)',hint:'수평거리와 높이 입력',
+   inputs:[['L','수평거리'],['H','높이']],
+   calc(v){
+     if(!(v.L>0)||isNaN(v.H)) return '수평거리와 높이를 입력하세요';
+     return [['경사율',calcFmt(v.H/v.L*100,3)+' %'],['경사각',calcFmt(Math.atan(v.H/v.L)/DEG,3)+'°'],['빗면 길이',calcFmt(Math.hypot(v.L,v.H))]];
+   },note:'경사율 = 높이 / 수평거리 × 100'},
+  {name:'⭕ 원 (둘레 · 면적)',hint:'지름 입력',
+   inputs:[['D','지름 D (mm)']],
+   calc(v){
+     if(!(v.D>0)) return '지름을 입력하세요';
+     const A=Math.PI*v.D*v.D/4;
+     return [['반지름',calcFmt(v.D/2)+' mm'],['둘레',calcFmt(Math.PI*v.D)+' mm'],['면적',calcFmt(A)+' mm²'],['',calcFmt(A/100)+' cm²']];
+   },note:'둘레 = πD · 면적 = πD²/4'},
+  {name:'🛢 원통 체적 (탱크 · 배관)',hint:'내경과 길이(높이) 입력',
+   inputs:[['D','내경 D (mm)'],['H','길이 / 높이 (mm)']],
+   calc(v){
+     if(!(v.D>0&&v.H>0)) return '내경과 길이를 입력하세요';
+     const V=Math.PI*v.D*v.D/4*v.H;   // mm³
+     return [['체적',calcFmt(V/1e6,4)+' L'],['',calcFmt(V/1e9,6)+' m³'],['',calcFmt(V/1000,2)+' cm³']];
+   },note:'V = πD²/4 × H'},
+  {name:'⚙️ 모터 토크',hint:'출력과 회전수 입력',
+   inputs:[['P','출력 (kW)'],['n','회전수 (rpm)']],
+   calc(v){
+     if(!(v.P>0&&v.n>0)) return '출력과 회전수를 입력하세요';
+     const T=9549.3*v.P/v.n;
+     return [['토크',calcFmt(T,3)+' N·m'],['',calcFmt(T/G0,3)+' kgf·m']];
+   },note:'T [N·m] = 9549 × P [kW] / n [rpm]'},
+  {name:'🔄 회전수 ↔ 선속도',hint:'롤러·풀리 지름과 회전수 입력',
+   inputs:[['D','지름 (mm)'],['n','회전수 (rpm)']],
+   calc(v){
+     if(!(v.D>0&&v.n>0)) return '지름과 회전수를 입력하세요';
+     const ms=Math.PI*v.D*v.n/60000;
+     return [['선속도',calcFmt(ms,4)+' m/s'],['',calcFmt(ms*60,3)+' m/min']];
+   },note:'v [m/s] = π × D [mm] × n [rpm] / 60000'},
+  {name:'🔩 풀리 / 기어 비',hint:'지름 또는 잇수 + 입력 회전수',
+   inputs:[['d1','구동측 지름·잇수'],['d2','피동측 지름·잇수'],['n1','구동측 회전수 (rpm)']],
+   calc(v){
+     if(!(v.d1>0&&v.d2>0)) return '구동측과 피동측 값을 입력하세요';
+     const r=[['감속비 (피동/구동)',calcFmt(v.d2/v.d1,4)+' : 1']];
+     if(v.n1>0) r.push(['피동측 회전수',calcFmt(v.n1*v.d1/v.d2,4)+' rpm']);
+     return r;
+   },note:'n2 = n1 × D1 / D2 (토크는 반비례로 증가)'},
+];
+function renderFxInputs(){
+  const f=FORMULAS[+document.getElementById('fxSel').value];
+  const box=document.getElementById('fxInputs');
+  let h=`<div class="calc-note" style="margin:0 0 10px;">${f.hint}</div>`;
+  for(let i=0;i<f.inputs.length;i+=2){
+    const cell=([id,label,def,type])=>`<div class="field"><label class="flabel">${label}</label><input class="finput" id="fx_${id}" ${type==='text'?'type="text"':'type="number" inputmode="decimal"'} ${def!=null?`value="${def}"`:''} oninput="renderFx()"></div>`;
+    const pair=f.inputs.slice(i,i+2);
+    h+=pair.length===2&&!pair.some(p=>p[3]==='text')?`<div class="frow">${pair.map(cell).join('')}</div>`:pair.map(cell).join('');
+  }
+  box.innerHTML=h+`<button class="btn-ghost" onclick="renderFxInputs()">↺ 초기화</button>`;
+  renderFx();
+}
+function renderFx(){
+  const f=FORMULAS[+document.getElementById('fxSel').value];
+  const v={};
+  f.inputs.forEach(([id,,,type])=>{const el=document.getElementById('fx_'+id);v[id]=type==='text'?el.value:parseFloat(el.value);});
+  const out=f.calc(v);
+  const el=document.getElementById('fxResult');
+  if(typeof out==='string'){el.innerHTML=`<div class="empty"><span class="empty-icon">🧮</span>${out}</div>`;return;}
+  el.innerHTML=`<div class="calc-list"><div class="calc-group">계산 결과</div>${out.map(([k,r])=>`<div class="calc-row"><span class="calc-unit">${k}</span><span class="calc-val">${r}</span></div>`).join('')}</div><div class="calc-note">※ ${f.note}</div>`;
 }
 function onConvCatChange(){
   const units=Object.keys(CONV_UNITS[document.getElementById('convCat').value]);
