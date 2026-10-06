@@ -2322,7 +2322,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
     <div class="frow">
       <div class="field"><label class="flabel">입고일</label><input class="finput" id="inboundDate" type="date"></div>
-      <div class="field"><label class="flabel">공급업체</label><input class="finput" id="inboundVendor" placeholder="예) SKF Korea" autocomplete="off"></div>
+      <div class="field"><label class="flabel">공급업체</label><input class="finput" id="inboundVendor" placeholder="예) SKF Korea" autocomplete="off" list="inboundVendorList"><datalist id="inboundVendorList"></datalist></div>
     </div>
     <div class="field"><label class="flabel">비고</label><input class="finput" id="inboundNote" placeholder="입고 메모" autocomplete="off"></div>
     <div style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
@@ -3799,6 +3799,10 @@ function openInbound(i){
   document.getElementById('inboundPrice').value = p.price||'';
   document.getElementById('inboundDate').value = localToday();
   document.getElementById('inboundVendor').value = '';
+  // 공급업체 자동완성: 부품 메이커 + 이전 입고 공급업체
+  const vendors = [...new Set([...db.parts.map(x=>x.maker), ...db.inbounds.map(b=>b.vendor)]
+    .map(v=>(v||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  document.getElementById('inboundVendorList').innerHTML = vendors.map(v=>`<option value="${v.replace(/"/g,'&quot;')}">`).join('');
   document.getElementById('inboundNote').value = '';
   document.getElementById('inboundAfterQty').textContent = p.qty + ' 개';
   // 입고 미리보기
@@ -3850,9 +3854,7 @@ function saveInbound(){
   renderParts();
   populatePartSelect();
   checkAlarms();
-  renderInboundHist(inboundPartIdx);
-  document.getElementById('inboundQty').value = '';
-  document.getElementById('inboundAfterQty').textContent = db.parts[inboundPartIdx].qty + ' 개';
+  closeModal('inboundModal');
   toast('입고 완료: ' + p.name + ' +' + qty + '개');
 }
 
