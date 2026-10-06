@@ -1248,7 +1248,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
   </div>
   <div class="sec">
-    <div class="sec-title">부품 재고 현황 <button class="rpt-btn" onclick="exportPartsReport()">⬇ HTML</button></div>
+    <div class="sec-title">부품 재고 현황 <button class="rpt-btn" id="partViewBtn" onclick="togglePartView()">📥 최근 입고</button><button class="rpt-btn" style="margin-left:0;" onclick="exportPartsReport()">⬇ HTML</button></div>
     <!-- 재고 요약 -->
     <div id="partSummaryBar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 10px;text-align:center;">
@@ -2673,6 +2673,13 @@ function clearPartSearch(){
   document.getElementById('partSearchClear').style.display = 'none';
   renderParts();
 }
+// 부품 목록 보기 모드: 'stock'(재고 현황) / 'inbound'(최근 입고)
+let partView = 'stock';
+function togglePartView(){
+  partView = partView==='stock' ? 'inbound' : 'stock';
+  document.getElementById('partViewBtn').textContent = partView==='stock' ? '📥 최근 입고' : '📦 재고 현황';
+  renderParts();
+}
 function setPartTypeFilter(type){
   partTypeFilter = type;
   document.querySelectorAll('#partTypeFilter .filter-chip').forEach(c=>{
@@ -3595,6 +3602,7 @@ function renderParts(){
   if(sumShort) sumShort.textContent=shortCount;
   if(sumTotal) sumTotal.textContent=fmtCost(totalValue);
 
+  if(partView==='inbound'){renderRecentInbounds(el,cntEl);return;}
   if(!db.parts.length){el.innerHTML='<div class="empty"><span class="empty-icon">📦</span>등록된 부품 없음</div>';if(cntEl)cntEl.innerHTML='';return;}
   const q=(partSearchQ||'').toLowerCase();
   const filtered=db.parts.filter(p=>{
@@ -3645,6 +3653,31 @@ function renderParts(){
       </div>
       ${warn?`<div class="stock-warn" style="display:block;">🔴 안전재고 이하 — 발주 필요!</div>`:''}
     </div>`}).join('');
+}
+// 최근 입고 리스트 (검색어 · 타입 필터 적용, 최신순 50건)
+function renderRecentInbounds(el,cntEl){
+  const q=(partSearchQ||'').toLowerCase();
+  const all=(db.inbounds||[]).filter(b=>{
+    const p=db.parts.find(x=>x.pn===b.pn);
+    const mq=!q||(b.pn||'').toLowerCase().includes(q)||(b.partName||'').toLowerCase().includes(q)||
+      (b.vendor||'').toLowerCase().includes(q)||(b.note||'').toLowerCase().includes(q);
+    const mt=partTypeFilter==='ALL'||(p&&p.type===partTypeFilter);
+    return mq&&mt;
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(Number(b.id)||0)-(Number(a.id)||0));
+  const list=all.slice(0,50);
+  if(cntEl) cntEl.innerHTML=`최근 입고 <span>${list.length}</span>${all.length>list.length?' / '+all.length:''}건`;
+  if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon">📥</span>입고 이력 없음</div>';return;}
+  el.innerHTML='<div class="card" style="padding:6px 14px;">'+list.map(b=>{
+    const pidx=db.parts.findIndex(x=>x.pn===b.pn);
+    return `
+    <div class="inbound-hist-item"${pidx>=0?` style="cursor:pointer;" onclick="openInbound(${pidx})"`:''}>
+      <div class="inbound-qty">+${b.qty}</div>
+      <div class="inbound-info">
+        <div class="part-name" style="font-size:14px;">${hlText(b.partName||'',partSearchQ)} <span class="inbound-date">[${hlText(b.pn||'',partSearchQ)}]</span></div>
+        <div class="inbound-date">📅 ${b.date}${b.vendor?' | 🏢 '+hlText(b.vendor,partSearchQ):''}${b.price?' | 단가 '+fmtCost(b.price):''}</div>
+        ${b.note?`<div class="inbound-note">${hlText(b.note,partSearchQ)}</div>`:''}
+      </div>
+    </div>`}).join('')+'</div>';
 }
 let partEditIdx=-1;
 function openPartEdit(i){
