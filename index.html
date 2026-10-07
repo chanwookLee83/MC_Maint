@@ -372,6 +372,11 @@ body.light input[type="datetime-local"]::-webkit-calendar-picker-indicator{filte
 .ftextarea{resize:none;height:80px;font-size:14px;}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.frow>*,.frow3>*{min-width:0;}   /* 그리드 칸이 입력칸 내용 폭 때문에 넘치지 않도록 */
+/* 일시 입력 (시작/종료): 좁은 화면에서는 한 줄씩 */
+.frow-dt input[type="datetime-local"]{min-width:0;max-width:100%;display:block;min-height:46px;}
+input[type="datetime-local"]::-webkit-date-and-time-value{text-align:left;}
+@media(max-width:520px){.frow.frow-dt{grid-template-columns:1fr;gap:0;}}
 .fselect-w{position:relative;}
 .fselect-w::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;font-size:13px;}
 
@@ -1190,7 +1195,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </div>
       <div class="field"><label class="flabel">원인</label><div class="ac-wrap"><input class="finput" id="mCause" placeholder="고장 원인 또는 정비 사유" autocomplete="off" oninput="acShow('mCause','causes')"><div class="ac-list" id="ac-mCause"></div></div></div>
       <div class="field"><label class="flabel">정비 내용 *</label><textarea class="ftextarea" id="mContent" placeholder="정비 내용을 입력하세요..." style="height:88px;"></textarea></div>
-      <div class="frow">
+      <div class="frow frow-dt">
         <div class="field"><label class="flabel">시작일시</label><input class="finput" id="mStart" type="datetime-local" style="font-size:14px;" onchange="onMStartChange()"></div>
         <div class="field"><label class="flabel">종료일시</label><input class="finput" id="mEnd" type="datetime-local" style="font-size:14px;"></div>
       </div>
@@ -2341,7 +2346,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
     <div class="field"><label class="flabel">원인</label><div class="ac-wrap"><input class="finput" id="eMCause" autocomplete="off" oninput="acShow('eMCause','causes')"><div class="ac-list" id="ac-eMCause"></div></div></div>
     <div class="field"><label class="flabel">정비 내용 *</label><textarea class="ftextarea" id="eMContent" style="height:88px;"></textarea></div>
-    <div class="frow">
+    <div class="frow frow-dt">
       <div class="field"><label class="flabel">시작일시</label><input class="finput" id="eMStart" type="datetime-local" style="font-size:14px;"></div>
       <div class="field"><label class="flabel">종료일시</label><input class="finput" id="eMEnd" type="datetime-local" style="font-size:14px;"></div>
     </div>
