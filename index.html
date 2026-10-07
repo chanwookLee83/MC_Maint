@@ -90,6 +90,7 @@ async function pollFirestore() {
       db.boms      = serverDb.boms      || [];
       db.reqs      = serverDb.reqs      || [];
       db.calibs    = serverDb.calibs    || [];
+      db.projects  = serverDb.projects  || [];
       db.eqChk     = serverDb.eqChk     || {};
       db.customChk = serverDb.customChk || {};
       localStorage.setItem('mms_v1', data.db);
@@ -129,6 +130,7 @@ async function pollFirestore() {
         checkAlarms();
         updateEvBadge();
         if (typeof renderReqLog === 'function') renderReqLog();
+        if (typeof renderProjects === 'function') renderProjects();
         showSyncBadge('🔄 동기화됨');
       }
     }
@@ -609,6 +611,50 @@ canvas{display:block;width:100%!important;}
 /* FILTER CHIP */
 .filter-chip{flex-shrink:0;border-radius:20px;padding:5px 11px;font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;border:1px solid var(--border2);color:var(--muted);background:var(--card);transition:all .15s;user-select:none;}
 .filter-chip.active{border-color:var(--amber);color:var(--amber);background:#f59e0b10;}
+/* 프로젝트 진행 관리 */
+.proj-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
+.proj-item:active{border-color:var(--amber);}
+.proj-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+.proj-pn{font-family:var(--mono);font-size:11px;color:var(--blue);}
+.proj-name{font-size:15px;font-weight:700;margin-top:2px;word-break:break-all;}
+.proj-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.proj-bar-bg{flex:1;height:7px;background:var(--bg);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.proj-bar-fill{height:100%;border-radius:4px;transition:width .3s;}
+.proj-pct{font-family:var(--mono);font-size:13px;font-weight:bold;min-width:40px;text-align:right;}
+.proj-docs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.proj-doc{border-radius:6px;padding:4px 2px;text-align:center;font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:.5px;border:1px solid var(--border2);color:var(--muted);background:var(--bg);}
+.proj-doc.s1{border-color:#f59e0b50;color:var(--amber);background:#f59e0b12;}
+.proj-doc.s2{border-color:#10b98150;color:var(--green);background:#10b98112;}
+.seg{display:flex;gap:4px;}
+.seg button{flex:1;border-radius:8px;padding:8px 4px;font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;border:1px solid var(--border2);color:var(--muted);background:var(--card);transition:all .15s;}
+.seg button.on{border-color:var(--amber);color:var(--amber);background:#f59e0b14;}
+.seg button.on.s0{border-color:var(--muted2);color:var(--muted2);background:#4b5e7418;}
+.seg button.on.s2{border-color:var(--green);color:var(--green);background:#10b98114;}
+.proj-doc-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.proj-doc-row:last-child{border-bottom:none;}
+.proj-doc-label{min-width:92px;font-size:13px;font-weight:700;}
+.proj-doc-label small{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:normal;}
+.proj-doc.na{opacity:.55;border-style:dashed;}
+.coll-head{cursor:pointer;user-select:none;}
+.coll-arrow{display:inline-block;width:12px;transition:transform .2s;color:var(--muted);}
+.coll-head.open .coll-arrow{transform:rotate(90deg);}
+.coll-meta{font-family:var(--mono);font-size:11px;font-weight:normal;letter-spacing:0;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.proj-row{display:flex;align-items:center;gap:6px;margin-top:5px;}
+.proj-row .proj-docs{flex:1;min-width:0;}
+.proj-row-lbl{width:26px;flex-shrink:0;font-family:var(--cond);font-size:10px;font-weight:700;color:var(--muted);}
+.proj-steps{display:flex;gap:3px;}
+.proj-step{flex:1;height:7px;border-radius:3px;background:var(--border2);}
+.proj-step.done{background:var(--green);}
+.proj-step.next{background:#f59e0b55;}
+.seg-sm button{font-size:12px;letter-spacing:0;padding:8px 2px;}
+.proj-sub-title{display:flex;align-items:center;gap:6px;font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--muted2);margin:12px 0 6px;}
+.step-ed{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+.step-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;border-radius:8px;border:1px solid var(--border2);background:var(--card);color:var(--muted);cursor:pointer;transition:all .15s;}
+.step-btn .step-no{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:bold;border:1.5px solid currentColor;}
+.step-btn .step-lbl{font-family:var(--cond);font-size:10.5px;font-weight:700;line-height:1.2;text-align:center;word-break:keep-all;}
+.step-btn.done{border-color:#10b98160;background:#10b98114;color:var(--green);}
+.step-btn.done .step-no{background:var(--green);border-color:var(--green);color:#fff;}
+.step-btn.next{border-color:#f59e0b60;color:var(--amber);}
 .filter-chip:active{transform:scale(.95);}
 
 /* SEARCH BAR */
@@ -1373,6 +1419,19 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <div class="kpi-box" style="border-top:2px solid var(--green)"><div class="kpi-label">총 정비건</div><div class="kpi-val" style="color:var(--green)" id="k-maint">0</div><div class="kpi-sub">건</div></div>
       <div class="kpi-box" style="border-top:2px solid var(--red)"><div class="kpi-label">고장 건수</div><div class="kpi-val" style="color:var(--red)" id="k-fail">0</div><div class="kpi-sub">건</div></div>
       <div class="kpi-box" style="border-top:2px solid var(--blue)"><div class="kpi-label">총 정비비용</div><div class="kpi-val" style="color:var(--blue);font-size:18px;" id="k-cost">₩0</div><div class="kpi-sub">누적</div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title coll-head" onclick="toggleProjPanel()">
+      <span class="coll-arrow" id="projArrow">▸</span>프로젝트 진행 현황
+      <span class="coll-meta" id="projCollMeta"></span>
+      <button class="rpt-btn" onclick="event.stopPropagation();openProjectNew()">＋ 등록</button>
+    </div>
+    <div id="projBody" style="display:none;">
+    <div id="projPeriodNote" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin:-4px 0 8px;display:none;"></div>
+    <div id="projSummary" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;"></div>
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;" id="projFilter"></div>
+    <div id="projList"><div class="empty" style="padding:14px;">등록된 프로젝트 없음</div></div>
     </div>
   </div>
   <div class="sec">
@@ -2337,6 +2396,33 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   </div>
 </div>
 
+<!-- 프로젝트 등록/수정 -->
+<div class="modal-bg" id="projModal" onclick="closeModal('projModal',event)">
+  <div class="modal">
+    <div class="modal-title"><span id="projModalTitle">프로젝트 등록</span> <button class="modal-close" onclick="closeModal('projModal')">✕</button></div>
+    <div class="frow">
+      <div class="field"><label class="flabel">품번 *</label><input class="finput" id="prjPN" placeholder="예) 12345-AB000" autocomplete="off"></div>
+      <div class="field"><label class="flabel">품명 *</label><input class="finput" id="prjName" placeholder="예) FRONT COVER" autocomplete="off"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">담당자</label><input class="finput" id="prjOwner" placeholder="예) 홍길동" autocomplete="off" list="prjOwnerList"><datalist id="prjOwnerList"></datalist></div>
+      <div class="field"><label class="flabel">목표 완료일</label><input class="finput" id="prjDue" type="date"></div>
+    </div>
+    <div class="field"><label class="flabel">구분</label><div class="seg" id="prjKindSeg"></div></div>
+    <div class="field"><label class="flabel">진행사항</label><div id="prjDocEdit"></div></div>
+    <button class="btn-primary" style="margin-top:6px;" onclick="saveProject()">💾 저장</button>
+    <button class="btn-sm bsm-r" id="prjDelBtn" style="width:100%;padding:10px;" onclick="deleteProject()">🗑 프로젝트 삭제</button>
+  </div>
+</div>
+
+<!-- 프로젝트 상세 (문서 상태 빠른 변경) -->
+<div class="modal-bg" id="projDetailModal" onclick="closeModal('projDetailModal',event)">
+  <div class="modal">
+    <div class="modal-title">프로젝트 진행 <button class="modal-close" onclick="closeModal('projDetailModal')">✕</button></div>
+    <div id="projDetailBody"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="sync-badge" id="syncBadge"></div>
 
@@ -2371,6 +2457,7 @@ if(!db.reqs) db.reqs=[];
 if(!db.calibs) db.calibs=[];
 if(!db.partTypes) db.partTypes=[];
 if(!db.maintTypes) db.maintTypes=[];
+if(!db.projects) db.projects=[];
 function save(){
   localStorage.setItem('mms_v1',JSON.stringify(db));
   // Firestore 동기화 (Firebase 준비됐을 때만)
@@ -3899,6 +3986,298 @@ function deleteInbound(id, pidx){
   toast('입고 기록 삭제됨','w');
 }
 
+// ══════ 프로젝트 진행 관리 (공정문서 · 설비 · 공정 설계) ══════
+const PROJ_DOCS = [
+  {k:'pfc',   label:'PFC',          sub:'공정흐름도'},
+  {k:'pfmea', label:'PFMEA',        sub:'잠재고장모드'},
+  {k:'cp',    label:'Control Plan', sub:'관리계획서'},
+  {k:'wi',    label:'WI',           sub:'작업표준서'},
+];
+const PROJ_ST = ['미진행','진행중','완료'];   // 공정문서 · 전체 상태: 0 / 1 / 2
+const PROJ_EQUIP = [{k:'eq',label:'설비'},{k:'tool',label:'치공구'},{k:'jig',label:'지그'}];
+const PROJ_EQ_ST = ['미진행','설계','검토','완료','해당 없음'];   // 0~4 (4 = 해당 없음 → 진행률 제외)
+const PROJ_EQ_W  = [0, 1/3, 2/3, 1, null];
+const PROJ_STEPS = ['LAY OUT 확보','장비 입고','장비 SET UP','RUN&RATE','생산 인계'];  // step = 완료된 단계 수 0~5
+const PROJ_KINDS = ['MOLD','ASSY'];
+let projFilter = 'ALL';
+let projEditId = null;     // 등록·수정 모달 대상 (null = 신규)
+let projDetailId = null;   // 상세 모달 대상
+let projDraft = null;      // 등록·수정 모달 임시값
+
+function projEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function projNewProgress(){return {docs:{pfc:0,pfmea:0,cp:0,wi:0},equip:{eq:0,tool:0,jig:0},step:0};}
+
+// 구역별 진행률 (0~100, 설비가 모두 '해당 없음'이면 null)
+function projDocPct(p){
+  const sum = PROJ_DOCS.reduce((s,d)=>s+((p.docs&&p.docs[d.k])||0),0);
+  return Math.round(sum / (PROJ_DOCS.length*2) * 100);
+}
+function projEqPct(p){
+  const w = PROJ_EQUIP.map(e=>PROJ_EQ_W[(p.equip&&p.equip[e.k])||0]).filter(x=>x!=null);
+  return w.length ? Math.round(w.reduce((s,x)=>s+x,0)/w.length*100) : null;
+}
+function projStepPct(p){return Math.round((p.step||0)/PROJ_STEPS.length*100);}
+// 전체 진행률 = 해당 구역 평균
+function projPct(p){
+  const v = [projDocPct(p), projEqPct(p), projStepPct(p)].filter(x=>x!=null);
+  return Math.round(v.reduce((s,x)=>s+x,0)/v.length);
+}
+function projStatus(p){const pct=projPct(p);return pct>=100?2:pct<=0?0:1;}
+function projColor(st){return st===2?'var(--green)':st===1?'var(--amber)':'var(--muted)';}
+function projStepTxt(p){const s=p.step||0;return s===0?'미착수':s>=PROJ_STEPS.length?'생산 인계 완료':PROJ_STEPS[s-1]+' 완료';}
+// 목표일까지 남은 일수 (음수 = 지남), 목표일 없으면 null
+function projDday(p){
+  if(!p.due) return null;
+  return Math.round((new Date(p.due) - new Date(localToday())) / 86400000);
+}
+function projDdayTxt(dd){return dd===0?'D-Day':dd>0?'D-'+dd:'D+'+(-dd);}
+function projLate(p){const dd=projDday(p);return dd!=null && dd<0 && projStatus(p)!==2;}
+// 정렬: 미완료(목표일 임박순, 목표일 없으면 뒤) → 완료
+function projSorted(list){
+  return list.slice().sort((a,b)=>{
+    const ca=projStatus(a)===2, cb=projStatus(b)===2;
+    if(ca!==cb) return ca-cb;
+    if(!ca){
+      if(a.due&&b.due&&a.due!==b.due) return a.due.localeCompare(b.due);
+      if(!!a.due!==!!b.due) return a.due?-1:1;
+    }
+    return (b.updated||0)-(a.updated||0);
+  });
+}
+// 통계 기간 필터 (등록일 기준)
+function getProjectsInPeriod(fFrom,fTo){
+  return (db.projects||[]).filter(p=>(!fFrom||(p.date||'')>=fFrom)&&(!fTo||(p.date||'')<=fTo));
+}
+
+function setProjFilter(f){projFilter=f;renderProjects();}
+// 접이식 패널: 기본은 접힘, 펼친 상태는 현재 화면에서만 유지
+let projPanelOpen = false;
+function toggleProjPanel(){
+  projPanelOpen = !projPanelOpen;
+  document.getElementById('projBody').style.display = projPanelOpen ? '' : 'none';
+  document.getElementById('projArrow').parentElement.classList.toggle('open', projPanelOpen);
+}
+
+// 카드용 요약 (문서 4 · 설비 3 · 공정 5단계)
+function projCardRows(p){
+  const lbl = t=>`<div class="proj-row-lbl">${t}</div>`;
+  const docs = PROJ_DOCS.map(d=>{const v=(p.docs&&p.docs[d.k])||0;
+    return `<div class="proj-doc s${v}">${v===2?'✔ ':v===1?'◐ ':''}${d.label==='Control Plan'?'CP':d.label}</div>`;}).join('');
+  const eqs = PROJ_EQUIP.map(e=>{const v=(p.equip&&p.equip[e.k])||0;
+    const cls = v===4?'na':v===3?'s2':v?'s1':'s0';
+    return `<div class="proj-doc ${cls}">${e.label}${v&&v!==4?' · '+PROJ_EQ_ST[v]:v===4?' · N/A':''}</div>`;}).join('');
+  const s = p.step||0;
+  const steps = PROJ_STEPS.map((_,i)=>`<div class="proj-step${i<s?' done':i===s?' next':''}"></div>`).join('');
+  return `
+    <div class="proj-row">${lbl('문서')}<div class="proj-docs">${docs}</div></div>
+    <div class="proj-row">${lbl('설비')}<div class="proj-docs" style="grid-template-columns:repeat(3,1fr);">${eqs}</div></div>
+    <div class="proj-row">${lbl('공정')}<div style="flex:1;min-width:0;"><div class="proj-steps">${steps}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:${s>=PROJ_STEPS.length?'var(--green)':'var(--muted)'};margin-top:3px;">${s}/${PROJ_STEPS.length} · ${projStepTxt(p)}</div></div></div>`;
+}
+
+// 진행사항 편집 영역 (등록 모달 · 상세 모달 공용)
+// call(구역, 키, 값) → onclick 문자열
+function projEditorHtml(o, call){
+  const docs = PROJ_DOCS.map(d=>{const v=(o.docs&&o.docs[d.k])||0;return `
+    <div class="proj-doc-row">
+      <div class="proj-doc-label">${d.label}<small>${d.sub}</small></div>
+      <div class="seg" style="flex:1;">${PROJ_ST.map((l,i)=>`<button class="${v===i?'on s'+i:''}" onclick="${call('docs',d.k,i)}">${l}</button>`).join('')}</div>
+    </div>`;}).join('');
+  const eqs = PROJ_EQUIP.map(e=>{const v=(o.equip&&o.equip[e.k])||0;return `
+    <div class="proj-doc-row">
+      <div class="proj-doc-label" style="min-width:52px;">${e.label}<small>${PROJ_EQ_ST[v]}</small></div>
+      <div class="seg seg-sm" style="flex:1;">${[1,2,3,4].map(i=>`<button class="${v===i?'on '+(i===3?'s2':i===4?'s0':''):''}" onclick="${call('equip',e.k,v===i?0:i)}">${PROJ_EQ_ST[i]}</button>`).join('')}</div>
+    </div>`;}).join('');
+  const s = o.step||0;
+  const steps = PROJ_STEPS.map((l,i)=>`<button class="step-btn${i<s?' done':i===s?' next':''}" onclick="${call('step','',s===i+1?i:i+1)}">
+      <span class="step-no">${i<s?'✔':i+1}</span><span class="step-lbl">${l}</span></button>`).join('');
+  const sub = (icon,t,pct)=>`<div class="proj-sub-title">${icon} ${t}${pct==null?'':`<span style="margin-left:auto;font-family:var(--mono);color:${pct>=100?'var(--green)':pct>0?'var(--amber)':'var(--muted)'};">${pct}%</span>`}</div>`;
+  return `
+    ${sub('📄','공정문서 4종',projDocPct(o))}<div class="card" style="padding:2px 12px;">${docs}</div>
+    ${sub('🏭','설비 진행 현황',projEqPct(o))}<div class="card" style="padding:2px 12px;">${eqs}</div>
+    ${sub('🛠','공정 설계 진행',projStepPct(o))}<div class="card" style="padding:10px 8px;"><div class="step-ed">${steps}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;margin-top:6px;">단계를 누르면 그 단계까지 완료 처리 · 마지막 완료 단계를 다시 누르면 취소</div></div>`;
+}
+function projApply(o,sec,k,v){
+  if(sec==='step'){o.step=v;return;}
+  if(!o[sec]) o[sec]={};
+  o[sec][k]=v;
+}
+
+function renderProjects(){
+  if(!db.projects) db.projects=[];
+  const sumEl = document.getElementById('projSummary');
+  const fEl = document.getElementById('projFilter');
+  const el = document.getElementById('projList');
+  const noteEl = document.getElementById('projPeriodNote');
+  if(!el) return;
+  const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
+  const fTo=document.getElementById('sFilterDateTo')?.value||'';
+  const list = getProjectsInPeriod(fFrom,fTo);
+  if(noteEl){
+    noteEl.style.display = (fFrom||fTo) ? '' : 'none';
+    noteEl.textContent = `기간 필터 적용 (등록일 기준) · ${list.length} / ${db.projects.length}건`;
+  }
+
+  const cnt = [0,0,0];
+  list.forEach(p=>cnt[projStatus(p)]++);
+  const late = list.filter(projLate).length;
+  const avg = list.length ? Math.round(list.reduce((s,p)=>s+projPct(p),0)/list.length) : 0;
+  const box = (label,val,color)=>`<div style="background:var(--card);border:1px solid var(--border);border-top:2px solid ${color};border-radius:9px;padding:9px 2px;text-align:center;">
+      <div style="font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--muted);margin-bottom:3px;white-space:nowrap;">${label}</div>
+      <div style="font-family:var(--mono);font-size:17px;font-weight:bold;color:${color};">${val}</div></div>`;
+  const metaEl = document.getElementById('projCollMeta');
+  if(metaEl) metaEl.innerHTML = list.length
+    ? `${list.length}건 · 진행 ${cnt[1]}${late?` · <b style="color:var(--red);">지연 ${late}</b>`:''} · 평균 ${avg}%` : '';
+  sumEl.innerHTML = box('진행중',cnt[1],'var(--amber)') + box('미진행',cnt[0],'var(--muted2)')
+    + box('완료',cnt[2],'var(--green)') + box('지연',late,'var(--red)') + box('평균',avg+'%','var(--blue)');
+
+  const filters = [['ALL','ALL'],['MOLD','MOLD'],['ASSY','ASSY'],['S0','미진행'],['S1','진행중'],['S2','완료'],['LATE','지연']];
+  fEl.innerHTML = filters.map(([k,l])=>`<button class="filter-chip${projFilter===k?' active':''}" onclick="setProjFilter('${k}')">${l}</button>`).join('');
+
+  const filtered = projSorted(list.filter(p=>{
+    if(projFilter==='ALL') return true;
+    if(projFilter==='LATE') return projLate(p);
+    if(projFilter[0]==='S') return projStatus(p)===+projFilter[1];
+    return p.kind===projFilter;
+  }));
+
+  if(!filtered.length){
+    el.innerHTML = `<div class="empty" style="padding:14px;">${db.projects.length?'해당 프로젝트 없음':'등록된 프로젝트 없음<br><span style="font-size:11px;">＋ 프로젝트 등록으로 추가하세요</span>'}</div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(p=>{
+    const pct = projPct(p), st = projStatus(p), col = projColor(st), dd = projDday(p), isLate = projLate(p);
+    return `<div class="proj-item" onclick="openProjectDetail(${p.id})"${isLate?' style="border-color:#ef444460;"':''}>
+      <div class="proj-head">
+        <div style="min-width:0;">
+          <div class="proj-pn">${projEsc(p.pn)}</div>
+          <div class="proj-name">${projEsc(p.name)}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;">
+          <span class="badge ${p.kind==='MOLD'?'badge-purple':'badge-blue'}">${p.kind}</span>
+          <span class="badge ${st===2?'badge-green':st===1?'badge-amber':'badge-gray'}">${PROJ_ST[st]}</span>
+        </div>
+      </div>
+      ${p.owner||p.due?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin:-4px 0 8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        ${p.owner?`<span>👤 ${projEsc(p.owner)}</span>`:''}
+        ${p.due?`<span>🎯 ${p.due}</span>${st!==2?`<span class="badge ${isLate?'badge-red':dd<=7?'badge-amber':'badge-gray'}" style="font-size:10px;padding:1px 6px;">${projDdayTxt(dd)}${isLate?' 지연':''}</span>`:''}`:''}
+      </div>`:''}
+      <div class="proj-bar-row">
+        <div class="proj-bar-bg"><div class="proj-bar-fill" style="width:${pct}%;background:${col};"></div></div>
+        <div class="proj-pct" style="color:${col};">${pct}%</div>
+      </div>
+      ${projCardRows(p)}
+    </div>`;
+  }).join('');
+}
+
+// 상세 모달: 진행사항을 바로 바꾸고 즉시 저장
+function openProjectDetail(id){
+  projDetailId = id;
+  renderProjectDetail();
+  openModal('projDetailModal');
+}
+function renderProjectDetail(){
+  const p = (db.projects||[]).find(x=>x.id===projDetailId);
+  const body = document.getElementById('projDetailBody');
+  if(!p){closeModal('projDetailModal');return;}
+  const pct = projPct(p), st = projStatus(p), col = projColor(st), dd = projDday(p), isLate = projLate(p);
+  body.innerHTML = `
+    <div style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="min-width:0;">
+          <div class="proj-pn">${projEsc(p.pn)}</div>
+          <div class="proj-name">${projEsc(p.name)}</div>
+        </div>
+        <span class="badge ${p.kind==='MOLD'?'badge-purple':'badge-blue'}">${p.kind}</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;">
+        <span>👤 ${projEsc(p.owner||'담당자 미지정')}</span>
+        <span>🎯 ${p.due||'목표일 미지정'}${dd!=null&&st!==2?` <b style="color:${isLate?'var(--red)':'var(--amber)'};">(${projDdayTxt(dd)})</b>`:''}</span>
+      </div>
+      <div class="proj-bar-row" style="margin:10px 0 0;">
+        <div class="proj-bar-bg"><div class="proj-bar-fill" style="width:${pct}%;background:${col};"></div></div>
+        <div class="proj-pct" style="color:${col};">${pct}%</div>
+      </div>
+    </div>
+    ${projEditorHtml(p,(sec,k,v)=>`setProjProgress(${p.id},'${sec}','${k}',${v})`)}
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;">등록 ${p.date||'-'}${p.updated?' · 최종 변경 '+new Date(p.updated).toLocaleDateString('sv-SE'):''}</div>
+    <button class="btn-sm bsm-a" style="width:100%;padding:10px;" onclick="closeModal('projDetailModal');openProjectEdit(${p.id})">✏️ 품번 · 품명 · 담당자 · 목표일 수정 / 삭제</button>`;
+}
+function setProjProgress(id,sec,k,v){
+  const p = (db.projects||[]).find(x=>x.id===id);
+  if(!p) return;
+  const docsBefore = projDocPct(p), before = projStatus(p);
+  projApply(p,sec,k,v); p.updated=Date.now();
+  save(); renderProjects(); renderProjectDetail();
+  if(before!==2 && projStatus(p)===2) toast('🎉 프로젝트 완료: '+p.name);
+  else if(docsBefore<100 && projDocPct(p)===100) toast('📄 공정문서 4종 완료: '+p.name);
+}
+
+// 등록·수정 모달
+function openProjectNew(){
+  projEditId = null;
+  projDraft = Object.assign({pn:'',name:'',owner:'',due:'',kind:'MOLD'}, projNewProgress());
+  fillProjModal('프로젝트 등록');
+}
+function openProjectEdit(id){
+  const p = (db.projects||[]).find(x=>x.id===id);
+  if(!p) return;
+  projEditId = id;
+  const base = projNewProgress();
+  projDraft = {pn:p.pn,name:p.name,owner:p.owner||'',due:p.due||'',kind:p.kind||'MOLD',
+    docs:Object.assign(base.docs,p.docs), equip:Object.assign(base.equip,p.equip), step:p.step||0};
+  fillProjModal('프로젝트 수정');
+}
+function fillProjModal(title){
+  document.getElementById('projModalTitle').textContent = title;
+  document.getElementById('prjPN').value = projDraft.pn;
+  document.getElementById('prjName').value = projDraft.name;
+  document.getElementById('prjOwner').value = projDraft.owner;
+  document.getElementById('prjDue').value = projDraft.due;
+  // 담당자 자동완성: 기존 프로젝트 담당자
+  const owners = [...new Set((db.projects||[]).map(x=>(x.owner||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  document.getElementById('prjOwnerList').innerHTML = owners.map(o=>`<option value="${projEsc(o)}">`).join('');
+  document.getElementById('prjDelBtn').style.display = projEditId ? '' : 'none';
+  renderProjDraft();
+  openModal('projModal');
+}
+function setProjDraft(sec,k,v){projApply(projDraft,sec,k,v);renderProjDraft();}
+function renderProjDraft(){
+  document.getElementById('prjKindSeg').innerHTML = PROJ_KINDS.map(k=>
+    `<button class="${projDraft.kind===k?'on':''}" onclick="projDraft.kind='${k}';renderProjDraft()">${k}</button>`).join('');
+  document.getElementById('prjDocEdit').innerHTML = projEditorHtml(projDraft,(sec,k,v)=>`setProjDraft('${sec}','${k}',${v})`);
+}
+function saveProject(){
+  const pn = document.getElementById('prjPN').value.trim();
+  const name = document.getElementById('prjName').value.trim();
+  const owner = document.getElementById('prjOwner').value.trim();
+  const due = document.getElementById('prjDue').value;
+  if(!pn||!name){toast('품번과 품명을 입력해 주세요','w');return;}
+  if(!db.projects) db.projects=[];
+  const dup = db.projects.find(x=>x.pn===pn && x.kind===projDraft.kind && x.id!==projEditId);
+  if(dup){toast('이미 등록된 품번입니다 ('+projDraft.kind+')','e');return;}
+  const prog = {docs:projDraft.docs, equip:projDraft.equip, step:projDraft.step};
+  if(projEditId){
+    const p = db.projects.find(x=>x.id===projEditId);
+    if(p) Object.assign(p,{pn,name,owner,due,kind:projDraft.kind},prog,{updated:Date.now()});
+    toast('프로젝트 수정 완료');
+  } else {
+    db.projects.unshift(Object.assign({id:Date.now(),pn,name,owner,due,kind:projDraft.kind},prog,{date:localToday(),updated:Date.now()}));
+    toast('프로젝트 등록 완료: '+name);
+  }
+  save(); closeModal('projModal'); renderProjects();
+}
+function deleteProject(){
+  const p = (db.projects||[]).find(x=>x.id===projEditId);
+  if(!p) return;
+  if(!confirm(`[${p.pn}] ${p.name} 프로젝트를 삭제할까요?`)) return;
+  db.projects = db.projects.filter(x=>x.id!==projEditId);
+  save(); closeModal('projModal'); renderProjects();
+  toast('삭제됨','w');
+}
+
 // ══════ MTBF / MTTR ══════
 function calcMTBF(eqId){
   const fails=db.maints.filter(m=>m.eqId===eqId&&m.type==='고장').sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -4127,6 +4506,7 @@ function toggleStatsMtbfOnly(){
   renderStats();
 }
 function renderStats(){
+  renderProjects();
   const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
   const fTo=document.getElementById('sFilterDateTo')?.value||'';
   // 날짜 필터 적용된 정비 목록 (정비일 기준)
@@ -5626,11 +6006,12 @@ function getStatsExportData(){
     puMap[k].qty+=(Number(p.qty)||0);puMap[k].cost+=(Number(p.price)||0)*(Number(p.qty)||0);
   }));
   const parts=Object.values(puMap).sort((a,b)=>b.qty-a.qty);
-  return {fFrom,fTo,periodLabel,fm,kpi,perEq,perMonth,perType,parts};
+  const projects=getProjectsInPeriod(fFrom,fTo);
+  return {fFrom,fTo,periodLabel,fm,kpi,perEq,perMonth,perType,parts,projects};
 }
 
 function exportStatsReport(){
-  if(!db.maints.length){toast('정비 데이터 없음','w');return;}
+  if(!db.maints.length&&!(db.projects||[]).length){toast('정비 · 프로젝트 데이터 없음','w');return;}
   const d=getStatsExportData();
   const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
   const mtbfTxt=v=>v==null?'—':`${v.toFixed(0)}h (~${Math.round(v/24)}일)`;
@@ -5668,6 +6049,34 @@ function exportStatsReport(){
   const partRows=d.parts.length?d.parts.map((p,i)=>`<tr>
     <td class="num">${i+1}</td><td>${esc(p.name)}</td><td>${esc(p.pn)}</td><td class="num">${p.qty}</td><td class="num">${fmtCost(p.cost)}</td>
   </tr>`).join(''):`<tr><td colspan="5" class="empty">데이터 없음</td></tr>`;
+
+  const pj=d.projects, pjCnt=[0,0,0];
+  pj.forEach(p=>pjCnt[projStatus(p)]++);
+  const pjLate=pj.filter(p=>projLate(p)).length;
+  const pjAvg=pj.length?Math.round(pj.reduce((s,p)=>s+projPct(p),0)/pj.length):0;
+  const pjStTxt=v=>['<span style="color:#94a3b8;">미진행</span>','<span style="color:#b45309;">진행중</span>','<span style="color:#047857;font-weight:700;">완료</span>'][v||0];
+  const pjEqTxt=v=>`<span style="color:${['#94a3b8','#b45309','#b45309','#047857','#cbd5e1'][v||0]};">${PROJ_EQ_ST[v||0]}</span>`;
+  const projRows=pj.length?projSorted(pj).map(p=>{
+    const dd=projDday(p);
+    return `<tr>
+    <td>${esc(p.pn)}</td><td>${esc(p.name)}</td><td>${p.kind}</td><td>${esc(p.owner||'')}</td>
+    <td>${p.date||''}</td><td${projLate(p)?' style="color:#b91c1c;font-weight:700;"':''}>${p.due||''}${dd!=null&&projStatus(p)!==2?' ('+projDdayTxt(dd)+')':''}</td>
+    ${PROJ_DOCS.map(x=>`<td>${pjStTxt(p.docs&&p.docs[x.k])}</td>`).join('')}
+    ${PROJ_EQUIP.map(x=>`<td>${pjEqTxt(p.equip&&p.equip[x.k])}</td>`).join('')}
+    <td>${p.step||0}/${PROJ_STEPS.length} ${projStepTxt(p)}</td>
+    <td class="num">${projPct(p)}%</td><td>${PROJ_ST[projStatus(p)]}</td></tr>`;}).join('')
+    :`<tr><td colspan="16" class="empty">해당 기간 등록된 프로젝트 없음</td></tr>`;
+  const projSection=pj.length||(db.projects||[]).length?`
+<h2>프로젝트 진행 현황</h2>
+<div class="kpi-row">
+  <div class="kpi"><span class="kl">전체</span><span class="kv">${pj.length}<small>건</small></span></div>
+  <div class="kpi"><span class="kl">진행중</span><span class="kv" style="color:#b45309;">${pjCnt[1]}<small>건</small></span></div>
+  <div class="kpi"><span class="kl">완료</span><span class="kv" style="color:#047857;">${pjCnt[2]}<small>건</small></span></div>
+  <div class="kpi"><span class="kl">지연</span><span class="kv" style="color:#b91c1c;">${pjLate}<small>건</small></span></div>
+  <div class="kpi"><span class="kl">평균 진행률</span><span class="kv" style="color:#1d4ed8;">${pjAvg}<small>%</small></span></div>
+</div>
+<div style="font-size:8.5pt;color:#94a3b8;margin-bottom:4px;">진행률 = 공정문서 · 설비(해당 없음 제외) · 공정 설계 5단계 평균 · 등록일 기준 기간 필터 적용</div>
+<table><thead><tr><th>품번</th><th>품명</th><th>구분</th><th>담당자</th><th>등록일</th><th>목표일</th><th>PFC</th><th>PFMEA</th><th>CP</th><th>WI</th><th>설비</th><th>치공구</th><th>지그</th><th>공정 설계</th><th>진행률</th><th>상태</th></tr></thead><tbody>${projRows}</tbody></table>`:'';
 
   const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>설비 통계 리포트</title>
 <style>*{margin:0;padding:0;box-sizing:border-box;}
@@ -5710,6 +6119,7 @@ ${img2?`<div class="chart"><img src="${img2}" alt="정비 유형 분포"></div>`
 
 <h2>부품 사용 내역</h2>
 <table><thead><tr><th>순위</th><th>부품명</th><th>형번</th><th>사용수량</th><th>금액</th></tr></thead><tbody>${partRows}</tbody></table>
+${projSection}
 
 <div class="footer">※ 본 리포트는 설비관리 시스템에서 자동 생성되었습니다. 수치는 선택된 기간 필터 기준입니다.</div>
 </body></html>`;
@@ -5721,7 +6131,7 @@ ${img2?`<div class="chart"><img src="${img2}" alt="정비 유형 분포"></div>`
 
 function exportStatsXLSX(){
   if(typeof XLSX==='undefined'){toast('엑셀 모듈 로드 실패 — 인터넷 연결 확인','e');return;}
-  if(!db.maints.length){toast('정비 데이터 없음','w');return;}
+  if(!db.maints.length&&!(db.projects||[]).length){toast('정비 · 프로젝트 데이터 없음','w');return;}
   const d=getStatsExportData();
   const wb=XLSX.utils.book_new();
 
@@ -5758,6 +6168,17 @@ function exportStatsXLSX(){
   const pAoa=[['순위','부품명','형번','사용수량','금액(원)']];
   d.parts.forEach((p,i)=>pAoa.push([i+1,p.name,p.pn,p.qty,p.cost]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pAoa),'부품 사용');
+
+  const prAoa=[['품번','품명','구분','담당자','등록일','목표 완료일','D-day','PFC','PFMEA','Control Plan','WI','설비','치공구','지그','공정 설계 단계','공정 설계 현황','진행률(%)','상태','지연']];
+  projSorted(d.projects).forEach(p=>{
+    const dd=projDday(p);
+    prAoa.push([p.pn,p.name,p.kind,p.owner||'',p.date||'',p.due||'',dd==null||projStatus(p)===2?'':projDdayTxt(dd),
+      ...PROJ_DOCS.map(x=>PROJ_ST[(p.docs&&p.docs[x.k])||0]),
+      ...PROJ_EQUIP.map(x=>PROJ_EQ_ST[(p.equip&&p.equip[x.k])||0]),
+      `${p.step||0}/${PROJ_STEPS.length}`,projStepTxt(p),
+      projPct(p),PROJ_ST[projStatus(p)],projLate(p)?'지연':'']);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(prAoa),'프로젝트 진행');
 
   const suffix=(d.fFrom||d.fTo)?'_'+(d.fFrom||'')+'_'+(d.fTo||''):'';
   XLSX.writeFile(wb,'설비통계데이터'+suffix+'_'+localToday()+'.xlsx');
