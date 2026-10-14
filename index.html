@@ -315,6 +315,9 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 .alarm-badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:none;align-items:center;justify-content:center;font-family:var(--mono);padding:0 3px;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.35);}
 .alarm-badge.show{display:flex;}
 .topbar-date{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap;}
+.dow{font-weight:700;margin-left:2px;}
+.dow-sat{color:#3b82f6 !important;}
+.dow-sun{color:#ef4444 !important;}
 .theme-btn{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-size:16px;padding:6px 9px;cursor:pointer;transition:all .2s;}
 .theme-btn:hover,.theme-btn:active{border-color:var(--amber);color:var(--amber);}
 /* 동기화 뱃지 */
@@ -2442,6 +2445,10 @@ if('serviceWorker' in navigator){
 
 // ── 유틸 ──
 function localToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+// 날짜(YYYY-MM-DD…) 뒤에 요일 표기 — 토요일 파랑, 일요일 빨강
+function dw(s){if(!s)return s||'';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return s;const d=new Date(+m[1],+m[2]-1,+m[3]).getDay();if(isNaN(d))return s;return s+'<span class="dow'+(d===6?' dow-sat':d===0?' dow-sun':'')+'">('+'일월화수목금토'[d]+')</span>';}
+// 인쇄 보고서용 (인라인 색상)
+function dwp(s){if(!s)return s||'';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return s;const d=new Date(+m[1],+m[2]-1,+m[3]).getDay();if(isNaN(d))return s;return s+'<span style="font-weight:700;'+(d===6?'color:#2563eb;':d===0?'color:#dc2626;':'')+'">('+'일월화수목금토'[d]+')</span>';}
 function localNow(){const d=new Date();return localToday()+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function fmtCost(n){return'₩'+Number(n||0).toLocaleString();}
 function diffHours(s,e){if(!s||!e)return 0;return Math.max(0,((new Date(e)-new Date(s))/3600000));}
@@ -2449,7 +2456,7 @@ function fmtDur(h){if(!h||h<=0)return'';const t=Math.round(h*60);const d=Math.fl
 function daysSince(d){if(!d)return null;return Math.floor((Date.now()-new Date(d))/(86400000));}
 
 // ── 날짜 표시 ──
-document.getElementById('topDate').textContent=localToday();
+document.getElementById('topDate').innerHTML=dw(localToday());
 
 // ── 데이터 ──
 let db=JSON.parse(localStorage.getItem('mms_v1')||'{"eqs":[],"maints":[],"parts":[],"insps":[],"inbounds":[],"events":[],"boms":[],"customChk":{}}');
@@ -2538,8 +2545,8 @@ function renderCalib(){
       <td style="${td}color:var(--muted);">${c.maker||'—'}</td>
       <td style="${td}color:var(--muted);">${c.location||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);">${c.cycleMon||'—'}</td>
-      <td style="${td}text-align:center;font-family:var(--mono);">${c.lastDate||'—'}</td>
-      <td style="${td}text-align:center;font-family:var(--mono);font-weight:600;color:${statusCol};">${next||'—'}</td>
+      <td style="${td}text-align:center;font-family:var(--mono);">${dw(c.lastDate)||'—'}</td>
+      <td style="${td}text-align:center;font-family:var(--mono);font-weight:600;color:${statusCol};">${dw(next)||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);font-weight:bold;color:${statusCol};">${remain!==null?remain+'일':'—'}</td>
       <td style="${td}text-align:center;"><span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${statusCol};">${statusTxt}</span></td>
       <td style="${td}color:var(--muted);">${c.manager||'—'}</td>
@@ -2674,7 +2681,7 @@ function checkAlarms(){
     if(remain<=0){
       alarms.push({type:'critical',icon:'⚠️',text:`[${eq.name}] 점검 기한 초과`,sub:`마지막 점검 후 ${days}일 경과 (주기 ${cycle}일)`,tab:'insp',eqId:eq.id});
     } else if(remain<=5){
-      alarms.push({type:'warning',icon:'📅',text:`[${eq.name}] 점검 D-${remain}`,sub:`${lastInsp.date} 점검 후 ${days}일 경과`,tab:'insp',eqId:eq.id});
+      alarms.push({type:'warning',icon:'📅',text:`[${eq.name}] 점검 D-${remain}`,sub:`${dw(lastInsp.date)} 점검 후 ${days}일 경과`,tab:'insp',eqId:eq.id});
     }
   });
 
@@ -2685,10 +2692,10 @@ function checkAlarms(){
     const next=addCalibMonths(c.lastDate,c.cycleMon);
     const remain=Math.ceil((new Date(next)-new Date(today))/86400000);
     if(remain<=0){
-      alarms.push({type:'critical',icon:'📐',text:`[${c.name}] 검교정 기한 초과`,sub:`차기 검교정일: ${next} (${Math.abs(remain)}일 초과)`,tab:'calib'});
+      alarms.push({type:'critical',icon:'📐',text:`[${c.name}] 검교정 기한 초과`,sub:`차기 검교정일: ${dw(next)} (${Math.abs(remain)}일 초과)`,tab:'calib'});
       calibWarnCount++;
     } else if(remain<=10){
-      alarms.push({type:'warning',icon:'📐',text:`[${c.name}] 검교정 D-${remain}`,sub:`차기 검교정일: ${next}`,tab:'calib'});
+      alarms.push({type:'warning',icon:'📐',text:`[${c.name}] 검교정 D-${remain}`,sub:`차기 검교정일: ${dw(next)}`,tab:'calib'});
       calibWarnCount++;
     }
   });
@@ -2703,11 +2710,11 @@ function checkAlarms(){
     const diffEnd=Math.round((new Date(endDate)-new Date(today))/86400000);
     const icon=EV_CAT_ICON[ev.cat]||'📅';
     if(diffEnd<0){
-      alarms.push({type:'critical',icon,text:`[일정] ${ev.title} 기한 초과`,sub:`${ev.date} 예정 (${Math.abs(diffEnd)}일 경과)`,tab:'event',id:ev.id});
+      alarms.push({type:'critical',icon,text:`[일정] ${ev.title} 기한 초과`,sub:`${dw(ev.date)} 예정 (${Math.abs(diffEnd)}일 경과)`,tab:'event',id:ev.id});
     } else if(diffStart<=0){
-      alarms.push({type:'critical',icon,text:`[일정] ${ev.title} 진행중`,sub:`${ev.date}${ev.dateEnd&&ev.dateEnd!==ev.date?' ~ '+ev.dateEnd:''}`,tab:'event',id:ev.id});
+      alarms.push({type:'critical',icon,text:`[일정] ${ev.title} 진행중`,sub:`${dw(ev.date)}${ev.dateEnd&&ev.dateEnd!==ev.date?' ~ '+dw(ev.dateEnd):''}`,tab:'event',id:ev.id});
     } else if(diffStart<=7){
-      alarms.push({type:'warning',icon,text:`[일정] ${ev.title} D-${diffStart}`,sub:`${ev.date} 예정`,tab:'event',id:ev.id});
+      alarms.push({type:'warning',icon,text:`[일정] ${ev.title} D-${diffStart}`,sub:`${dw(ev.date)} 예정`,tab:'event',id:ev.id});
     }
   });
 
@@ -3218,13 +3225,13 @@ function renderEqList(){
           <div class="eq-info-cell">
             <div class="eq-info-cell-label">마지막 점검</div>
             <div class="eq-info-cell-val" style="color:${inspStatus==='overdue'?'var(--red)':inspStatus==='soon'?'var(--amber)':'var(--text)'}">
-              ${lastInsp?lastInsp.date:'기록 없음'}${inspRemain?`<span style="font-size:10px;margin-left:4px;color:${inspStatus==='overdue'?'var(--red)':inspStatus==='soon'?'var(--amber)':'var(--green)'};">${inspRemain}</span>`:''}
+              ${lastInsp?dw(lastInsp.date):'기록 없음'}${inspRemain?`<span style="font-size:10px;margin-left:4px;color:${inspStatus==='overdue'?'var(--red)':inspStatus==='soon'?'var(--amber)':'var(--green)'};">${inspRemain}</span>`:''}
             </div>
-            ${nextInspDate?`<div style="font-family:var(--mono);font-size:10px;color:${inspStatus==='overdue'?'var(--red)':'var(--muted)'};margin-top:3px;">▶ 차기 점검: ${nextInspDate}</div>`:''}
+            ${nextInspDate?`<div style="font-family:var(--mono);font-size:10px;color:${inspStatus==='overdue'?'var(--red)':'var(--muted)'};margin-top:3px;">▶ 차기 점검: ${dw(nextInspDate)}</div>`:''}
           </div>
           <div class="eq-info-cell">
             <div class="eq-info-cell-label">마지막 정비</div>
-            <div class="eq-info-cell-val">${lastMaint?lastMaint.date:'—'}${lastMaint?`<span style="color:var(--muted);font-size:10px;"> (${lastMaint.type})</span>`:''}</div>
+            <div class="eq-info-cell-val">${lastMaint?dw(lastMaint.date):'—'}${lastMaint?`<span style="color:var(--muted);font-size:10px;"> (${lastMaint.type})</span>`:''}</div>
           </div>
           ${lastInsp&&lastInsp.worker?`<div class="eq-info-cell full"><div class="eq-info-cell-label">최근 점검자</div><div class="eq-info-cell-val">👤 ${lastInsp.worker}</div></div>`:''}
           ${eq.grade?`<div class="eq-info-cell full">
@@ -3617,7 +3624,7 @@ function renderMaintLog(){
         <div class="mlog-head">
           <div class="mlog-head-left">
             <div class="mlog-eq">🏭 ${m.eqName}</div>
-            <div class="mlog-date">${rd?`🔧 수리: <b>${rd}${rdEnd&&rdEnd!==rd?` ~ ${rdEnd}`:''}</b> &nbsp;·&nbsp; 📋 등록: ${m.date}`:`📅 ${m.date}`}${m.worker?' | 👤 '+m.worker:''}</div>
+            <div class="mlog-date">${rd?`🔧 수리: <b>${dw(rd)}${rdEnd&&rdEnd!==rd?` ~ ${dw(rdEnd)}`:''}</b> &nbsp;·&nbsp; 📋 등록: ${dw(m.date)}`:`📅 ${dw(m.date)}`}${m.worker?' | 👤 '+m.worker:''}</div>
           </div>
           <button class="btn-sm bsm-a" onclick="openMaintEdit(${realIdx})" style="margin-right:4px;">✏️ 수정</button>
           <button class="btn-sm bsm-r" onclick="deleteMaint(${realIdx})">DEL</button>
@@ -3766,7 +3773,7 @@ function renderRecentInbounds(el,cntEl){
       <div class="inbound-qty">+${b.qty}</div>
       <div class="inbound-info">
         <div class="part-name" style="font-size:14px;">${hlText(b.partName||'',partSearchQ)} <span class="inbound-date">[${hlText(b.pn||'',partSearchQ)}]</span></div>
-        <div class="inbound-date">📅 ${b.date}${b.vendor?' | 🏢 '+hlText(b.vendor,partSearchQ):''}${b.price?' | 단가 '+fmtCost(b.price):''}</div>
+        <div class="inbound-date">📅 ${dw(b.date)}${b.vendor?' | 🏢 '+hlText(b.vendor,partSearchQ):''}${b.price?' | 단가 '+fmtCost(b.price):''}</div>
         ${b.note?`<div class="inbound-note">${hlText(b.note,partSearchQ)}</div>`:''}
       </div>
     </div>`}).join('')+'</div>';
@@ -3952,7 +3959,7 @@ function renderInboundHist(pidx){
     <div class="inbound-hist-item">
       <div class="inbound-qty">+${b.qty}</div>
       <div class="inbound-info">
-        <div class="inbound-date">📅 ${b.date} ${b.vendor?'| 🏢 '+b.vendor:''}</div>
+        <div class="inbound-date">📅 ${dw(b.date)} ${b.vendor?'| 🏢 '+b.vendor:''}</div>
         <div class="inbound-note">${b.note||''} ${b.price?'| 단가 '+fmtCost(b.price):''}</div>
       </div>
       <button class="btn-sm bsm-r" onclick="deleteInbound('${b.id}',${pidx})">DEL</button>
@@ -4166,7 +4173,7 @@ function renderProjects(){
       </div>
       ${p.owner||p.due?`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin:-4px 0 8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         ${p.owner?`<span>👤 ${projEsc(p.owner)}</span>`:''}
-        ${p.due?`<span>🎯 ${p.due}</span>${st!==2?`<span class="badge ${isLate?'badge-red':dd<=7?'badge-amber':'badge-gray'}" style="font-size:10px;padding:1px 6px;">${projDdayTxt(dd)}${isLate?' 지연':''}</span>`:''}`:''}
+        ${p.due?`<span>🎯 ${dw(p.due)}</span>${st!==2?`<span class="badge ${isLate?'badge-red':dd<=7?'badge-amber':'badge-gray'}" style="font-size:10px;padding:1px 6px;">${projDdayTxt(dd)}${isLate?' 지연':''}</span>`:''}`:''}
       </div>`:''}
       <div class="proj-bar-row">
         <div class="proj-bar-bg"><div class="proj-bar-fill" style="width:${pct}%;background:${col};"></div></div>
@@ -4199,7 +4206,7 @@ function renderProjectDetail(){
       </div>
       <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;">
         <span>👤 ${projEsc(p.owner||'담당자 미지정')}</span>
-        <span>🎯 ${p.due||'목표일 미지정'}${dd!=null&&st!==2?` <b style="color:${isLate?'var(--red)':'var(--amber)'};">(${projDdayTxt(dd)})</b>`:''}</span>
+        <span>🎯 ${dw(p.due)||'목표일 미지정'}${dd!=null&&st!==2?` <b style="color:${isLate?'var(--red)':'var(--amber)'};">(${projDdayTxt(dd)})</b>`:''}</span>
       </div>
       <div class="proj-bar-row" style="margin:10px 0 0;">
         <div class="proj-bar-bg"><div class="proj-bar-fill" style="width:${pct}%;background:${col};"></div></div>
@@ -4207,7 +4214,7 @@ function renderProjectDetail(){
       </div>
     </div>
     ${projEditorHtml(p,(sec,k,v)=>`setProjProgress(${p.id},'${sec}','${k}',${v})`)}
-    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;">등록 ${p.date||'-'}${p.updated?' · 최종 변경 '+new Date(p.updated).toLocaleDateString('sv-SE'):''}</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;">등록 ${dw(p.date)||'-'}${p.updated?' · 최종 변경 '+dw(new Date(p.updated).toLocaleDateString('sv-SE')):''}</div>
     <button class="btn-sm bsm-a" style="width:100%;padding:10px;" onclick="closeModal('projDetailModal');openProjectEdit(${p.id})">✏️ 품번 · 품명 · 담당자 · 목표일 수정 / 삭제</button>`;
 }
 function setProjProgress(id,sec,k,v){
@@ -4552,8 +4559,8 @@ function renderStats(){
       const firstFail=failDates[0]||'';
       const lastFail=failDates[failDates.length-1]||'';
       const failDateStr=failCount===0?''
-        :failCount===1?firstFail
-        :`${firstFail} ~ ${lastFail}`;
+        :failCount===1?dw(firstFail)
+        :`${dw(firstFail)} ~ ${dw(lastFail)}`;
       const mtbfNote=failCount>0?((fFrom||fTo)?'기간 기준':'전체 기간'):'';
       return `<div class="mtbf-eq">
         <div class="mtbf-eq-head" onclick="this.parentElement.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
@@ -4825,8 +4832,8 @@ function renderInspLog(){
             <div class="insp-log-name">${d.eqName}</div>
             ${d.verdict?`<span style="font-family:var(--cond);font-size:11px;font-weight:900;letter-spacing:2px;padding:2px 8px;border-radius:5px;${d.verdict==='OK'?'background:#10b98120;border:1px solid #10b98145;color:var(--green);':'background:#ef444420;border:1px solid #ef444445;color:var(--red);'}">${d.verdict}</span>`:''}
           </div>
-          <div class="insp-log-date">📅 ${d.date}${d.worker?' | 👤 '+d.worker:''}</div>
-          <div class="insp-log-next" style="color:${nextColor};">▶ 차기 점검: ${nextDateStr} (${daysToNext>=0?'D-'+daysToNext:'D+'+Math.abs(daysToNext)})</div>
+          <div class="insp-log-date">📅 ${dw(d.date)}${d.worker?' | 👤 '+d.worker:''}</div>
+          <div class="insp-log-next" style="color:${nextColor};">▶ 차기 점검: ${dw(nextDateStr)} (${daysToNext>=0?'D-'+daysToNext:'D+'+Math.abs(daysToNext)})</div>
           ${hasChk?`<div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;">
             ${Object.entries(d.chk).map(([cat,vals])=>{
               const ok=Object.values(vals).filter(v=>v==='ok').length;
@@ -4920,7 +4927,7 @@ function onInspEqChange(){
         const _nextStr=_nd.toISOString().slice(0,10);
         const _dColor=_remain<=0?'var(--red)':_remain<=5?'var(--amber)':'var(--green)';
         const _dLabel=_remain<=0?`D+${Math.abs(_remain)} 초과`:`D-${_remain}`;
-        _textEl.innerHTML=`📅 지난 점검: <b style="color:var(--amber)">${_lastInsp.date}</b>${_lastInsp.worker?' | 👤 '+_lastInsp.worker:''}<br>🗓 차기 예정: <b style="color:${_dColor}">${_nextStr}</b> <span style="color:${_dColor};font-weight:700;">(${_dLabel})</span>`;
+        _textEl.innerHTML=`📅 지난 점검: <b style="color:var(--amber)">${dw(_lastInsp.date)}</b>${_lastInsp.worker?' | 👤 '+_lastInsp.worker:''}<br>🗓 차기 예정: <b style="color:${_dColor}">${dw(_nextStr)}</b> <span style="color:${_dColor};font-weight:700;">(${_dLabel})</span>`;
         _textEl.style.color='var(--text)';
       }
       _infoEl.style.display='block';
@@ -5680,7 +5687,7 @@ function renderEvents(){
   el.innerHTML=Object.entries(groups).map(([date,evs])=>{
     const isToday=date===today;
     const isPast=date<today;
-    const dateLabel=isToday?`📍 오늘 · ${date}`:isPast?`· ${date}`:date;
+    const dateLabel=isToday?`📍 오늘 · ${dw(date)}`:isPast?`· ${dw(date)}`:dw(date);
     return `
     <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:3px;color:${isToday?'var(--amber)':isPast?'var(--muted)':'var(--blue)'};margin:10px 0 6px;display:flex;align-items:center;gap:8px;">
       ${dateLabel}<span style="flex:1;height:1px;background:var(--border);display:block;"></span>
@@ -5689,7 +5696,7 @@ function renderEvents(){
       const dd=evDday(ev.date);
       const col=EV_CAT_COLOR[ev.cat]||'var(--blue)';
       const icon=EV_CAT_ICON[ev.cat]||'📌';
-      const dateRange=ev.dateEnd&&ev.dateEnd!==ev.date?`${ev.date} ~ ${ev.dateEnd}`:ev.date;
+      const dateRange=ev.dateEnd&&ev.dateEnd!==ev.date?`${dw(ev.date)} ~ ${dw(ev.dateEnd)}`:dw(ev.date);
       return `
       <div class="ev-card cat-${ev.cat}${ev.done||ev.date<today?' past':''}" id="ev-${ev.id}" style="border-left-color:${col};">
         <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
@@ -5892,7 +5899,7 @@ function exportInspReport(){
       }
       if(items.length===0){
         const vc=d.verdict==='OK'?'#15803d':d.verdict==='NG'?'#b91c1c':'#64748b';
-        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">${d.date}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;white-space:nowrap;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:normal;min-width:150px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};white-space:nowrap;">${d.verdict||''}</td></tr>`;
+        bodyHtml+=`<tr><td style="font-weight:600;border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">▶ ${d.eqName}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">${dwp(d.date)}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:nowrap;">${d.worker||''}</td><td colspan="3" style="border:1px solid #e2e8f0;padding:6px 10px;color:#94a3b8;white-space:nowrap;">(체크리스트 없음)</td><td style="border:1px solid #e2e8f0;padding:6px 10px;white-space:normal;min-width:150px;">${d.note||''}</td><td style="border:1px solid #e2e8f0;padding:6px 10px;text-align:center;font-weight:700;color:${vc};white-space:nowrap;">${d.verdict||''}</td></tr>`;
         return;
       }
       items.forEach((it,idx)=>{
@@ -5903,7 +5910,7 @@ function exportInspReport(){
         const TDW=`border:1px solid #e2e8f0;padding:6px 10px;background:${catBg[it.cat]};white-space:normal;min-width:150px;`;
         bodyHtml+=`<tr>
           <td style="${TD}font-weight:${idx===0?'600':'400'};color:${idx===0?'inherit':'transparent'};">${idx===0?'▶ '+d.eqName:''}</td>
-          <td style="${TD}color:${idx===0?'inherit':'transparent'};">${idx===0?d.date:''}</td>
+          <td style="${TD}color:${idx===0?'inherit':'transparent'};">${idx===0?dwp(d.date):''}</td>
           <td style="${TD}">${d.worker||''}</td>
           <td style="${TDW}"><span style="color:${catFg[it.cat]};font-size:9pt;font-weight:700;margin-right:5px;">[${catLabel[it.cat]}]</span>${it.label}</td>
           <td style="${TDW}font-size:9pt;color:#64748b;">${it.sub}</td>
@@ -5928,7 +5935,7 @@ th,td{overflow-wrap:normal;word-break:keep-all;}
 .footer{margin-top:16px;font-size:9pt;color:#94a3b8;}
 @media print{body{padding:12px 14px;}.tbl-wrap{overflow:visible;}table{font-size:8pt;}th,td{padding:3px 5px !important;}@page{size:landscape;}}</style></head><body>
 <h1>📋 설비 정기점검 이력 보고서</h1>
-<div class="meta">출력일: ${localToday()} &nbsp;|&nbsp; 기간: ${period} &nbsp;|&nbsp; 장비: ${filterEq||'전체'} &nbsp;|&nbsp; 판정: ${filterVerdict||'전체'} &nbsp;|&nbsp; 총 ${list.length}건</div>
+<div class="meta">출력일: ${dwp(localToday())} &nbsp;|&nbsp; 기간: ${period} &nbsp;|&nbsp; 장비: ${filterEq||'전체'} &nbsp;|&nbsp; 판정: ${filterVerdict||'전체'} &nbsp;|&nbsp; 총 ${list.length}건</div>
 <div class="legend">
   <span><span class="lb" style="background:#eff6ff;border:1px solid #bfdbfe;"></span>공압</span>
   <span><span class="lb" style="background:#fffbeb;border:1px solid #fde68a;"></span>전기</span>
@@ -6065,7 +6072,7 @@ function exportStatsReport(){
     const dd=projDday(p);
     return `<tr>
     <td>${esc(p.pn)}</td><td>${esc(p.name)}</td><td>${p.kind}</td><td>${esc(p.owner||'')}</td>
-    <td>${p.date||''}</td><td${projLate(p)?' style="color:#b91c1c;font-weight:700;"':''}>${p.due||''}${dd!=null&&projStatus(p)!==2?' ('+projDdayTxt(dd)+')':''}</td>
+    <td>${dwp(p.date||'')}</td><td${projLate(p)?' style="color:#b91c1c;font-weight:700;"':''}>${dwp(p.due||'')}${dd!=null&&projStatus(p)!==2?' ('+projDdayTxt(dd)+')':''}</td>
     ${PROJ_DOCS.map(x=>`<td>${pjStTxt(p.docs&&p.docs[x.k])}</td>`).join('')}
     ${PROJ_EQUIP.map(x=>`<td>${pjEqTxt(p.equip&&p.equip[x.k])}</td>`).join('')}
     <td>${p.step||0}/${PROJ_STEPS.length} ${projStepTxt(p)}</td>
@@ -6105,7 +6112,7 @@ td.empty{text-align:center;color:#94a3b8;}
 @media print{body{padding:14px 18px;}h2{page-break-after:avoid;}tr{page-break-inside:avoid;}}
 </style></head><body>
 <h1>📊 설비 정비 통계 리포트</h1>
-<div class="meta">출력일: ${localToday()} &nbsp;|&nbsp; 대상 기간: ${esc(d.periodLabel)} &nbsp;|&nbsp; 정비 ${d.kpi.maintCount}건</div>
+<div class="meta">출력일: ${dwp(localToday())} &nbsp;|&nbsp; 대상 기간: ${esc(d.periodLabel)} &nbsp;|&nbsp; 정비 ${d.kpi.maintCount}건</div>
 
 <h2>전체 KPI</h2>
 ${kpiCards}
@@ -6218,7 +6225,7 @@ tr.warn td{background:#fffbeb;}
 <h1>${title}</h1>
 <div class="meta">${metaLine}</div>
 ${bodyHtml}
-<div class="footer">※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 표시 내용은 화면에 적용된 필터 기준입니다. · 출력일 ${localToday()}</div>
+<div class="footer">※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 표시 내용은 화면에 적용된 필터 기준입니다. · 출력일 ${dwp(localToday())}</div>
 </body></html>`;
 }
 
@@ -6238,7 +6245,7 @@ function exportMaintReport(){
   const rows=list.map(m=>{
     const rd=(m.start?m.start.slice(0,10):null)||m.date;
     const rdEnd=m.end?m.end.slice(0,10):null;
-    const rdTxt=rd?(rdEnd&&rdEnd!==rd?`${rd}<br>~ ${rdEnd}`:rd):'—';
+    const rdTxt=rd?(rdEnd&&rdEnd!==rd?`${dwp(rd)}<br>~ ${dwp(rdEnd)}`:dwp(rd)):'—';
     const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
     const parts=(m.parts||[]).map(p=>`[${esc(p.pn)}] ${esc(p.name)} ×${p.qty}`).join('<br>')||'—';
     const pc=(m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;
@@ -6262,7 +6269,7 @@ function exportMaintReport(){
     <div>부품비용 합계<b>${fmtCost(totCost)}</b></div>
   </div>
   <table><thead><tr><th>수리기간</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}</tbody></table>`;
-  const meta=`장비: ${esc(eqName)} · 유형: ${esc(fType||'전체')} · 기간: ${fFrom||'처음'} ~ ${fTo||'현재'} · 총 ${list.length}건`;
+  const meta=`장비: ${esc(eqName)} · 유형: ${esc(fType||'전체')} · 기간: ${dwp(fFrom)||'처음'} ~ ${dwp(fTo)||'현재'} · 총 ${list.length}건`;
   downloadFile('정비이력서_'+localToday()+'.html',reportShell('🔧 설비 정비 이력서',meta,body),'text/html');
   toast('정비 이력서 다운로드 완료');
 }
@@ -6295,13 +6302,13 @@ function exportEqReport(){
       <td class="c">${esc(eq.grade||'')||'—'}</td>
       <td class="c">${esc(eq.cond||'')||'—'}</td>
       <td class="c">${stTag}</td>
-      <td class="c">${eq.install||'—'}</td>
+      <td class="c">${dwp(eq.install)||'—'}</td>
       <td class="c">${eq.cycle?eq.cycle+'일':'—'}</td>
       <td class="num">${mtbf?mtbf.toFixed(0)+'h':'—'}</td>
       <td class="num">${mttr?mttr.toFixed(1)+'h':'—'}</td>
       <td class="c">${maints.length} / ${fails.length}</td>
-      <td class="c">${lastInsp?lastInsp.date:'—'}</td>
-      <td class="c">${lastMaint?((lastMaint.start?lastMaint.start.slice(0,10):null)||lastMaint.date):'—'}</td>
+      <td class="c">${lastInsp?dwp(lastInsp.date):'—'}</td>
+      <td class="c">${lastMaint?dwp((lastMaint.start?lastMaint.start.slice(0,10):null)||lastMaint.date):'—'}</td>
     </tr>`;
   }).join('');
   const body=`<div class="sum">
@@ -6377,8 +6384,8 @@ function exportCalibReport(){
       <td>${esc(c.maker||'')||'—'}</td>
       <td>${esc(c.location||'')||'—'}</td>
       <td class="c">${c.cycleMon||'—'}</td>
-      <td class="c">${c.lastDate||'—'}</td>
-      <td class="c">${next||'—'}</td>
+      <td class="c">${dwp(c.lastDate)||'—'}</td>
+      <td class="c">${dwp(next)||'—'}</td>
       <td class="num">${remain!==null?remain+'일':'—'}</td>
       <td class="c">${tag}</td>
       <td>${esc(c.manager||'')||'—'}</td>
@@ -6393,7 +6400,7 @@ function exportCalibReport(){
     <div>정상<b>${ok}</b></div>
   </div>
   <table><thead><tr><th>No</th><th>설비명</th><th>관리번호</th><th>검교정 항목</th><th>Maker/Model</th><th>설치위치</th><th>주기(월)</th><th>최종일</th><th>차기일</th><th>잔여</th><th>상태</th><th>담당자</th><th>기관</th><th>비고</th></tr></thead><tbody>${rows}</tbody></table>`;
-  const meta=`총 ${db.calibs.length}건 · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${today}`;
+  const meta=`총 ${db.calibs.length}건 · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${dwp(today)}`;
   downloadFile('검교정관리대장_'+localToday()+'.html',reportShell('📐 검교정 관리대장',meta,body),'text/html');
   toast('검교정 관리대장 다운로드 완료');
 }
@@ -6578,7 +6585,7 @@ h1{font-size:17pt;font-weight:700;margin-bottom:5px;}.sub{font-size:10pt;color:#
 table{border-collapse:collapse;width:100%;}.footer{margin-top:18px;font-size:9pt;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;}
 @media print{body{padding:15px 20px;}}</style></head><body>
 <h1>📋 ${year}년 설비 연간 점검 계획표</h1>
-<div class="sub">출력일: ${localToday()} &nbsp;|&nbsp; 대상 장비: ${eqs.length}대</div>
+<div class="sub">출력일: ${dwp(localToday())} &nbsp;|&nbsp; 대상 장비: ${eqs.length}대</div>
 <div class="legend">
   <span><span class="lb" style="background:#f0fdf4;border:1px solid #86efac;"></span>완료</span>
   <span><span class="lb" style="background:#fffbeb;border:1px solid #fcd34d;"></span>부분완료</span>
@@ -7271,7 +7278,7 @@ function renderReqLog() {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;">
         <span style="font-weight:700;color:${nameCol};font-size:15px;">${emoji} ${r.eqName.replace(/</g,'&lt;')}</span>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">${r.reqDate} ${r.reqTime}</span>
+          <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">${dw(r.reqDate)} ${r.reqTime}</span>
           ${actionBtn}
           <button onclick="deleteReq(${r.id},event)"
             style="background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:7px;
