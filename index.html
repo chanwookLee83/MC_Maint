@@ -91,6 +91,7 @@ async function pollFirestore() {
       db.reqs      = serverDb.reqs      || [];
       db.calibs    = serverDb.calibs    || [];
       db.projects  = serverDb.projects  || [];
+      db.capas     = serverDb.capas     || [];
       db.eqChk     = serverDb.eqChk     || {};
       db.customChk = serverDb.customChk || {};
       localStorage.setItem('mms_v1', data.db);
@@ -131,6 +132,7 @@ async function pollFirestore() {
         updateEvBadge();
         if (typeof renderReqLog === 'function') renderReqLog();
         if (typeof renderProjects === 'function') renderProjects();
+        if (typeof renderCapaList === 'function') renderCapaList();
         showSyncBadge('동기화됨');
       }
     }
@@ -789,6 +791,91 @@ body.light .sec-title::after{background:#d4d9e2;}
 .ev-content{font-size:13px;color:var(--muted2);margin-top:6px;line-height:1.6;border-top:1px solid var(--border);padding-top:6px;}
 .ev-actions{display:flex;gap:6px;margin-top:8px;}
 
+/* ── 공정 캐파 분석 ── */
+.capa-sub{font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:4px 0 10px;display:flex;align-items:center;gap:8px;}
+.capa-sub::after{content:'';flex:1;height:1px;background:var(--border);}
+.capa-proc{background:var(--card2);border:1px solid var(--border);border-radius:11px;padding:10px;margin-bottom:8px;}
+.capa-proc-hd{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.capa-proc-hd .finput{flex:1;min-width:0;padding:9px 11px;font-size:14px;}
+.capa-no{font-family:var(--mono);font-size:13px;color:var(--amber);font-weight:700;min-width:22px;}
+.capa-ic{background:transparent;border:1px solid var(--border2);border-radius:7px;color:var(--muted2);width:30px;height:36px;cursor:pointer;font-size:11px;flex-shrink:0;}
+.capa-ic:disabled{opacity:.3;cursor:default;}
+.capa-ic.del{color:var(--red);border-color:#ef444440;}
+.capa-proc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.capa-proc-grid>div{min-width:0;}
+.capa-proc-grid label{display:block;font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:3px;white-space:nowrap;}
+.capa-proc-grid .finput{padding:8px 9px;font-size:14px;}
+.capa-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+@media(min-width:768px){.capa-kpis{grid-template-columns:repeat(4,1fr);}}
+/* 기간별 라인 캐파 (일/주/월/년) */
+:root{--cp-day:#8f9cf0;--cp-week:#3cc2b4;--cp-month:#f0b04a;--cp-year:#ec7fa0;}
+body.light{--cp-day:#3747ac;--cp-week:#0f8578;--cp-month:#a8690f;--cp-year:#b8335d;}
+.capa-period{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px 12px 12px;margin-bottom:12px;}
+.capa-period-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:1px;color:var(--text);margin-bottom:10px;}
+.capa-period-hd span{font-family:var(--mono);font-size:11px;font-weight:normal;letter-spacing:0;color:var(--muted);}
+.capa-period-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+@media(min-width:768px){.capa-period-grid{grid-template-columns:repeat(4,1fr);}}
+.cp{--c:var(--cp-day);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);border-top:3px solid var(--c);border-radius:10px;padding:10px 11px;background:color-mix(in srgb,var(--c) 8%,var(--card));min-width:0;}
+.cp.week{--c:var(--cp-week);}.cp.month{--c:var(--cp-month);}.cp.year{--c:var(--cp-year);}
+.cp-l{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--c);}
+.cp-l em{font-style:normal;font-family:var(--mono);font-size:10px;font-weight:normal;letter-spacing:0;color:var(--muted);}
+.cp-v{font-family:var(--mono);font-size:22px;font-weight:bold;color:var(--c);margin-top:4px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cp-v small{font-size:11px;color:var(--muted);font-weight:normal;margin-left:3px;}
+.cp-b{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:2px;}
+.cp-bar{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:8px;}
+.cp-bar i{display:block;height:100%;border-radius:3px;background:var(--c);}
+.cp-bar i.over{background:var(--red);}
+.cp-d{font-family:var(--mono);font-size:10.5px;color:var(--muted2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cp-d b.neg{color:var(--red);}.cp-d b.pos{color:var(--green);}
+/* 병목 공정 C/T 구분 */
+.capa-kpi.capa-bn{grid-column:span 2;border-color:color-mix(in srgb,var(--red) 45%,transparent);}
+.capa-kpi.capa-bn .v{color:var(--red);}
+.capa-ct2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+.capa-ct2>div{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:7px 9px;min-width:0;}
+.capa-ct2>div.eff{border-color:color-mix(in srgb,var(--red) 40%,transparent);}
+.capa-ct2 span{display:block;font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);}
+.capa-ct2 b{display:block;font-family:var(--mono);font-size:18px;color:var(--text);margin-top:2px;}
+.capa-ct2 .eff b{color:var(--red);}
+.capa-ct2 b small{font-size:11px;color:var(--muted);font-weight:normal;margin-left:2px;}
+.capa-ct2 em{display:block;font-style:normal;font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.capa-kpi{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 12px;min-width:0;}
+.capa-kpi .l{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--muted);}
+.capa-kpi .v{font-family:var(--mono);font-size:21px;font-weight:bold;color:var(--text);margin-top:3px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.capa-kpi .v small{font-size:12px;color:var(--muted);margin-left:3px;font-weight:normal;}
+.capa-kpi .s{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+.capa-kpi.hl{border-color:var(--amber);}
+.capa-verdict{border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:13px;line-height:1.7;border:1px solid var(--border2);background:var(--card);color:var(--text);}
+.capa-verdict b{font-family:var(--mono);}
+.capa-chart-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-family:var(--cond);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--muted2);}
+.capa-chart-t span{font-family:var(--mono);font-size:10px;font-weight:normal;letter-spacing:0;color:var(--muted);}
+.capa-chart{position:relative;height:200px;display:flex;align-items:flex-end;gap:6px;padding:0 4px;border-bottom:1px solid var(--border2);margin-top:22px;}
+.capa-bar-w{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;}
+.capa-bar{width:100%;max-width:56px;border-radius:5px 5px 0 0;background:#5a68c0;}
+.capa-bar.over{background:#ef444499;}
+.capa-bar.bn{background:var(--red);}
+.capa-bar-v{font-family:var(--mono);font-size:11px;color:var(--text);margin-bottom:3px;white-space:nowrap;}
+.capa-xl{display:flex;gap:6px;padding:5px 4px 0;}
+.capa-xl div{flex:1;min-width:0;text-align:center;font-size:11px;color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.capa-takt{position:absolute;left:0;right:0;border-top:2px dashed var(--amber);pointer-events:none;z-index:1;}
+.capa-takt span{position:absolute;right:0;top:-19px;font-family:var(--mono);font-size:11px;color:var(--amber);background:var(--card);padding:0 4px;}
+.capa-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);}
+.capa-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+.capa-tbl{width:100%;border-collapse:collapse;min-width:1060px;font-size:12px;}
+.capa-tbl th{font-family:var(--cond);font-size:12px;letter-spacing:1px;color:var(--muted);text-align:right;padding:8px 7px;border-bottom:2px solid var(--border2);white-space:nowrap;background:var(--card2);}
+.capa-tbl td{font-family:var(--mono);text-align:right;padding:8px 7px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text);}
+.capa-tbl th:first-child,.capa-tbl td:first-child{text-align:left;font-family:var(--sans);}
+.capa-tbl tr.bn td{background:#ef444412;}
+.capa-tbl tfoot td{font-weight:700;border-top:2px solid var(--border2);border-bottom:none;background:var(--card2);}
+.capa-saved{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 12px;margin-bottom:7px;cursor:pointer;transition:border-color .15s;}
+.capa-saved:hover{border-color:var(--border2);}
+.capa-saved.on{border-color:var(--amber);}
+.capa-saved-n{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.capa-saved-n span{font-size:11px;font-weight:400;color:var(--muted);margin-left:4px;}
+.capa-saved-m{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+.capa-formula{font-size:12px;color:var(--muted2);line-height:1.9;}
+.capa-formula b{font-family:var(--mono);color:var(--text);font-weight:600;}
+@media(max-width:520px){.capa-proc-grid{grid-template-columns:repeat(2,1fr);}}
+
 /* ── 단위 환산 / 실린더 계산 ── */
 .calc-list{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;}
 .calc-group{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--muted2);background:var(--card2);padding:8px 14px;border-bottom:1px solid var(--border);}
@@ -1081,6 +1168,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="tab" onclick="gotoTab('annual')" id="tab-annual"><span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M12 14h2M8 17h2M12 17h2"/></svg></span>연간계획</div>
   <div class="tab" onclick="gotoTab('bom')"    id="tab-bom">   <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 21 7v10l-9 5-9-5V7zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></span>파트</div>
   <div class="tab" onclick="gotoTab('event')"  id="tab-event"> <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M10 15l1.5 1.5L15 13"/></svg></span>일정<div class="tbadge" id="evBadge"></div></div>
+  <div class="tab" onclick="gotoTab('capa')"   id="tab-capa">  <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17a9 9 0 1 1 17 0zM12 14l4.5-4.5M12 14h.01M7 13h1M16 13h1M12 8V7"/></svg></span>캐파</div>
   <div class="tab" onclick="gotoTab('conv')"   id="tab-conv">  <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h13l-3-3M17 17H4l3 3"/></svg></span>환산</div>
   <div class="tab" onclick="gotoTab('cyl')"    id="tab-cyl">   <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01"/></svg></span>실린더</div>
   <div class="tab" onclick="gotoTab('share')"  id="tab-share"> <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v6h14v-6"/></svg></span>공유</div>
@@ -1667,6 +1755,48 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </div>
     </div>
     <div id="evList"><div class="empty"><span class="empty-icon"></span>등록된 일정 없음</div></div>
+  </div>
+</div>
+
+<!-- ══════ 공정 캐파 분석 ══════ -->
+<div class="page" id="page-capa">
+  <div class="sec" style="margin-top:4px;">
+    <div class="sec-title">공정 캐파 분석 <button class="rpt-btn" onclick="exportCapaReport()">HTML</button><button class="rpt-btn" style="margin-left:0;" onclick="exportCapaCSV()">CSV</button></div>
+    <div class="card amber-t">
+      <div class="capa-sub">기본 조건</div>
+      <div class="frow">
+        <div class="field"><label class="flabel">분석명 (모델 · 품번) *</label><input class="finput" id="capaName" placeholder="예) FRONT COVER ASSY" autocomplete="off" oninput="capaDraft.name=this.value"></div>
+        <div class="field"><label class="flabel">라인 / 구분</label><input class="finput" id="capaLine" placeholder="예) 조립 2라인" autocomplete="off" oninput="capaDraft.line=this.value"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">가동시간 (h/일)</label><input class="finput" id="capaHours" type="number" inputmode="decimal" min="0" step="0.5" oninput="capaDraft.hours=this.value;renderCapaResult()"></div>
+        <div class="field"><label class="flabel">가동일수 (일/월)</label><input class="finput" id="capaDays" type="number" inputmode="decimal" min="0" oninput="capaDraft.days=this.value;renderCapaYB();renderCapaResult()"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">종합효율 OEE (%)</label><input class="finput" id="capaEff" type="number" inputmode="decimal" min="1" max="100" oninput="capaDraft.eff=this.value;renderCapaResult()"></div>
+        <div class="field"><label class="flabel">월 요구수량 (EA)</label><input class="finput" id="capaDemand" type="number" inputmode="numeric" min="0" placeholder="선택 · 부하율 판정용" oninput="capaDraft.demand=this.value;renderCapaResult()"></div>
+      </div>
+      <div class="field"><label class="flabel">주 · 년 캐파 기준</label><div class="seg" id="capaYB"></div>
+        <div id="capaYBNote" class="calc-note" style="margin-top:6px;"></div></div>
+      <div class="calc-note" style="margin:-4px 0 14px;">※ 가동시간은 휴식·식사 시간을 뺀 실가동 기준 (예: 2교대 × 10h = 20h) · 공정별 효율을 비우면 종합효율이 적용됩니다</div>
+
+      <div class="capa-sub">공정 구성</div>
+      <div id="capaProcs"></div>
+      <button class="btn-ghost" onclick="capaAdd()">＋ 공정 추가</button>
+      <div class="field" style="margin-top:6px;"><label class="flabel">비고</label><input class="finput" id="capaNote" placeholder="가정 조건, 개선 계획 등" autocomplete="off" oninput="capaDraft.note=this.value"></div>
+      <div class="frow" style="margin-top:4px;">
+        <button class="btn-ghost" style="margin-bottom:0;" onclick="newCapa()">↺ 새로 작성</button>
+        <button class="btn-primary" style="margin-bottom:0;" onclick="saveCapa()">분석 저장</button>
+      </div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">분석 결과</div>
+    <div id="capaResult"></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">저장된 분석</div>
+    <div id="capaList"></div>
   </div>
 </div>
 
@@ -2470,6 +2600,7 @@ if(!db.reqs) db.reqs=[];
 if(!db.calibs) db.calibs=[];
 if(!db.partTypes) db.partTypes=[];
 if(!db.maintTypes) db.maintTypes=[];
+if(!db.capas) db.capas=[];
 if(!db.projects) db.projects=[];
 function save(){
   localStorage.setItem('mms_v1',JSON.stringify(db));
@@ -2480,7 +2611,7 @@ function save(){
 // ── 탭 ──
 let _gotoTabFromPop=false;
 function gotoTab(n){
-  ['eq','maint','parts','calib','stats','insp','annual','bom','event','conv','cyl','share','req'].forEach(t=>{
+  ['eq','maint','parts','calib','stats','insp','annual','bom','event','capa','conv','cyl','share','req'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active',t===n);
     document.getElementById('tab-'+t).classList.toggle('active',t===n);
   });
@@ -2492,6 +2623,7 @@ function gotoTab(n){
   if(n==='calib') renderCalib();
   if(n==='bom')   {populateBomEqSel();renderBomTree();}
   if(n==='event') renderEvents();
+  if(n==='capa')  renderCapa();
   if(n==='conv')  initConv();
   if(n==='cyl')   renderCyl();
   if(n==='req')   {initReqForm();renderReqLog();}
@@ -6725,6 +6857,420 @@ function toast(msg,type='ok'){
   const el=document.getElementById('toast');
   el.textContent=msg;el.className='toast show'+(type==='w'?' tw':type==='e'?' te':'');
   clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ══════ 공정 캐파 분석 ══════
+let capaDraft=null;
+// 주 · 년 캐파 기준 : 월 가동일 환산 / 주 5일(52주) / 주 6일(52주) / 365일
+const CAPA_YB={
+  m12: {l:'월 가동일 × 12', s:'월×12', wd:D=>D*12/52, yd:D=>D*12},
+  w5:  {l:'주 5일 (52주 · 260일)', s:'주 5일', wd:()=>5, yd:()=>260},
+  w6:  {l:'주 6일 (52주 · 312일)', s:'주 6일', wd:()=>6, yd:()=>312},
+  d365:{l:'365일 (연중 무휴)', s:'365일', wd:()=>7, yd:()=>365},
+};
+function capaYB(d){return CAPA_YB[d&&d.yearBasis]?d.yearBasis:'m12';}
+function renderCapaYB(){
+  const el=document.getElementById('capaYB');if(!el) return;
+  const cur=capaYB(capaDraft), D=capaNum(capaDraft.days)||0;
+  el.innerHTML=Object.entries(CAPA_YB).map(([k,b])=>`<button class="${k===cur?'on':''}" onclick="capaSetYB('${k}')">${b.s}</button>`).join('');
+  const b=CAPA_YB[cur];
+  const note=document.getElementById('capaYBNote');
+  if(note) note.textContent=`${b.l} → 주 ${capaFmt(b.wd(D),1).replace(/\.0$/,'')}일 · 년 ${capaFmt(b.yd(D))}일 가동 기준 (월 캐파는 가동일수 ${capaFmt(D,1).replace(/\.0$/,'')}일 기준)`;
+}
+function capaSetYB(k){capaDraft.yearBasis=k;renderCapaYB();renderCapaResult();}
+function capaNew(){return {id:null,name:'',line:'',hours:20,days:22,eff:85,demand:'',note:'',yearBasis:'w5',procs:[{name:'',par:1,ppl:1,ct:'',eff:''}]};}
+function capaNum(v){const n=parseFloat(v);return isNaN(n)?null:n;}
+function capaFmt(n,d=0){return n==null||!isFinite(n)?'—':Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function capaSt(load){
+  if(load==null||!isFinite(load)) return null;
+  return load>100?{t:'부족',c:'var(--red)',tag:'r'}:load>=85?{t:'주의',c:'var(--amber)',tag:'a'}:{t:'여유',c:'var(--green)',tag:'g'};
+}
+// 캐파 계산 : 효율 반영 C/T = C/T ÷ 설비수 ÷ 효율 · 일 캐파 = 가동시간(초) ÷ 효율 반영 C/T · 라인 캐파 = 병목 공정 기준
+function calcCapa(d){
+  const H=capaNum(d.hours)||0, D=capaNum(d.days)||0;
+  const E=(capaNum(d.eff)??100)/100, dem=capaNum(d.demand);
+  const yb=CAPA_YB[capaYB(d)];
+  const avail=H*3600;
+  const takt=(dem>0&&D>0&&avail>0)?avail/(dem/D):null;
+  const rows=(d.procs||[]).map((p,i)=>{
+    const ct=capaNum(p.ct), par=Math.max(1,Math.round(capaNum(p.par)||1)), ppl=capaNum(p.ppl)||0;
+    const e=(capaNum(p.eff)??E*100)/100;
+    const name=(p.name||'').trim()||('공정 '+(i+1));
+    if(!(ct>0)||!(e>0)||!(avail>0)) return {i,name,valid:false,par,ppl,ct};
+    const ctEff=ct/par, ctReal=ctEff/e;
+    const uph=3600/ctReal, day=avail/ctReal, month=day*D;
+    return {i,name,valid:true,ct,par,ppl,e,ctEff,ctReal,uph,day,month,
+      upph:ppl>0?uph/ppl:null,
+      load:dem>0&&month>0?dem/month*100:null,
+      needPar:takt?Math.max(1,Math.ceil(ct/(takt*e)-1e-9)):null};
+  });
+  const v=rows.filter(r=>r.valid);
+  const base={rows,valid:false,H,D,E,dem,avail,takt};
+  if(!v.length) return base;
+  const bn=v.reduce((a,b)=>b.day<a.day?b:a);
+  const ppl=rows.reduce((s,r)=>s+(r.ppl||0),0);
+  const maxCt=Math.max(...v.map(r=>r.ctEff));
+  return Object.assign(base,{valid:true,bn,
+    lineDay:bn.day,lineWeek:bn.day*yb.wd(D),lineMonth:bn.month,lineYear:bn.day*yb.yd(D),weekDays:yb.wd(D),yearDays:yb.yd(D),ybKey:capaYB(d),ybLabel:yb.l,lineUph:bn.uph,ppl,
+    lineUpph:ppl>0?bn.uph/ppl:null,
+    balance:v.reduce((s,r)=>s+r.ctEff,0)/(v.length*maxCt)*100,
+    load:dem>0&&bn.month>0?dem/bn.month*100:null,
+    gap:dem>0?bn.month-dem:null});
+}
+
+function renderCapa(){
+  if(!capaDraft) capaDraft=capaNew();
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v==null?'':v;};
+  set('capaName',capaDraft.name);set('capaLine',capaDraft.line);
+  set('capaHours',capaDraft.hours);set('capaDays',capaDraft.days);
+  set('capaEff',capaDraft.eff);set('capaDemand',capaDraft.demand);set('capaNote',capaDraft.note);
+  renderCapaYB();renderCapaProcs();renderCapaResult();renderCapaList();
+}
+function renderCapaProcs(){
+  const el=document.getElementById('capaProcs');if(!el) return;
+  const n=capaDraft.procs.length;
+  const inp=(i,k,label,val,ph,mode)=>`<div><label>${label}</label><input class="finput" type="number" inputmode="${mode||'decimal'}" min="0" value="${val==null?'':projEsc(val)}" placeholder="${ph||''}" oninput="capaP(${i},'${k}',this.value)"></div>`;
+  el.innerHTML=capaDraft.procs.map((p,i)=>`
+    <div class="capa-proc">
+      <div class="capa-proc-hd">
+        <span class="capa-no">${String(i+1).padStart(2,'0')}</span>
+        <input class="finput" placeholder="공정명 (예: 사출, 조립, 검사)" value="${projEsc(p.name)}" autocomplete="off" oninput="capaP(${i},'name',this.value)">
+        <button class="capa-ic" title="위로" onclick="capaMove(${i},-1)"${i?'':' disabled'}>▲</button>
+        <button class="capa-ic" title="아래로" onclick="capaMove(${i},1)"${i<n-1?'':' disabled'}>▼</button>
+        <button class="capa-ic del" title="삭제" onclick="capaDel(${i})">✕</button>
+      </div>
+      <div class="capa-proc-grid">
+        ${inp(i,'ct','C/T (초)',p.ct,'예) 45')}
+        ${inp(i,'par','설비수 (병렬)',p.par,'1','numeric')}
+        ${inp(i,'ppl','인원 (명)',p.ppl,'0','decimal')}
+        ${inp(i,'eff','효율 (%)',p.eff,'기본 '+(capaDraft.eff||'-'))}
+      </div>
+    </div>`).join('');
+}
+function capaP(i,k,v){
+  capaDraft.procs[i][k]=v;
+  renderCapaResult();
+}
+function capaAdd(){
+  capaDraft.procs.push({name:'',par:1,ppl:1,ct:'',eff:''});
+  renderCapaProcs();renderCapaResult();
+  const items=document.querySelectorAll('#capaProcs .capa-proc-hd .finput');
+  if(items.length) items[items.length-1].focus();
+}
+function capaDel(i){
+  if(capaDraft.procs.length<=1){capaDraft.procs=[{name:'',par:1,ppl:1,ct:'',eff:''}];}
+  else capaDraft.procs.splice(i,1);
+  renderCapaProcs();renderCapaResult();
+}
+function capaMove(i,dir){
+  const j=i+dir, a=capaDraft.procs;
+  if(j<0||j>=a.length) return;
+  [a[i],a[j]]=[a[j],a[i]];
+  renderCapaProcs();renderCapaResult();
+}
+
+function capaVerdictText(r){
+  if(!(r.dem>0)) return {cls:'',html:'월 요구수량을 입력하면 <b>부하율 · Takt Time 대비 공정별 판정</b>과 필요 설비수가 표시됩니다.'};
+  const st=capaSt(r.load);
+  const over=r.rows.filter(x=>x.valid&&r.takt&&x.ctReal>r.takt);
+  let h;
+  if(r.load>100){
+    h=`월 요구 <b>${capaFmt(r.dem)}</b> EA 대비 <b style="color:var(--red);">${capaFmt(-r.gap)} EA 부족</b> (부하율 ${capaFmt(r.load,1)}%).<br>`
+     +`Takt <b>${capaFmt(r.takt,1)}초</b>를 넘는 공정(효율 반영 C/T 기준): `
+     +over.map(x=>`<b>${projEsc(x.name)}</b>(효율 반영 ${capaFmt(x.ctReal,1)}초 · 설비 ${x.par}→${x.needPar}대 필요)`).join(', ')
+     +`<br>→ C/T 단축, 설비 증설, 가동시간·가동일수 확대 중 개선안을 검토하세요.`;
+  } else if(r.load>=85){
+    h=`월 요구 <b>${capaFmt(r.dem)}</b> EA 대응 가능, 여유 <b>${capaFmt(r.gap)}</b> EA (부하율 <b style="color:${st.c};">${capaFmt(r.load,1)}%</b>).<br>`
+     +`부하율 85% 이상 — 설비 고장·불량·물량 변동 시 대응 여유가 부족합니다. 병목 <b>${projEsc(r.bn.name)}</b> 공정을 우선 관리하세요.`;
+  } else {
+    h=`월 요구 <b>${capaFmt(r.dem)}</b> EA 대비 <b style="color:var(--green);">${capaFmt(r.gap)} EA 여유</b> (부하율 ${capaFmt(r.load,1)}%). 현재 조건으로 충분히 대응 가능합니다.`;
+  }
+  return {cls:st?st.tag:'',html:h};
+}
+
+// 기간별 라인 캐파 (일 / 주 / 월 / 년) — 주 가동일 = 월 가동일 × 12 ÷ 52
+function capaPeriods(r){
+  const dDay=r.dem>0&&r.D>0?r.dem/r.D:null;
+  const trim=x=>capaFmt(x,1).replace(/\.0$/,'');
+  return [
+    {k:'day',  l:'일 캐파',en:'DAILY',  v:r.lineDay,  dem:dDay,                   b:`가동 ${trim(r.H)}h · UPH ${capaFmt(r.lineUph,1)}`},
+    {k:'week', l:'주 캐파',en:'WEEKLY', v:r.lineWeek, dem:dDay!=null?dDay*r.weekDays:null, b:`주 ${capaFmt(r.weekDays,1).replace(/\.0$/,'')}일 가동`},
+    {k:'month',l:'월 캐파',en:'MONTHLY',v:r.lineMonth,dem:r.dem>0?r.dem:null,      b:`월 ${trim(r.D)}일 가동`},
+    {k:'year', l:'년 캐파',en:'YEARLY', v:r.lineYear, dem:r.dem>0?r.dem*12:null,   b:`${CAPA_YB[r.ybKey].s} · 연 ${capaFmt(r.yearDays)}일 가동`},
+  ];
+}
+function capaPeriodPanel(r){
+  return `<div class="capa-period">
+    <div class="capa-period-hd">기간별 라인 캐파<span>병목 [${projEsc(r.bn.name)}] 기준</span></div>
+    <div class="capa-period-grid">${capaPeriods(r).map(p=>{
+      const load=p.dem?p.dem/p.v*100:null, gap=p.dem?p.v-p.dem:null;
+      return `<div class="cp ${p.k}">
+        <div class="cp-l">${p.l}<em>${p.en}</em></div>
+        <div class="cp-v">${capaFmt(p.v)}<small>EA</small></div>
+        <div class="cp-b">${p.b}</div>
+        ${load!=null?`<div class="cp-bar"><i class="${load>100?'over':''}" style="width:${Math.min(load,100).toFixed(1)}%;"></i></div>
+        <div class="cp-d">요구 ${capaFmt(p.dem)} · <b class="${gap<0?'neg':'pos'}">${gap<0?'−':'+'}${capaFmt(Math.abs(gap))}</b></div>`:''}
+      </div>`;}).join('')}
+    </div>
+  </div>`;
+}
+function capaBnBlock(r){
+  const b=r.bn;
+  return `<div class="capa-kpi capa-bn"><div class="l">병목 공정</div><div class="v">${projEsc(b.name)}</div>
+    <div class="capa-ct2">
+      <div><span>기준 C/T</span><b>${capaFmt(b.ctEff,1)}<small>초</small></b><em>C/T ${capaFmt(b.ct,1)}초 ÷ 설비 ${b.par}대</em></div>
+      <div class="eff"><span>효율 반영 C/T</span><b>${capaFmt(b.ctReal,1)}<small>초</small></b><em>기준 C/T ÷ 효율 ${capaFmt(b.e*100,0)}%</em></div>
+    </div></div>`;
+}
+function renderCapaResult(){
+  const el=document.getElementById('capaResult');if(!el||!capaDraft) return;
+  // 공정별 효율 placeholder 갱신 (기본 효율 변경 시)
+  document.querySelectorAll('#capaProcs .capa-proc-grid > div:nth-child(4) .finput').forEach(x=>x.placeholder='기본 '+(capaDraft.eff||'-'));
+  const r=calcCapa(capaDraft);
+  if(!(r.avail>0)){el.innerHTML='<div class="empty">가동시간을 입력하세요</div>';return;}
+  if(!r.valid){el.innerHTML='<div class="empty">공정별 C/T를 입력하면 캐파가 계산됩니다</div>';return;}
+  const st=capaSt(r.load);
+  const kpi=(l,v,u,s,hl)=>`<div class="capa-kpi${hl?' hl':''}"><div class="l">${l}</div><div class="v">${v}${u?`<small>${u}</small>`:''}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+  let h=capaPeriodPanel(r)+'<div class="capa-kpis">'
+    +capaBnBlock(r)
+    +kpi('라인 UPH',capaFmt(r.lineUph,1),'EA/h','병목 공정 시간당 생산')
+    +kpi('Takt Time',r.takt?capaFmt(r.takt,1):'—',r.takt?'초':'',r.takt?`일 요구 ${capaFmt(r.dem/r.D)} EA`:'요구수량 입력 시 계산')
+    +kpi('부하율',r.load!=null?capaFmt(r.load,1):'—',r.load!=null?'%':'',st?`<b style="color:${st.c};">${st.t}</b>${r.gap!=null?` · ${r.gap>=0?'여유':'부족'} ${capaFmt(Math.abs(r.gap))} EA`:''}`:'요구수량 입력 시 계산')
+    +kpi('라인 밸런스',capaFmt(r.balance,1),'%','Σ기준 C/T ÷ (공정수 × 최대)')
+    +kpi('총 인원',capaFmt(r.ppl,1).replace(/\.0$/,''),'명',`공정 ${r.rows.filter(x=>x.valid).length}개`)
+    +kpi('UPPH',r.lineUpph!=null?capaFmt(r.lineUpph,2):'—',r.lineUpph!=null?'EA/인·h':'','라인 UPH ÷ 총 인원')
+    +'</div>';
+  const vd=capaVerdictText(r);
+  const vBorder=vd.cls==='r'?'var(--red)':vd.cls==='a'?'var(--amber)':vd.cls==='g'?'var(--green)':'var(--border2)';
+  h+=`<div class="capa-verdict" style="border-left:3px solid ${vBorder};">${vd.html}</div>`;
+
+  // Yamazumi (공정별 효율 반영 C/T vs Takt)
+  const v=r.rows.filter(x=>x.valid);
+  const max=Math.max(...v.map(x=>x.ctReal),r.takt||0)*1.08;
+  h+=`<div class="card" style="padding:14px 12px 12px;">
+    <div class="capa-chart-t">공정별 효율 반영 C/T<span>단위: 초 · 효율 반영 C/T = C/T ÷ 설비수 ÷ 효율</span></div>
+    <div class="capa-chart">
+      ${r.takt?`<div class="capa-takt" style="bottom:${(r.takt/max*85).toFixed(2)}%;"><span>Takt ${capaFmt(r.takt,1)}s</span></div>`:''}
+      ${v.map(x=>`<div class="capa-bar-w"><div class="capa-bar-v">${capaFmt(x.ctReal,1)}</div><div class="capa-bar${x===r.bn?' bn':(r.takt&&x.ctReal>r.takt?' over':'')}" style="height:${(x.ctReal/max*85).toFixed(2)}%;"></div></div>`).join('')}
+    </div>
+    <div class="capa-xl">${v.map(x=>`<div title="${projEsc(x.name)}">${projEsc(x.name)}</div>`).join('')}</div>
+    <div class="capa-legend"><span><i style="background:#5a68c0;"></i>공정</span><span><i style="background:var(--red);"></i>병목</span>${r.takt?'<span><i style="background:#ef444499;"></i>Takt 초과</span><span><i style="border-top:2px dashed var(--amber);height:0;width:14px;border-radius:0;"></i>Takt Time</span>':''}</div>
+  </div>`;
+
+  // 공정별 상세 표
+  const tr=x=>{
+    if(!x.valid) return `<tr><td>${projEsc(x.name)}</td><td>${x.par}</td><td>${capaFmt(x.ppl,1).replace(/\.0$/,'')}</td><td colspan="11" style="text-align:left;color:var(--muted);">C/T 미입력</td></tr>`;
+    const s=capaSt(x.load);
+    return `<tr${x===r.bn?' class="bn"':''}>
+      <td>${projEsc(x.name)}${x===r.bn?' <span class="badge badge-red" style="font-size:9px;padding:1px 5px;">병목</span>':''}</td>
+      <td>${x.par}</td><td>${capaFmt(x.ppl,1).replace(/\.0$/,'')}</td><td>${capaFmt(x.ct,1)}</td><td>${capaFmt(x.ctEff,1)}</td><td>${capaFmt(x.e*100,0)}%</td>
+      <td${r.takt&&x.ctReal>r.takt?' style="color:var(--red);font-weight:700;"':''}>${capaFmt(x.ctReal,1)}</td>
+      <td>${capaFmt(x.uph,1)}</td><td>${capaFmt(x.day)}</td><td>${capaFmt(x.day*r.weekDays)}</td><td>${capaFmt(x.month)}</td>
+      <td>${x.upph!=null?capaFmt(x.upph,2):'—'}</td>
+      <td>${x.load!=null?capaFmt(x.load,1)+'%':'—'}</td>
+      <td>${x.needPar!=null?x.needPar+'대'+(x.needPar>x.par?` <span style="color:var(--red);">(+${x.needPar-x.par})</span>`:''):'—'}</td>
+      <td>${s?`<b style="color:${s.c};">${s.t}</b>`:'—'}</td></tr>`;
+  };
+  h+=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;">
+    <table class="capa-tbl"><thead><tr><th>공정</th><th>설비</th><th>인원</th><th>C/T(s)</th><th>기준 C/T(s)</th><th>효율</th><th>효율 반영 C/T(s)</th><th>UPH</th><th>일 캐파</th><th>주 캐파</th><th>월 캐파</th><th>UPPH</th><th>부하율</th><th>필요 설비</th><th>판정</th></tr></thead>
+    <tbody>${r.rows.map(tr).join('')}</tbody>
+    <tfoot><tr><td>라인 (병목 기준)</td><td>${r.rows.reduce((s,x)=>s+x.par,0)}</td><td>${capaFmt(r.ppl,1).replace(/\.0$/,'')}</td><td>${capaFmt(r.bn.ct,1)}</td><td>${capaFmt(r.bn.ctEff,1)}</td><td>${capaFmt(r.bn.e*100,0)}%</td><td>${capaFmt(r.bn.ctReal,1)}</td><td>${capaFmt(r.lineUph,1)}</td><td>${capaFmt(r.lineDay)}</td><td>${capaFmt(r.lineWeek)}</td><td>${capaFmt(r.lineMonth)}</td><td>${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</td><td>${r.load!=null?capaFmt(r.load,1)+'%':'—'}</td><td>—</td><td>${st?`<b style="color:${st.c};">${st.t}</b>`:'—'}</td></tr></tfoot>
+    </table></div>`;
+
+  h+=`<div class="card"><div class="capa-sub" style="margin-top:0;">산출 기준</div><div class="capa-formula">
+    · 가용시간 = 가동시간 × 3,600 = <b>${capaFmt(r.avail)}</b>초/일 · 월 가동 <b>${capaFmt(r.D,1).replace(/\.0$/,'')}</b>일<br>
+    · 기준 C/T = C/T ÷ 설비수 &nbsp;·&nbsp; 효율 반영 C/T = 기준 C/T ÷ 효율 &nbsp;·&nbsp; UPH = 3,600 ÷ 효율 반영 C/T<br>
+    · 일 캐파 = 가용시간 ÷ 효율 반영 C/T &nbsp;·&nbsp; 월 캐파 = 일 캐파 × 가동일수 &nbsp;·&nbsp; 주 · 년 캐파 = 일 캐파 × 주 · 연 가동일 (기준: <b>${projEsc(r.ybLabel)}</b>, 주 ${capaFmt(r.weekDays,1).replace(/\.0$/,'')}일 · 연 ${capaFmt(r.yearDays)}일)<br>
+    · 라인 캐파 = 공정 중 최소 캐파(병목 공정) &nbsp;·&nbsp; UPPH = UPH ÷ 인원<br>
+    · Takt Time = 가용시간 ÷ (월 요구수량 ÷ 가동일수) &nbsp;·&nbsp; 부하율 = 요구수량 ÷ 캐파<br>
+    · 필요 설비 = ⌈C/T ÷ (Takt × 효율)⌉ &nbsp;·&nbsp; 판정: 부하율 85% 미만 여유 / 85~100% 주의 / 100% 초과 부족
+  </div></div>`;
+  el.innerHTML=h;
+}
+
+function renderCapaList(){
+  const el=document.getElementById('capaList');if(!el) return;
+  const list=(db.capas||[]).slice().sort((a,b)=>(b.updated||0)-(a.updated||0));
+  if(!list.length){el.innerHTML='<div class="empty" style="padding:16px;">저장된 분석 없음</div>';return;}
+  el.innerHTML=list.map(c=>{
+    const r=calcCapa(c), st=capaSt(r.load), act=capaDraft&&capaDraft.id===c.id;
+    return `<div class="capa-saved${act?' on':''}" onclick="loadCapa(${c.id})">
+      <div style="flex:1;min-width:0;">
+        <div class="capa-saved-n">${projEsc(c.name)}${c.line?`<span>${projEsc(c.line)}</span>`:''}</div>
+        <div class="capa-saved-m">${dw(c.date)} · 공정 ${(c.procs||[]).length}개 · 월 ${r.valid?capaFmt(r.lineMonth):'—'} EA${r.valid?' · 병목 '+projEsc(r.bn.name):''}</div>
+      </div>
+      ${st?`<span class="badge badge-${st.tag==='r'?'red':st.tag==='a'?'amber':'green'}" style="flex-shrink:0;">${st.t} ${capaFmt(r.load,0)}%</span>`:''}
+      <button class="btn-sm bsm-b" style="flex-shrink:0;" onclick="event.stopPropagation();copyCapa(${c.id})">복제</button>
+      <button class="btn-sm bsm-r" style="flex-shrink:0;" onclick="event.stopPropagation();deleteCapa(${c.id})">삭제</button>
+    </div>`;
+  }).join('');
+}
+
+function saveCapa(){
+  const name=(capaDraft.name||'').trim();
+  if(!name){toast('분석명(모델 · 품번)을 입력해 주세요','w');document.getElementById('capaName')?.focus();return;}
+  if(!calcCapa(capaDraft).valid){toast('C/T가 입력된 공정이 없습니다','w');return;}
+  if(!db.capas) db.capas=[];
+  capaDraft.name=name;
+  const data=JSON.parse(JSON.stringify(capaDraft));
+  data.updated=Date.now();
+  const idx=data.id?db.capas.findIndex(x=>x.id===data.id):-1;
+  if(idx>=0) db.capas[idx]=data;
+  else{
+    data.id=Date.now();data.date=localToday();
+    db.capas.unshift(data);
+    capaDraft.id=data.id;capaDraft.date=data.date;
+  }
+  save();renderCapaList();
+  toast((idx>=0?'캐파 분석 수정: ':'캐파 분석 저장: ')+name);
+}
+function loadCapa(id){
+  const c=(db.capas||[]).find(x=>x.id===id);if(!c) return;
+  capaDraft=JSON.parse(JSON.stringify(c));
+  if(!capaDraft.procs||!capaDraft.procs.length) capaDraft.procs=[{name:'',par:1,ppl:1,ct:'',eff:''}];
+  renderCapa();
+  document.getElementById('page-capa')?.scrollTo({top:0,behavior:'smooth'});
+  toast('불러옴: '+c.name);
+}
+function copyCapa(id){
+  const c=(db.capas||[]).find(x=>x.id===id);if(!c) return;
+  capaDraft=JSON.parse(JSON.stringify(c));
+  capaDraft.id=null;capaDraft.date=null;capaDraft.name=(c.name||'')+' (복사)';
+  renderCapa();
+  document.getElementById('page-capa')?.scrollTo({top:0,behavior:'smooth'});
+  toast('복제됨 — 수정 후 저장하세요');
+}
+function deleteCapa(id){
+  const c=(db.capas||[]).find(x=>x.id===id);if(!c) return;
+  if(!confirm(`[${c.name}] 캐파 분석을 삭제할까요?`)) return;
+  db.capas=db.capas.filter(x=>x.id!==id);
+  if(capaDraft&&capaDraft.id===id) capaDraft.id=null;
+  save();renderCapaList();toast('삭제됨','w');
+}
+function newCapa(){
+  const dirty=capaDraft&&!capaDraft.id&&(capaDraft.name||capaDraft.procs.some(p=>p.name||p.ct));
+  if(dirty&&!confirm('저장하지 않은 입력 내용이 있습니다. 새로 작성할까요?')) return;
+  capaDraft=capaNew();renderCapa();
+}
+
+// ── 캐파 분석 내보내기 ──
+function _capaFileName(ext){
+  const nm=(capaDraft.name||'미지정').trim().replace(/[\\/:*?"<>|\s]+/g,'_');
+  return '공정캐파분석_'+nm+'_'+localToday()+'.'+ext;
+}
+function exportCapaCSV(){
+  const r=calcCapa(capaDraft);
+  if(!r.valid){toast('C/T가 입력된 공정이 없습니다','w');return;}
+  const d=capaDraft, st=capaSt(r.load);
+  const e=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const n=(v,dp=0)=>v==null||!isFinite(v)?'':(+v).toFixed(dp);
+  const rows=[
+    [e('공정 캐파 분석')],
+    [e('분석명'),e(d.name)],[e('라인/구분'),e(d.line)],[e('작성일'),e(localToday())],
+    [e('가동시간(h/일)'),n(r.H,2)],[e('가동일수(일/월)'),n(r.D,1)],[e('종합효율(%)'),n(r.E*100,1)],
+    [e('월 요구수량(EA)'),r.dem>0?r.dem:''],[e('주·년 캐파 기준'),e(r.ybLabel)],[e('주 가동일(일)'),n(r.weekDays,2)],[e('연 가동일(일)'),n(r.yearDays)],[e('비고'),e(d.note)],
+    [],
+    ['공정','설비수','인원(명)','C/T(초)','기준 C/T(초)','효율(%)','효율 반영 C/T(초)','UPH','일 캐파(EA)','주 캐파(EA)','월 캐파(EA)','UPPH','부하율(%)','필요 설비(대)','판정','병목'].map(e)
+  ];
+  r.rows.forEach(x=>{
+    if(!x.valid){rows.push([e(x.name),x.par,x.ppl,'','','','','','','','','','','',e('C/T 미입력'),'']);return;}
+    const s=capaSt(x.load);
+    rows.push([e(x.name),x.par,x.ppl,n(x.ct,2),n(x.ctEff,2),n(x.e*100,1),n(x.ctReal,2),n(x.uph,1),n(x.day),n(x.day*r.weekDays),n(x.month),n(x.upph,2),n(x.load,1),x.needPar??'',e(s?s.t:''),e(x===r.bn?'병목':'')]);
+  });
+  rows.push([]);
+  rows.push([e('라인 요약')]);
+  [['라인 일 캐파(EA)',n(r.lineDay)],['라인 주 캐파(EA)',n(r.lineWeek)],['라인 월 캐파(EA)',n(r.lineMonth)],['라인 년 캐파(EA)',n(r.lineYear)],
+   ['라인 UPH',n(r.lineUph,1)],['병목 공정',e(r.bn.name)],['병목 기준 C/T(초, C/T÷설비)',n(r.bn.ctEff,2)],['병목 효율(%)',n(r.bn.e*100,1)],['병목 효율 반영 C/T(초)',n(r.bn.ctReal,2)],['Takt Time(초)',n(r.takt,2)],
+   ['부하율(%)',n(r.load,1)],['여유(+)/부족(-) EA',n(r.gap)],['판정',e(st?st.t:'')],
+   ['라인 밸런스(%)',n(r.balance,1)],['총 인원(명)',r.ppl],['UPPH',n(r.lineUpph,2)]
+  ].forEach(([k,v])=>rows.push([e(k),v]));
+  download(_capaFileName('csv'),'﻿'+rows.map(x=>x.join(',')).join('\n'),'text/csv');
+  toast('캐파 분석 CSV 저장 완료');
+}
+function exportCapaReport(){
+  const r=calcCapa(capaDraft);
+  if(!r.valid){toast('C/T가 입력된 공정이 없습니다','w');return;}
+  const d=capaDraft, esc=_rptEsc, st=capaSt(r.load);
+  const pplTxt=v=>capaFmt(v,1).replace(/\.0$/,'');
+  const stTag=s=>s?`<span class="tag ${s.tag}">${s.t}</span>`:'—';
+  const v=r.rows.filter(x=>x.valid);
+  const max=Math.max(...v.map(x=>x.ctReal),r.takt||0)*1.08;
+  const chart=`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:6px;">
+    <div style="font-size:9pt;color:#64748b;margin-bottom:22px;">단위: 초 · 효율 반영 C/T = C/T ÷ 설비수 ÷ 효율${r.takt?' · 점선 = Takt Time':''}</div>
+    <div style="position:relative;height:190px;display:flex;align-items:flex-end;gap:8px;border-bottom:1px solid #94a3b8;padding:0 4px;">
+      ${r.takt?`<div style="position:absolute;left:0;right:0;bottom:${(r.takt/max*85).toFixed(2)}%;border-top:2px dashed #b45309;"><span style="position:absolute;right:0;top:-17px;font-size:8.5pt;color:#b45309;background:#fff;padding:0 4px;">Takt ${capaFmt(r.takt,1)}s</span></div>`:''}
+      ${v.map(x=>`<div style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;">
+        <div style="font-size:8.5pt;margin-bottom:2px;">${capaFmt(x.ctReal,1)}</div>
+        <div style="width:100%;max-width:60px;height:${(x.ctReal/max*85).toFixed(2)}%;border-radius:4px 4px 0 0;background:${x===r.bn?'#dc2626':(r.takt&&x.ctReal>r.takt?'#f87171':'#5a68c0')};-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;padding:4px 4px 0;">${v.map(x=>`<div style="flex:1;text-align:center;font-size:8.5pt;color:#475569;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc(x.name)}</div>`).join('')}</div>
+  </div>`;
+  const rowsHtml=r.rows.map(x=>{
+    if(!x.valid) return `<tr><td style="white-space:nowrap;">${esc(x.name)}</td><td class="c">${x.par}</td><td class="c">${pplTxt(x.ppl)}</td><td colspan="12" style="color:#94a3b8;">C/T 미입력</td></tr>`;
+    const s=capaSt(x.load);
+    return `<tr class="${x===r.bn?'danger':''}">
+      <td style="white-space:nowrap;">${esc(x.name)}${x===r.bn?' <span class="tag r">병목</span>':''}</td>
+      <td class="c">${x.par}</td><td class="c">${pplTxt(x.ppl)}</td><td class="num">${capaFmt(x.ct,1)}</td><td class="num">${capaFmt(x.ctEff,1)}</td><td class="num">${capaFmt(x.e*100,0)}%</td>
+      <td class="num"${r.takt&&x.ctReal>r.takt?' style="color:#b91c1c;font-weight:700;"':''}>${capaFmt(x.ctReal,1)}</td>
+      <td class="num">${capaFmt(x.uph,1)}</td><td class="num">${capaFmt(x.day)}</td><td class="num">${capaFmt(x.day*r.weekDays)}</td><td class="num">${capaFmt(x.month)}</td>
+      <td class="num">${x.upph!=null?capaFmt(x.upph,2):'—'}</td><td class="num">${x.load!=null?capaFmt(x.load,1)+'%':'—'}</td>
+      <td class="c">${x.needPar!=null?x.needPar+'대'+(x.needPar>x.par?` (+${x.needPar-x.par})`:''):'—'}</td><td class="c">${stTag(s)}</td></tr>`;
+  }).join('');
+  const PC={day:['#3747ac','#eef0fb'],week:['#0f8578','#e7f6f4'],month:['#a8690f','#fdf5e8'],year:['#b8335d','#fcecf1']};
+  const periodHtml=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">${capaPeriods(r).map(p=>{
+    const [c,bg]=PC[p.k], load=p.dem?p.dem/p.v*100:null, gap=p.dem?p.v-p.dem:null;
+    return `<div style="border:1px solid ${c}55;border-top:4px solid ${c};border-radius:8px;padding:10px 12px;background:${bg};-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <div style="display:flex;justify-content:space-between;font-size:9.5pt;font-weight:700;color:${c};">${p.l}<span style="font-size:7.5pt;font-weight:400;color:#94a3b8;">${p.en}</span></div>
+      <div style="font-size:17pt;font-weight:800;color:${c};margin-top:3px;">${capaFmt(p.v)}<span style="font-size:9pt;color:#64748b;font-weight:500;margin-left:3px;">EA</span></div>
+      <div style="font-size:8pt;color:#64748b;">${p.b}</div>
+      ${load!=null?`<div style="height:5px;background:#e2e8f0;border-radius:3px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:${Math.min(load,100).toFixed(1)}%;background:${load>100?'#dc2626':c};-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div></div>
+      <div style="font-size:8pt;color:#475569;margin-top:3px;">요구 ${capaFmt(p.dem)} · <b style="color:${gap<0?'#b91c1c':'#15803d'};">${gap<0?'−':'+'}${capaFmt(Math.abs(gap))}</b></div>`:''}
+    </div>`;}).join('')}</div>`;
+  const bnHtml=`<table style="margin-bottom:10px;"><tbody><tr>
+    <th style="width:16%;">병목 공정</th><td style="font-weight:700;color:#b91c1c;">${esc(r.bn.name)}</td>
+    <th style="width:16%;">기준 C/T</th><td><b>${capaFmt(r.bn.ctEff,1)}초</b> <span style="color:#64748b;">(C/T ${capaFmt(r.bn.ct,1)}초 ÷ 설비 ${r.bn.par}대)</span></td>
+    <th style="width:16%;">효율 반영 C/T</th><td><b style="color:#b91c1c;">${capaFmt(r.bn.ctReal,1)}초</b> <span style="color:#64748b;">(÷ 효율 ${capaFmt(r.bn.e*100,0)}%)</span></td>
+  </tr></tbody></table>`;
+  const vd=capaVerdictText(r).html.replace(/var\(--red\)/g,'#b91c1c').replace(/var\(--green\)/g,'#15803d').replace(/var\(--amber\)/g,'#b45309');
+  const body=`
+  <h2>1. 분석 조건</h2>
+  <table><tbody>
+    <tr><th style="width:18%;">분석명</th><td>${esc(d.name||'—')}</td><th style="width:18%;">라인 / 구분</th><td>${esc(d.line||'—')}</td></tr>
+    <tr><th>가동시간</th><td>${capaFmt(r.H,2).replace(/\.?0+$/,'')} h/일 (가용 ${capaFmt(r.avail)}초)</td><th>가동일수</th><td>${capaFmt(r.D,1).replace(/\.0$/,'')} 일/월</td></tr>
+    <tr><th>종합효율 (OEE)</th><td>${capaFmt(r.E*100,1).replace(/\.0$/,'')}%</td><th>월 요구수량</th><td>${r.dem>0?capaFmt(r.dem)+' EA':'—'}</td></tr>
+    <tr><th>주 · 년 캐파 기준</th><td colspan="3">${esc(r.ybLabel)} — 주 ${capaFmt(r.weekDays,1).replace(/\.0$/,'')}일 · 연 ${capaFmt(r.yearDays)}일 가동</td></tr>
+    ${d.note?`<tr><th>비고</th><td colspan="3">${esc(d.note)}</td></tr>`:''}
+  </tbody></table>
+  <h2>2. 라인 캐파 요약</h2>
+  ${periodHtml}
+  ${bnHtml}
+  <div class="sum">
+    <div>라인 UPH<b>${capaFmt(r.lineUph,1)}</b></div>
+    <div>Takt Time<b>${r.takt?capaFmt(r.takt,1)+' 초':'—'}</b></div>
+    <div>부하율<b>${r.load!=null?capaFmt(r.load,1)+'%':'—'}</b></div>
+    <div>라인 밸런스<b>${capaFmt(r.balance,1)}%</b></div>
+    <div>총 인원 / UPPH<b>${pplTxt(r.ppl)}명 / ${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</b></div>
+  </div>
+  <div style="border:1px solid #e2e8f0;border-left:3px solid ${st?(st.tag==='r'?'#b91c1c':st.tag==='a'?'#b45309':'#15803d'):'#64748b'};border-radius:7px;padding:10px 12px;font-size:9.5pt;line-height:1.7;margin-bottom:6px;">${vd}</div>
+  <h2>3. 공정별 효율 반영 C/T (Yamazumi)</h2>
+  ${chart}
+  <h2>4. 공정별 캐파 상세</h2>
+  <table><thead><tr><th>공정</th><th>설비</th><th>인원</th><th>C/T(s)</th><th>기준 C/T(s)</th><th>효율</th><th>효율 반영 C/T(s)</th><th>UPH</th><th>일 캐파</th><th>주 캐파</th><th>월 캐파</th><th>UPPH</th><th>부하율</th><th>필요 설비</th><th>판정</th></tr></thead>
+  <tbody>${rowsHtml}
+  <tr style="font-weight:700;background:#f1f5f9;"><td style="white-space:nowrap;">라인 (병목 기준)</td><td class="c">${r.rows.reduce((s,x)=>s+x.par,0)}</td><td class="c">${pplTxt(r.ppl)}</td><td class="num">${capaFmt(r.bn.ct,1)}</td><td class="num">${capaFmt(r.bn.ctEff,1)}</td><td class="num">${capaFmt(r.bn.e*100,0)}%</td><td class="num">${capaFmt(r.bn.ctReal,1)}</td><td class="num">${capaFmt(r.lineUph,1)}</td><td class="num">${capaFmt(r.lineDay)}</td><td class="num">${capaFmt(r.lineWeek)}</td><td class="num">${capaFmt(r.lineMonth)}</td><td class="num">${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</td><td class="num">${r.load!=null?capaFmt(r.load,1)+'%':'—'}</td><td class="c">—</td><td class="c">${stTag(st)}</td></tr>
+  </tbody></table>
+  <h2>5. 산출 기준</h2>
+  <div style="font-size:9pt;color:#475569;line-height:1.9;">
+    · 기준 C/T = C/T ÷ 설비수 · 효율 반영 C/T = 기준 C/T ÷ 효율 · UPH = 3,600 ÷ 효율 반영 C/T<br>
+    · 일 캐파 = 가동시간 × 3,600 ÷ 효율 반영 C/T · 월 캐파 = 일 캐파 × 가동일수 · 주 · 년 캐파 = 일 캐파 × 주 · 연 가동일 (기준: ${esc(r.ybLabel)}, 주 ${capaFmt(r.weekDays,1).replace(/\.0$/,'')}일 · 연 ${capaFmt(r.yearDays)}일) · 라인 캐파 = 병목 공정(최소 캐파) 기준<br>
+    · Takt Time = 가용시간 ÷ (월 요구수량 ÷ 가동일수) · 부하율 = 요구수량 ÷ 캐파 · 필요 설비 = ⌈C/T ÷ (Takt × 효율)⌉<br>
+    · 라인 밸런스 = Σ(C/T ÷ 설비수) ÷ (공정수 × 최대값) · UPPH = UPH ÷ 인원 · 판정: 부하율 85% 미만 여유 / 85~100% 주의 / 100% 초과 부족
+  </div>
+  <table style="width:auto;margin:22px 0 0 auto;"><thead><tr><th style="width:90px;text-align:center;">작성</th><th style="width:90px;text-align:center;">검토</th><th style="width:90px;text-align:center;">승인</th></tr></thead>
+  <tbody><tr><td style="height:56px;"></td><td></td><td></td></tr></tbody></table>`;
+  const meta=`분석명: ${esc(d.name||'—')}${d.line?' · '+esc(d.line):''} · 작성일 ${dwp(localToday())}`;
+  downloadFile(_capaFileName('html'),reportShell('공정 캐파 분석 보고서',meta,body),'text/html');
+  toast('캐파 분석 보고서 다운로드 완료');
 }
 
 // ══════ 단위 환산 ══════
