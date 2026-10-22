@@ -1781,6 +1781,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
         <div class="field"><label class="flabel">연 요구수량 (EA)</label><input class="finput" id="capaDemandY" type="number" inputmode="numeric" min="0" placeholder="월 × 12 자동" oninput="capaSetDemand(this.value,'y')"></div>
       </div>
       <div class="field"><label class="flabel">주 · 년 캐파 기준</label><div class="seg" id="capaYB"></div>
+        <div id="capaYBCustom" class="frow" style="display:none;margin-top:8px;">
+          <div class="field"><label class="flabel">주 가동일 (일)</label><input class="finput" id="capaCuWd" type="number" inputmode="decimal" min="0" max="7" step="0.5" placeholder="5" oninput="capaSetCu('cuWeekDays',this.value)"></div>
+          <div class="field"><label class="flabel">연 가동일 (일)</label><input class="finput" id="capaCuYd" type="number" inputmode="numeric" min="0" max="366" placeholder="예: 260 − 공휴일·명절" oninput="capaSetCu('cuYearDays',this.value)"></div>
+        </div>
         <div id="capaYBNote" class="calc-note" style="margin-top:6px;"></div></div>
       <div class="calc-note" style="margin:-4px 0 14px;">※ 가동시간은 휴식·식사 시간을 뺀 실가동 기준 (예: 2교대 × 10h = 20h) · 공정별 효율을 비우면 종합효율이 적용됩니다</div>
 
@@ -6865,23 +6869,38 @@ function toast(msg,type='ok'){
 
 // ══════ 공정 캐파 분석 ══════
 let capaDraft=null;
-// 주 · 년 캐파 기준 : 월 가동일 환산 / 주 5일(52주) / 주 6일(52주) / 365일
+// 주 · 년 캐파 기준 : 월 가동일 환산 / 주 5일(52주) / 주 6일(52주) / 365일 / 직접 입력(공휴일·명절 반영)
 const CAPA_YB={
   m12: {l:'월 가동일 × 12', s:'월×12', wd:D=>D*12/52, yd:D=>D*12},
   w5:  {l:'주 5일 (52주 · 260일)', s:'주 5일', wd:()=>5, yd:()=>260},
   w6:  {l:'주 6일 (52주 · 312일)', s:'주 6일', wd:()=>6, yd:()=>312},
   d365:{l:'365일 (연중 무휴)', s:'365일', wd:()=>7, yd:()=>365},
+  cu:  {l:'직접 입력', s:'직접 입력', wd:(D,d)=>capaCuWd(d), yd:(D,d)=>capaCuYd(d)},
 };
+function capaCuWd(d){const n=capaNum(d&&d.cuWeekDays);return n>0?Math.min(n,7):5;}
+function capaCuYd(d){const n=capaNum(d&&d.cuYearDays);return n>0?Math.min(n,366):250;}
 function capaYB(d){return CAPA_YB[d&&d.yearBasis]?d.yearBasis:'m12';}
 function renderCapaYB(){
   const el=document.getElementById('capaYB');if(!el) return;
   const cur=capaYB(capaDraft), D=capaNum(capaDraft.days)||0;
   el.innerHTML=Object.entries(CAPA_YB).map(([k,b])=>`<button class="${k===cur?'on':''}" onclick="capaSetYB('${k}')">${b.s}</button>`).join('');
+  const cu=document.getElementById('capaYBCustom');
+  if(cu){
+    cu.style.display=cur==='cu'?'':'none';
+    const w=document.getElementById('capaCuWd'), y=document.getElementById('capaCuYd');
+    if(w&&document.activeElement!==w) w.value=capaDraft.cuWeekDays??5;
+    if(y&&document.activeElement!==y) y.value=capaDraft.cuYearDays??250;
+  }
   const b=CAPA_YB[cur];
   const note=document.getElementById('capaYBNote');
-  if(note) note.textContent=`${b.l} → 주 ${capaFmt(b.wd(D),1).replace(/\.0$/,'')}일 · 년 ${capaFmt(b.yd(D))}일 가동 기준 (월 캐파는 가동일수 ${capaFmt(D,1).replace(/\.0$/,'')}일 기준)`;
+  if(note) note.textContent=`${b.l} → 주 ${capaFmt(b.wd(D,capaDraft),1).replace(/\.0$/,'')}일 · 년 ${capaFmt(b.yd(D,capaDraft))}일 가동 기준 (월 캐파는 가동일수 ${capaFmt(D,1).replace(/\.0$/,'')}일 기준)`;
 }
-function capaSetYB(k){capaDraft.yearBasis=k;renderCapaYB();renderCapaResult();}
+function capaSetYB(k){
+  capaDraft.yearBasis=k;
+  if(k==='cu'){if(capaDraft.cuWeekDays==null) capaDraft.cuWeekDays=5;if(capaDraft.cuYearDays==null) capaDraft.cuYearDays=250;}
+  renderCapaYB();renderCapaResult();
+}
+function capaSetCu(f,v){capaDraft[f]=v;renderCapaYB();renderCapaResult();}
 // 월 ↔ 연 요구수량 연동 (저장은 월 기준 demand 하나만)
 function capaSetDemand(v,src){
   const n=capaNum(v);
@@ -6934,7 +6953,7 @@ function calcCapa(d){
   const nNew=rows.filter(r=>r.src==='신규').length, nOld=rows.length-nNew;
   const maxCt=Math.max(...v.map(r=>r.ctEff));
   return Object.assign(base,{valid:true,bn,
-    lineDay:bn.day,lineWeek:bn.day*yb.wd(D),lineMonth:bn.month,lineYear:bn.day*yb.yd(D),weekDays:yb.wd(D),yearDays:yb.yd(D),ybKey:capaYB(d),ybLabel:yb.l,lineUph:bn.uph,ppl,pplOld,pplNew,nNew,nOld,
+    lineDay:bn.day,lineWeek:bn.day*yb.wd(D,d),lineMonth:bn.month,lineYear:bn.day*yb.yd(D,d),weekDays:yb.wd(D,d),yearDays:yb.yd(D,d),ybKey:capaYB(d),ybLabel:yb.l,lineUph:bn.uph,ppl,pplOld,pplNew,nNew,nOld,
     lineUpph:ppl>0?bn.uph/ppl:null,
     balance:v.reduce((s,r)=>s+r.ctEff,0)/(v.length*maxCt)*100,
     load:dem>0&&bn.month>0?dem/bn.month*100:null,
