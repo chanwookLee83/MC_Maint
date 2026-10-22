@@ -7109,7 +7109,7 @@ function renderCapaResult(){
   h+=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;">
     <table class="capa-tbl"><thead><tr><th>공정</th><th>구분</th><th>설비</th><th>기존 인원</th><th>신규 인원</th><th>인원 계</th><th>C/T(s)</th><th>기준 C/T(s)</th><th>효율</th><th>효율 반영 C/T(s)</th><th>UPH</th><th>일 캐파</th><th>주 캐파</th><th>월 캐파</th><th>UPPH</th><th>부하율</th><th>필요 설비</th><th>판정</th></tr></thead>
     <tbody>${r.rows.map(tr).join('')}</tbody>
-    <tfoot><tr><td>라인 (병목 기준)</td><td>신규 ${r.nNew} · 기존 ${r.nOld}</td><td>${capaParSum(r)}</td><td>${capaPplTxt(r.pplOld)}</td><td>${capaPplTxt(r.pplNew)}</td><td>${capaPplTxt(r.ppl)}</td><td>${capaFmt(r.bn.ct,1)}</td><td>${capaFmt(r.bn.ctEff,1)}</td><td>${capaFmt(r.bn.e*100,0)}%</td><td>${capaFmt(r.bn.ctReal,1)}</td><td>${capaFmt(r.lineUph,1)}</td><td>${capaFmt(r.lineDay)}</td><td>${capaFmt(r.lineWeek)}</td><td>${capaFmt(r.lineMonth)}</td><td>${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</td><td>${r.load!=null?capaFmt(r.load,1)+'%':'—'}</td><td>—</td><td>${st?`<b style="color:${st.c};">${st.t}</b>`:'—'}</td></tr></tfoot>
+    <tfoot><tr><td>라인 (병목 기준)</td><td>신규 ${r.nNew}공정 · 기존 ${r.nOld}공정</td><td>${capaParSum(r)}</td><td>${capaPplTxt(r.pplOld)}</td><td>${capaPplTxt(r.pplNew)}</td><td>${capaPplTxt(r.ppl)}</td><td>${capaFmt(r.bn.ct,1)}</td><td>${capaFmt(r.bn.ctEff,1)}</td><td>${capaFmt(r.bn.e*100,0)}%</td><td>${capaFmt(r.bn.ctReal,1)}</td><td>${capaFmt(r.lineUph,1)}</td><td>${capaFmt(r.lineDay)}</td><td>${capaFmt(r.lineWeek)}</td><td>${capaFmt(r.lineMonth)}</td><td>${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</td><td>${r.load!=null?capaFmt(r.load,1)+'%':'—'}</td><td>—</td><td>${st?`<b style="color:${st.c};">${st.t}</b>`:'—'}</td></tr></tfoot>
     </table></div>`;
 
   h+=`<div class="card"><div class="capa-sub" style="margin-top:0;">산출 기준</div><div class="capa-formula">
@@ -7156,8 +7156,11 @@ function saveCapa(){
     db.capas.unshift(data);
     capaDraft.id=data.id;capaDraft.date=data.date;
   }
-  save();renderCapaList();
-  toast((idx>=0?'캐파 분석 수정: ':'캐파 분석 저장: ')+name);
+  save();
+  // 저장 후 다음 분석 입력을 위해 입력란 초기화 (저장본은 '저장된 분석'에서 다시 불러올 수 있음)
+  capaDraft=capaNew();renderCapa();
+  document.getElementById('page-capa')?.scrollTo({top:0,behavior:'smooth'});
+  toast((idx>=0?'캐파 분석 수정: ':'캐파 분석 저장: ')+name+' · 입력란 초기화');
 }
 function loadCapa(id){
   const c=(db.capas||[]).find(x=>x.id===id);if(!c) return;
@@ -7289,7 +7292,7 @@ function exportCapaReport(){
     <div>라인 밸런스<b>${capaFmt(r.balance,1)}%</b></div>
     <div>총 인원 / UPPH<b>${pplTxt(r.ppl)}명 / ${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</b></div>
     <div>기존 / 신규 인원<b>${pplTxt(r.pplOld)}명 / ${pplTxt(r.pplNew)}명</b></div>
-    <div>공정 구성<b>신규 ${r.nNew} · 기존 ${r.nOld}</b></div>
+    <div>공정 구성<b>신규 ${r.nNew}공정 · 기존 ${r.nOld}공정</b></div>
   </div>
   <div style="border:1px solid #e2e8f0;border-left:3px solid ${st?(st.tag==='r'?'#b91c1c':st.tag==='a'?'#b45309':'#15803d'):'#64748b'};border-radius:7px;padding:10px 12px;font-size:9.5pt;line-height:1.7;margin-bottom:6px;">${vd}</div></div>
   <div class="nobrk"><h2>3. 공정별 효율 반영 C/T (Yamazumi)</h2>
@@ -7297,7 +7300,7 @@ function exportCapaReport(){
   <div class="nobrk"><h2>4. 공정별 캐파 상세</h2>
   <table class="ctr"><thead><tr><th>공정</th><th>구분</th><th>설비</th><th>기존 인원</th><th>신규 인원</th><th>인원 계</th><th>C/T(s)</th><th>기준 C/T(s)</th><th>효율</th><th>효율 반영 C/T(s)</th><th>UPH</th><th>일 캐파</th><th>주 캐파</th><th>월 캐파</th><th>UPPH</th><th>부하율</th><th>필요 설비</th><th>판정</th></tr></thead>
   <tbody>${rowsHtml}
-  <tr style="font-weight:700;background:#f1f5f9;"><td style="white-space:nowrap;">라인 (병목 기준)</td><td class="c">신규 ${r.nNew} · 기존 ${r.nOld}</td><td class="c">${capaParSum(r)}</td><td class="c">${pplTxt(r.pplOld)}</td><td class="c">${pplTxt(r.pplNew)}</td><td class="c">${pplTxt(r.ppl)}</td><td class="c">${capaFmt(r.bn.ct,1)}</td><td class="c">${capaFmt(r.bn.ctEff,1)}</td><td class="c">${capaFmt(r.bn.e*100,0)}%</td><td class="c">${capaFmt(r.bn.ctReal,1)}</td><td class="c">${capaFmt(r.lineUph,1)}</td><td class="c">${capaFmt(r.lineDay)}</td><td class="c">${capaFmt(r.lineWeek)}</td><td class="c">${capaFmt(r.lineMonth)}</td><td class="c">${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</td><td class="c">${r.load!=null?capaFmt(r.load,1)+'%':'—'}</td><td class="c">—</td><td class="c">${stTag(st)}</td></tr>
+  <tr style="font-weight:700;background:#f1f5f9;"><td style="white-space:nowrap;">라인 (병목 기준)</td><td class="c">신규 ${r.nNew}공정 · 기존 ${r.nOld}공정</td><td class="c">${capaParSum(r)}</td><td class="c">${pplTxt(r.pplOld)}</td><td class="c">${pplTxt(r.pplNew)}</td><td class="c">${pplTxt(r.ppl)}</td><td class="c">${capaFmt(r.bn.ct,1)}</td><td class="c">${capaFmt(r.bn.ctEff,1)}</td><td class="c">${capaFmt(r.bn.e*100,0)}%</td><td class="c">${capaFmt(r.bn.ctReal,1)}</td><td class="c">${capaFmt(r.lineUph,1)}</td><td class="c">${capaFmt(r.lineDay)}</td><td class="c">${capaFmt(r.lineWeek)}</td><td class="c">${capaFmt(r.lineMonth)}</td><td class="c">${r.lineUpph!=null?capaFmt(r.lineUpph,2):'—'}</td><td class="c">${r.load!=null?capaFmt(r.load,1)+'%':'—'}</td><td class="c">—</td><td class="c">${stTag(st)}</td></tr>
   </tbody></table></div>
   <div class="nobrk"><h2>5. 산출 기준</h2>
   <div style="font-size:9pt;color:#475569;line-height:1.9;">
@@ -7507,7 +7510,7 @@ async function exportCapaXLSX(){
         4:x.pplNew?{bold:true,color:{argb:'FFB45309'}}:{},9:over?{bold:true,color:{argb:'FFB91C1C'}}:{},
         16:x.needPar>x.par?{bold:true,color:{argb:'FFB91C1C'}}:{},17:{bold:true,color:{argb:'FF'+stHex(s)}}}});
   });
-  putRow(['라인 (병목 기준)',`신규 ${r.nNew} · 기존 ${r.nOld}`,capaParSum(r),r.pplOld,r.pplNew,r.ppl,b.ct,b.ctEff,b.e,b.ctReal,r.lineUph,Math.round(r.lineDay),Math.round(r.lineWeek),Math.round(r.lineMonth),
+  putRow(['라인 (병목 기준)',`신규 ${r.nNew}공정 · 기존 ${r.nOld}공정`,capaParSum(r),r.pplOld,r.pplNew,r.ppl,b.ct,b.ctEff,b.e,b.ctReal,r.lineUph,Math.round(r.lineDay),Math.round(r.lineWeek),Math.round(r.lineMonth),
     r.lineUpph??'—',r.load!=null?r.load/100:'—','—',st?st.t:'—'],
     {fill:HEAD,font:{bold:true},cellFont:{17:{bold:true,color:{argb:'FF'+stHex(st)}}}});
   range(R-1,1,R-1,NC,x=>x.border={top:{style:'medium',color:{argb:NAVY}},bottom:thin,left:thin,right:thin});
