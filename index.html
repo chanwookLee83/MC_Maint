@@ -1332,7 +1332,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
         <div style="display:flex;align-items:baseline;justify-content:center;gap:7px;flex-wrap:wrap;">
           <span style="font-family:var(--cond);font-size:15px;font-weight:700;letter-spacing:1px;color:var(--muted);">총 부품비용</span>
           <span style="font-family:var(--mono);font-size:24px;font-weight:bold;color:var(--green);line-height:1;" id="maintSummaryPartCost">₩0</span>
-          <span style="font-family:var(--cond);font-size:12px;color:var(--muted);">(누적합계)</span>
+          <span style="font-family:var(--cond);font-size:12px;color:var(--muted);" id="maintSummaryScope">(누적합계)</span>
         </div>
       </div>
     </div>
@@ -1518,7 +1518,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <div class="kpi-box" style="border-top:2px solid var(--amber)"><div class="kpi-label">TOTAL 장비</div><div class="kpi-val" style="color:var(--amber)" id="k-eq">0</div><div class="kpi-sub">대</div></div>
       <div class="kpi-box" style="border-top:2px solid var(--green)"><div class="kpi-label">총 정비건</div><div class="kpi-val" style="color:var(--green)" id="k-maint">0</div><div class="kpi-sub">건</div></div>
       <div class="kpi-box" style="border-top:2px solid var(--red)"><div class="kpi-label">고장 건수</div><div class="kpi-val" style="color:var(--red)" id="k-fail">0</div><div class="kpi-sub">건</div></div>
-      <div class="kpi-box" style="border-top:2px solid var(--blue)"><div class="kpi-label">총 정비비용</div><div class="kpi-val" style="color:var(--blue);font-size:18px;" id="k-cost">₩0</div><div class="kpi-sub">누적</div></div>
+      <div class="kpi-box" style="border-top:2px solid var(--blue)"><div class="kpi-label">총 정비비용</div><div class="kpi-val" style="color:var(--blue);font-size:18px;" id="k-cost">₩0</div><div class="kpi-sub" id="k-cost-sub">누적</div></div>
     </div>
   </div>
   <div class="sec">
@@ -3647,13 +3647,27 @@ function onMStartChange(){
     }
   }
 }
+// 정비 이력 필터 (장비 · 유형 · 기간) — 이력 목록과 상단 요약이 같은 기준을 사용
+function getMaintFilter(){
+  const f={eq:document.getElementById('mFilterEqId')?.value||'',type:_mTypeFilter||'',
+    from:document.getElementById('mFilterDateFrom')?.value||'',to:document.getElementById('mFilterDateTo')?.value||''};
+  f.on=!!(f.eq||f.type||f.from||f.to);
+  f.list=db.maints.filter(m=>{
+    const md=(m.start?m.start.slice(0,10):null)||m.date;
+    return (!f.eq||m.eqId==f.eq)&&(!f.type||m.type===f.type)&&(!f.from||md>=f.from)&&(!f.to||md<=f.to);
+  });
+  return f;
+}
+function maintCostSum(list){return list.reduce((s,m)=>s+(m.partCost||0),0);}
 function updateMaintSummary(){
   const countEl=document.getElementById('maintSummaryCount');
   const costEl=document.getElementById('maintSummaryPartCost');
   if(!countEl||!costEl) return;
-  countEl.textContent=db.maints.length;
-  const totalCost=db.maints.reduce((s,m)=>s+(m.partCost||0),0);
-  costEl.textContent=fmtCost(totalCost);
+  const f=getMaintFilter();
+  countEl.textContent=f.list.length;
+  costEl.textContent=fmtCost(maintCostSum(f.list));
+  const scope=document.getElementById('maintSummaryScope');
+  if(scope) scope.textContent=f.on?'(필터 적용)':'(누적합계)';
 }
 function clearMaintForm(){
   ['mContent','mCause','mWorker'].forEach(id=>document.getElementById(id).value='');
@@ -3718,26 +3732,14 @@ function mFilterEqAcPick(eqId,eqName){
 function renderMaintLog(){
   renderAllMaintTypeUI();
   const el=document.getElementById('maintLog');
-  const fEq=document.getElementById('mFilterEqId')?.value||'';
-  const fType=_mTypeFilter||'';
-  const fFrom=document.getElementById('mFilterDateFrom')?.value||'';
-  const fTo=document.getElementById('mFilterDateTo')?.value||'';
-  let list=db.maints.filter(m=>{
-    const me=!fEq||m.eqId==fEq;
-    const mt=!fType||m.type===fType;
-    const md=(m.start?m.start.slice(0,10):null)||m.date;
-    const mf=!fFrom||md>=fFrom;
-    const mto=!fTo||md<=fTo;
-    return me&&mt&&mf&&mto;
-  });
+  const f=getMaintFilter(), list=f.list;
   list.sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
+  updateMaintSummary();
   const cntEl=document.getElementById('maintFilterCount');
   if(cntEl){
-    const isFiltered=fEq||fType||fFrom||fTo;
-    cntEl.innerHTML=isFiltered?`전체 <span>${db.maints.length}</span>건 중 <span>${list.length}</span>건 표시`:'';
+    cntEl.innerHTML=f.on?`전체 <span>${db.maints.length}</span>건 중 <span>${list.length}</span>건 표시 · 고장 <span>${list.filter(m=>m.type==='고장').length}</span>건 · 부품비용 <span>${fmtCost(maintCostSum(list))}</span> / 전체 ${fmtCost(maintCostSum(db.maints))}`:'';
   }
-  if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon"></span>'+(fEq||fType||fFrom||fTo?'필터 조건에 맞는 정비 이력 없음':'정비 이력 없음')+'</div>';return;}
-  updateMaintSummary();
+  if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon"></span>'+(f.on?'필터 조건에 맞는 정비 이력 없음':'정비 이력 없음')+'</div>';return;}
   const byYear={};
   list.forEach(m=>{
     const rd=m.start?m.start.slice(0,10):null;
@@ -4609,6 +4611,7 @@ function renderMonthlyMtbr(filteredMaints){
         <div class="mtbr-info">
           <span style="color:var(--muted);">정비 ${totalCount}건</span>
           <span style="color:${failCount>0?'var(--red)':'var(--muted)'};">고장 ${failCount}회</span>
+          <span style="color:var(--blue);">부품 ${fmtCost(maintCostSum(mAll))}</span>
         </div>
         <div class="mtbr-cell">
           <div class="lbl">MTBF</div>
@@ -4673,7 +4676,9 @@ function renderStats(){
   document.getElementById('k-eq').textContent=db.eqs.length;
   document.getElementById('k-maint').textContent=filteredMaints.length;
   document.getElementById('k-fail').textContent=filteredMaints.filter(m=>m.type==='고장').length;
-  document.getElementById('k-cost').textContent=fmtCost(filteredMaints.reduce((s,m)=>s+(m.partCost||0),0));
+  document.getElementById('k-cost').textContent=fmtCost(maintCostSum(filteredMaints));
+  const kCostSub=document.getElementById('k-cost-sub');
+  if(kCostSub) kCostSub.textContent=(fFrom||fTo)?`기간 내 · 전체 ${fmtCost(maintCostSum(db.maints))}`:'누적';
 
   // MTBF/MTTR 목록
   const mtEl=document.getElementById('mtbfList');
@@ -4708,7 +4713,7 @@ function renderStats(){
         <div class="mtbf-eq-head" onclick="this.parentElement.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
           <div class="info">
             <div class="nm">${eq.name}</div>
-            <div class="sm">정비 ${totalMaints}건 | 고장 ${failCount}회</div>
+            <div class="sm">정비 ${totalMaints}건 | 고장 ${failCount}회 | 부품 ${fmtCost(maintCostSum(allMaints))}</div>
           </div>
           <span class="mtbf-eq-chev">▾</span>
         </div>
