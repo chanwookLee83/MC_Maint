@@ -779,7 +779,29 @@ body.light .sec-title::after{background:#d4d9e2;}
 .ev-card.cat-설비{border-left-color:#10b981;}
 .ev-card.cat-안전{border-left-color:#ef4444;}
 .ev-card.cat-기타{border-left-color:#6b7280;}
-.ev-card.past{opacity:.55;}
+/* 지난 일정 : 내용만 흐리게, 버튼은 또렷하게 */
+.ev-card.past .ev-title,.ev-card.past .ev-meta,.ev-card.past .ev-content,.ev-card.past .ev-cat-badge,.ev-card.past .ev-dday{opacity:.6;}
+.ev-card .btn-sm{font-weight:800;}
+/* 일정 상태 : 완료(연한 베이지) · 진행중 · 드롭(빨간 가로선) */
+:root{--ev-done-bg:#2b2618;--ev-done-bd:#4a3f25;--ev-prog:#f59e0b;}
+body.light{--ev-done-bg:#fbf4e4;--ev-done-bd:#ead9b0;--ev-prog:#b45309;}
+.ev-card.done{background:var(--ev-done-bg);border-color:var(--ev-done-bd);}
+.ev-card.prog{border-color:color-mix(in srgb,var(--ev-prog) 45%,transparent);}
+.ev-card.drop .ev-title,.ev-card.drop .ev-meta,.ev-card.drop .ev-content,.ev-card.drop .ev-cat-badge,.ev-card.drop .ev-dday{
+  text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;opacity:.75;}
+.ev-st{font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:4px;border:1px solid;}
+.ev-st.done{background:#10b98115;border-color:#10b98130;color:var(--green);}
+.ev-st.prog{background:color-mix(in srgb,var(--ev-prog) 12%,transparent);border-color:color-mix(in srgb,var(--ev-prog) 35%,transparent);color:var(--ev-prog);}
+.ev-st.drop{background:#ef444415;border-color:#ef444435;color:var(--red);}
+.bsm-prog{background:color-mix(in srgb,var(--ev-prog) 12%,transparent);border:1px solid color-mix(in srgb,var(--ev-prog) 60%,transparent);color:var(--ev-prog);}
+.bsm-prog.on{background:var(--ev-prog);border-color:var(--ev-prog);color:#fff;}
+.bsm-gray{background:#64748b15;border:1px solid #64748b35;color:var(--muted2);}
+.bsm-drop{background:#64748b15;border:1px solid #64748b35;color:var(--muted2);text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;}
+/* 라이트 모드 일정 버튼 : 테두리 · 글자 진하게 (기본 버튼 규칙 뒤에 둠) */
+body.light .ev-card .bsm-g{background:#0a8a6214;border-color:#0a8a6270;color:#067a55;}
+body.light .ev-card .bsm-a{background:#3747ac12;border-color:#3747ac66;color:#3747ac;}
+body.light .ev-card .bsm-r{background:#c9363612;border-color:#c9363670;color:#c93636;}
+body.light .ev-card .bsm-gray,body.light .ev-card .bsm-drop{background:#64748b12;border-color:#64748b70;color:#374151;}
 .ev-dday{font-family:var(--mono);font-size:12px;font-weight:700;padding:2px 7px;border-radius:4px;flex-shrink:0;}
 .ev-dday.today{background:#5a68c020;color:var(--amber);}
 .ev-dday.soon{background:#5a68c020;color:var(--blue);}
@@ -1751,7 +1773,9 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
           <option value="">전체</option>
           <option value="upcoming">예정</option>
           <option value="today">오늘</option>
+          <option value="prog">진행중</option>
           <option value="past">완료</option>
+          <option value="drop">드롭</option>
           <option value="PM">PM 점검</option>
           <option value="교육">교육</option>
           <option value="회의">회의</option>
@@ -2836,7 +2860,7 @@ function checkAlarms(){
 
   // ── 등록된 일정 알람 (당일/D-7 이내/기한 초과) ──
   (db.events||[]).forEach(ev=>{
-    if(ev.done) return;
+    if(evClosed(ev)) return;
     const endDate=ev.dateEnd||ev.date;
     const diffStart=Math.round((new Date(ev.date)-new Date(today))/86400000);
     const diffEnd=Math.round((new Date(endDate)-new Date(today))/86400000);
@@ -5765,9 +5789,24 @@ function _syncEventEnd(startEl,endEl){
 function onEvStartChange(){_syncEventEnd(document.getElementById('evDate'),document.getElementById('evDateEnd'));}
 function onEEvStartChange(){_syncEventEnd(document.getElementById('eEvDate'),document.getElementById('eEvDateEnd'));}
 
+// 일정 상태 : done(완료) · state='prog'(진행중) | 'drop'(드롭) — 완료 · 드롭은 종료된 일정으로 보고 알림 · 배지에서 제외
+function evClosed(ev){return !!ev.done||ev.state==='drop';}
+function _evChanged(){save();renderEvents();updateEvBadge();checkAlarms();}
 function toggleEvDone(id){
-  const ev=db.events.find(e=>e.id===id);
-  if(ev){ev.done=!ev.done;save();renderEvents();updateEvBadge();}
+  const ev=db.events.find(e=>e.id===id);if(!ev) return;
+  ev.done=!ev.done; if(ev.done) delete ev.state;
+  _evChanged();
+}
+// 같은 상태를 다시 누르면 해제
+function setEvState(id,st){
+  const ev=db.events.find(e=>e.id===id);if(!ev) return;
+  if(ev.state===st) delete ev.state; else {ev.state=st;ev.done=false;}
+  _evChanged();
+}
+function restoreEv(id){
+  const ev=db.events.find(e=>e.id===id);if(!ev) return;
+  ev.done=false;delete ev.state;
+  _evChanged();
 }
 
 function deleteEvent(id){
@@ -5803,7 +5842,7 @@ function saveEvEdit(){
 
 function updateEvBadge(){
   const today=localToday();
-  const upcoming=db.events.filter(e=>!e.done&&e.date>=today).length;
+  const upcoming=db.events.filter(e=>!evClosed(e)&&e.date>=today).length;
   const badge=document.getElementById('evBadge');
   if(!badge)return;
   if(upcoming>0){badge.textContent=upcoming;badge.classList.add('show');}
@@ -5817,9 +5856,11 @@ function _eventReportList(){
   const filter=sel?.value||'';
   const today=localToday();
   let list=[...db.events].sort((a,b)=>b.date.localeCompare(a.date));
-  if(filter==='upcoming') list=list.filter(e=>!e.done&&e.date>=today);
+  if(filter==='upcoming') list=list.filter(e=>!evClosed(e)&&e.date>=today);
   else if(filter==='today') list=list.filter(e=>e.date===today);
-  else if(filter==='past')  list=list.filter(e=>e.done||e.date<today);
+  else if(filter==='past')  list=list.filter(e=>e.done||(e.date<today&&e.state!=='drop'));
+  else if(filter==='prog')  list=list.filter(e=>evStatus(e,today)[0]==='진행중');
+  else if(filter==='drop')  list=list.filter(e=>e.state==='drop');
   else if(filter) list=list.filter(e=>e.cat===filter);
   if(q) list=list.filter(e=>
     (e.title||'').toLowerCase().includes(q)||
@@ -5831,15 +5872,18 @@ function _eventReportList(){
 }
 // 일정 상태 : [표시명, 태그색]
 function evStatus(ev,today){
+  if(ev.state==='drop') return ['드롭','m'];
   if(ev.done) return ['완료','g'];
+  if(ev.state==='prog') return ['진행중','a'];
   if((ev.dateEnd||ev.date)<today) return ['기한초과','r'];
   if(ev.date<=today) return ['진행중','a'];
   return ['예정','m'];
 }
 function _eventReportSums(list,today){
   const n=k=>list.filter(e=>evStatus(e,today)[0]===k).length;
-  return [['전체 일정',list.length],['예정',n('예정')],['진행중',n('진행중')],['기한초과',n('기한초과')],['완료',n('완료')]];
+  return [['전체 일정',list.length],['예정',n('예정')],['진행중',n('진행중')],['기한초과',n('기한초과')],['완료',n('완료')],['드롭',n('드롭')]];
 }
+const EV_DONE_BG='#fbf4e4';   // 보고서 · Excel 완료 행 (화면의 연한 베이지와 동일)
 function exportEventsReport(){
   if(!db.events.length){toast('등록된 일정 없음','w');return;}
   const {q,filterLabel,list,today}=_eventReportList();
@@ -5848,9 +5892,11 @@ function exportEventsReport(){
   const rows=list.map(ev=>{
     const [st,tg]=evStatus(ev,today), dd=evDday(ev.date);
     const range=ev.dateEnd&&ev.dateEnd!==ev.date?`${dwp(ev.date)}<br>~ ${dwp(ev.dateEnd)}`:dwp(ev.date);
-    return `<tr class="${tg==='r'?'danger':tg==='a'?'warn':''}">
+    const drop=ev.state==='drop';
+    const trStyle=ev.done?` style="background:${EV_DONE_BG};"`:drop?' style="text-decoration:line-through;text-decoration-color:#dc2626;text-decoration-thickness:2px;color:#64748b;"':'';
+    return `<tr class="${tg==='r'?'danger':tg==='a'?'warn':''}"${trStyle}>
       <td class="c">${range}</td>
-      <td class="c">${ev.done?'—':esc(dd.label)}</td>
+      <td class="c">${evClosed(ev)?'—':esc(dd.label)}</td>
       <td class="c">${esc(ev.cat||'')||'—'}</td>
       <td style="font-weight:600;">${esc(ev.title)}</td>
       <td class="c">${esc(ev.owner||'')||'—'}</td>
@@ -5872,14 +5918,17 @@ async function exportEventsXLSX(){
   const wb=xrBook();
   xrSheet(wb,{name:'일정',title:'일정 관리표',
     meta:`구분/상태: ${filterLabel} · 검색: ${q||'—'} · 기준일 ${xrDay(today)} · 총 ${list.length}건`,
-    sums:_eventReportSums(list,today).map(([l,v])=>[l,v,'#,##0']),
+    sums:_eventReportSums(list,today).map(([l,v])=>[l,v,'#,##0']),sumW:9,   // 요약 6칸을 한 줄에
     cols:[{h:'날짜',w:17,al:'center'},{h:'D-day',w:9,al:'center'},{h:'구분',w:12,al:'center'},{h:'제목',w:30},{h:'담당자',w:10,al:'center'},
       {h:'내용',w:50},{h:'상태',w:10,al:'center'}],
     rows:list.map(ev=>{
-      const [st,tg]=evStatus(ev,today);
+      const [st,tg]=evStatus(ev,today), drop=ev.state==='drop';
+      // 드롭 : 내용 전체 취소선(빨강) · 완료 : 연한 베이지 행
+      const font={3:{bold:true}};
+      if(drop) for(let i=0;i<6;i++) font[i]=Object.assign({},font[i],{strike:true,color:{argb:'FFDC2626'}});
       return {vals:[ev.dateEnd&&ev.dateEnd!==ev.date?`${xrDay(ev.date)}\n~ ${xrDay(ev.dateEnd)}`:xrDay(ev.date),
-        ev.done?'—':evDday(ev.date).label,ev.cat||'—',ev.title,ev.owner||'—',ev.content||'—',st],
-        fill:tg==='r'?XR.ROW.danger:tg==='a'?XR.ROW.warn:null,font:{3:{bold:true}},tag:{6:tg}};
+        evClosed(ev)?'—':evDday(ev.date).label,ev.cat||'—',ev.title,ev.owner||'—',ev.content||'—',st],
+        fill:ev.done?xrArgb(EV_DONE_BG):tg==='r'?XR.ROW.danger:tg==='a'?XR.ROW.warn:null,font,tag:{6:tg}};
     })});
   await xrSave(wb,'일정표_'+localToday()+'.xlsx','일정표 Excel 다운로드 완료');
 }
@@ -5912,16 +5961,25 @@ function renderEvents(){
       const col=EV_CAT_COLOR[ev.cat]||'var(--blue)';
       const icon=EV_CAT_ICON[ev.cat]||'';
       const dateRange=ev.dateEnd&&ev.dateEnd!==ev.date?`${dw(ev.date)} ~ ${dw(ev.dateEnd)}`:dw(ev.date);
+      const drop=ev.state==='drop', prog=ev.state==='prog';
+      const stCls=ev.done?' done':drop?' drop':prog?' prog':(ev.date<today?' past':'');
+      const B=(cls,call,label)=>`<button class="btn-sm ${cls}" style="padding:4px 8px;font-size:10px;" onclick="${call}">${label}</button>`;
+      // 완료 · 드롭이면 복원만, 아니면 진행중(토글) · 완료 · 드롭
+      const stateBtns=evClosed(ev)
+        ? B('bsm-gray',`restoreEv(${ev.id})`,'↩ 복원')
+        : B('bsm-prog'+(prog?' on':''),`setEvState(${ev.id},'prog')`,prog?'✓ 진행중':'진행중')
+          +B('bsm-g',`toggleEvDone(${ev.id})`,'완료')
+          +B('bsm-drop',`setEvState(${ev.id},'drop')`,'드롭');
       return `
-      <div class="ev-card cat-${ev.cat}${ev.done||ev.date<today?' past':''}" id="ev-${ev.id}" style="border-left-color:${col};">
+      <div class="ev-card cat-${ev.cat}${stCls}" id="ev-${ev.id}" style="border-left-color:${col};">
         <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
-          
+
           <span class="ev-cat-badge" style="color:${col};border-color:${col}40;">${ev.cat}</span>
           <span class="ev-dday ${dd.cls}">${dd.label}</span>
-          ${ev.done?`<span style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;background:#10b98115;border:1px solid #10b98130;color:var(--green);padding:2px 7px;border-radius:4px;">완료</span>`:''}
+          ${ev.done?'<span class="ev-st done">완료</span>':drop?'<span class="ev-st drop">드롭</span>':prog?'<span class="ev-st prog">진행중</span>':''}
           <span style="flex:1;"></span>
-          <div style="display:flex;gap:5px;">
-            <button class="btn-sm bsm-g" style="padding:4px 8px;font-size:10px;" onclick="toggleEvDone(${ev.id})">${ev.done?'↩ 복원':'완료'}</button>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
+            ${stateBtns}
             <button class="btn-sm bsm-a" style="padding:4px 8px;font-size:10px;" onclick="openEvEdit(${ev.id})">수정</button>
             <button class="btn-sm bsm-r" style="padding:4px 8px;font-size:10px;" onclick="deleteEvent(${ev.id})">삭제</button>
           </div>
@@ -8211,7 +8269,7 @@ function _fireScheduledNotification(hour) {
       else if (remain <= 10) issues.push(c.name + ' 검교정 D-' + remain);
     });
     (db.events || []).forEach(ev => {
-      if (ev.done) return;
+      if (evClosed(ev)) return;
       const endDate = ev.dateEnd || ev.date;
       const diffStart = Math.round((new Date(ev.date) - new Date(today)) / 86400000);
       const diffEnd   = Math.round((new Date(endDate) - new Date(today)) / 86400000);
@@ -8534,7 +8592,7 @@ function _fireCatchupNotification() {
     else if (remain <= 10) issues.push(`${c.name} 검교정 D-${remain}`);
   });
   (db.events || []).forEach(ev => {
-    if (ev.done) return;
+    if (evClosed(ev)) return;
     const endDate = ev.dateEnd || ev.date;
     const diffStart = Math.round((new Date(ev.date) - new Date(today)) / 86400000);
     const diffEnd   = Math.round((new Date(endDate) - new Date(today)) / 86400000);
