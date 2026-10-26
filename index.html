@@ -1174,7 +1174,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   <div class="tab" onclick="gotoTab('capa')"   id="tab-capa">  <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17a9 9 0 1 1 17 0zM12 14l4.5-4.5M12 14h.01M7 13h1M16 13h1M12 8V7"/></svg></span>캐파</div>
   <div class="tab" onclick="gotoTab('conv')"   id="tab-conv">  <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h13l-3-3M17 17H4l3 3"/></svg></span>환산</div>
   <div class="tab" onclick="gotoTab('cyl')"    id="tab-cyl">   <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01"/></svg></span>실린더</div>
-  <div class="tab" onclick="gotoTab('share')"  id="tab-share"> <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v6h14v-6"/></svg></span>공유</div>
+  <div class="tab" onclick="gotoTab('share')"  id="tab-share"> <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>설정</div>
 </div>
 
 <!-- ══════ 장비 ══════ -->
@@ -1536,13 +1536,23 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
   </div>
   <div class="sec">
-    <div class="sec-title">장비별 MTBF / MTBM / MTTR</div>
+    <div class="sec-title coll-head" onclick="toggleStatsPanel('mtbf')">
+      <span class="coll-arrow" id="mtbfArrow">▸</span>장비별 MTBF / MTBM / MTTR
+      <span class="coll-meta" id="mtbfCollMeta"></span>
+    </div>
+    <div id="mtbfBody" style="display:none;">
     <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:-4px 0 8px;line-height:1.6;">MTBF=고장 간격 · MTBM=전체 정비 간격 · MTTR=평균 수리시간 · 선택 기간 기준</div>
     <div class="card amber-t" id="mtbfList"><div class="empty" style="padding:14px;">데이터 없음</div></div>
+    </div>
   </div>
   <div class="sec">
-    <div class="sec-title">월별 MTBF / MTBM / MTTR 내역</div>
+    <div class="sec-title coll-head" onclick="toggleStatsPanel('monthly')">
+      <span class="coll-arrow" id="monthlyArrow">▸</span>월별 MTBF / MTBM / MTTR 내역
+      <span class="coll-meta" id="monthlyCollMeta"></span>
+    </div>
+    <div id="monthlyBody" style="display:none;">
     <div class="card blue-t" id="monthlyMtbrList"><div class="empty" style="padding:14px;">데이터 없음</div></div>
+    </div>
   </div>
   <div class="sec">
     <div class="sec-title">월별 정비 건수</div>
@@ -1731,7 +1741,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
   <!-- 검색 / 필터 -->
   <div class="sec">
-    <div class="sec-title">일정 목록</div>
+    <div class="sec-title">일정 목록 <button class="rpt-btn" onclick="exportEventsReport()">HTML</button><button class="rpt-btn" style="margin-left:0;" onclick="exportEventsXLSX()">Excel</button><button class="rpt-btn" style="margin-left:0;" onclick="exportEventsCSV()">CSV</button></div>
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
       <div class="ac-wrap" style="flex:1;">
         <input class="finput" id="evSearch" placeholder="제목·내용·담당자 검색..." autocomplete="off" oninput="renderEvents()" style="padding:9px 12px;">
@@ -2009,7 +2019,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
   </div>
 </div>
 
-<!-- ══════ 공유 ══════ -->
+<!-- ══════ 설정 (알림 · 백업 · 초기화) — 페이지 id는 기존 share 유지 ══════ -->
 <div class="page" id="page-share">
   <div class="sec" style="margin-top:4px;">
     <div class="sec-title">핸드폰 알림</div>
@@ -2030,32 +2040,11 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <button class="share-btn" style="background:transparent;border:1px solid var(--border2);color:var(--muted2);" onclick="testLocalNotification()"><span></span> 테스트 알림 발송</button>
     <div class="share-note">※ 앱이 열려 있을 때 즉시 동작 · 완전한 백그라운드 알림은 functions/ 폴더 참고</div>
   </div>
-  <div class="share-divider"><span>내보내기</span></div>
-  <div class="sec" style="margin-top:4px;">
-    <div class="sec-title">데이터 내보내기</div>
-    <button class="share-btn sb-amber" onclick="exportAllCSV()"><span></span> 전체 CSV 내보내기</button>
-    <div class="share-note">→ 장비 / 정비이력 / 부품재고 / 점검기록 / 일정 / 파트(BOM) 전체 포함</div>
-    <button class="share-btn sb-green" onclick="exportMaintCSV()"><span></span> 정비이력 CSV</button>
-    <div class="share-note">→ 장비별 정비일지 + 부품사용 내역</div>
-    <button class="share-btn sb-green" onclick="exportInspReport()"><span></span> 점검이력 보고서 (HTML)</button>
-    <button class="share-btn sb-green" onclick="exportInspXLSX()"><span></span> 점검이력 보고서 (Excel)</button>
-    <div class="share-note">→ 공압·전기·외관·F/Proof 색상 구분 보고서 (Excel·인쇄 가능)</div>
-    <button class="share-btn sb-green" onclick="exportInspCSV()"><span></span> 점검이력 CSV</button>
-    <div class="share-note">→ 장비별 점검 항목·결과·판정 데이터 (Excel 편집 가능)</div>
-    <button class="share-btn sb-blue" onclick="exportPartsCSV()"><span></span> 부품재고 CSV</button>
-    <div class="share-note">→ 현재 재고 현황 + 안전재고 기준</div>
-    <button class="share-btn sb-green" onclick="exportInboundCSV()"><span></span> 입고이력 CSV</button>
-    <div class="share-note">→ 부품별 입고 일자 / 수량 / 단가 / 공급업체 내역</div>
-    <button class="share-btn sb-green" onclick="exportBomCSV()"><span></span> 파트(BOM) CSV</button>
-    <div class="share-note">→ 장비별 파트 목록 (부품명 / 형번 / 제조사 / 수량 / 카테고리)</div>
-    <button class="share-btn sb-green" onclick="exportEventsCSV()"><span></span> 일정 CSV</button>
-    <div class="share-note">→ 등록된 일정 전체 (날짜 / 구분 / 제목 / 담당자 / 내용 / 완료여부)</div>
-    <button class="share-btn sb-amber" onclick="exportJSON()"><span></span> 전체 백업 (JSON)</button>
-    <div class="share-note">→ 전체 데이터 백업 파일 (파트/일정 포함)</div>
-  </div>
-  <div class="share-divider"><span>복원</span></div>
+  <div class="share-divider"><span>백업 · 복원</span></div>
   <div class="sec" style="margin-top:16px;">
-    <div class="sec-title">데이터 가져오기</div>
+    <div class="sec-title">데이터 백업 · 복원</div>
+    <button class="share-btn sb-amber" onclick="exportJSON()"><span></span> 전체 백업 (JSON)</button>
+    <div class="share-note">→ 전체 데이터 백업 파일 · 탭별 이력은 각 탭의 HTML · Excel · CSV 버튼으로 받습니다</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
     <button class="share-btn sb-imp" onclick="document.getElementById('importFile').click()"><span></span> JSON 백업 복원</button>
     <div id="importResult"></div>
@@ -4215,6 +4204,13 @@ function toggleProjPanel(){
   document.getElementById('projBody').style.display = projPanelOpen ? '' : 'none';
   document.getElementById('projArrow').parentElement.classList.toggle('open', projPanelOpen);
 }
+// 통계 접이식 패널 (장비별 · 월별 MTBF): 기본은 접힘, key = 'mtbf' | 'monthly' → #keyBody · #keyArrow
+const statsPanelOpen = {};
+function toggleStatsPanel(key){
+  const open = statsPanelOpen[key] = !statsPanelOpen[key];
+  document.getElementById(key+'Body').style.display = open ? '' : 'none';
+  document.getElementById(key+'Arrow').parentElement.classList.toggle('open', open);
+}
 
 // 카드용 요약 (문서 4 · 설비 3 · 공정 5단계)
 function projCardRows(p){
@@ -4557,6 +4553,13 @@ function renderMonthlyMtbr(filteredMaints){
     if(d) monthSet.add(d.slice(0,7));
   });
   const months=[...monthSet].sort();
+  // 접힌 상태에서도 보이는 요약 : 기간(개월) · 정비 · 고장 · 부품비용
+  const meta=document.getElementById('monthlyCollMeta');
+  if(meta){
+    const nFail=filteredMaints.filter(m=>m.type==='고장').length;
+    meta.innerHTML=months.length
+      ? `${months[0]}${months.length>1?' ~ '+months[months.length-1]:''} · 기록 ${months.length}개월 · 정비 ${filteredMaints.length}건${nFail?` · <b style="color:var(--red);">고장 ${nFail}회</b>`:''} · 부품 ${fmtCost(maintCostSum(filteredMaints))}` : '';
+  }
   if(!months.length){el.innerHTML='<div class="empty" style="padding:14px;">데이터 없음</div>';return;}
   const byYear={};
   months.forEach(m=>{const y=m.slice(0,4);if(!byYear[y])byYear[y]=[];byYear[y].push(m);});
@@ -4688,6 +4691,13 @@ function renderStats(){
   const eqsWithRecords=db.eqs.filter(eq=>filteredMaints.some(m=>m.eqId===eq.id));
   const activeEqs=onlyWithRecords ? eqsWithRecords : db.eqs;
   const hiddenCount=db.eqs.length-eqsWithRecords.length;
+  // 접힌 상태에서도 보이는 요약 : 대상 장비 · 고장 · 부품비용
+  const mtbfMeta=document.getElementById('mtbfCollMeta');
+  if(mtbfMeta){
+    const nFail=filteredMaints.filter(m=>m.type==='고장').length;
+    mtbfMeta.innerHTML=eqsWithRecords.length
+      ? `기록 장비 ${eqsWithRecords.length}대${nFail?` · <b style="color:var(--red);">고장 ${nFail}회</b>`:''} · 부품 ${fmtCost(maintCostSum(filteredMaints))}` : '';
+  }
   if(!eqsWithRecords.length&&onlyWithRecords){mtEl.innerHTML='<div class="empty" style="padding:14px;">'+(fFrom||fTo?'해당 기간에 정비 기록이 있는 장비 없음':'데이터 없음')+'</div>';}
   else if(!activeEqs.length){mtEl.innerHTML='<div class="empty" style="padding:14px;">데이터 없음</div>';}
   else{
@@ -5800,26 +5810,82 @@ function updateEvBadge(){
   else badge.classList.remove('show');
 }
 
-function renderEvents(){
+// 일정 목록 필터 (검색어 · 구분/상태) — 화면 목록과 HTML · Excel · CSV 내보내기가 같은 기준을 사용
+function _eventReportList(){
   const q=(document.getElementById('evSearch')?.value||'').trim().toLowerCase();
-  const filter=document.getElementById('evFilter')?.value||'';
+  const sel=document.getElementById('evFilter');
+  const filter=sel?.value||'';
   const today=localToday();
-
   let list=[...db.events].sort((a,b)=>b.date.localeCompare(a.date));
-
-  // 필터
   if(filter==='upcoming') list=list.filter(e=>!e.done&&e.date>=today);
   else if(filter==='today') list=list.filter(e=>e.date===today);
   else if(filter==='past')  list=list.filter(e=>e.done||e.date<today);
   else if(filter) list=list.filter(e=>e.cat===filter);
-
-  // 검색
   if(q) list=list.filter(e=>
     (e.title||'').toLowerCase().includes(q)||
     (e.content||'').toLowerCase().includes(q)||
     (e.owner||'').toLowerCase().includes(q)||
     (e.cat||'').includes(q)
   );
+  return {q,filter,filterLabel:filter?(sel.options[sel.selectedIndex]?.text||filter):'전체',list,today};
+}
+// 일정 상태 : [표시명, 태그색]
+function evStatus(ev,today){
+  if(ev.done) return ['완료','g'];
+  if((ev.dateEnd||ev.date)<today) return ['기한초과','r'];
+  if(ev.date<=today) return ['진행중','a'];
+  return ['예정','m'];
+}
+function _eventReportSums(list,today){
+  const n=k=>list.filter(e=>evStatus(e,today)[0]===k).length;
+  return [['전체 일정',list.length],['예정',n('예정')],['진행중',n('진행중')],['기한초과',n('기한초과')],['완료',n('완료')]];
+}
+function exportEventsReport(){
+  if(!db.events.length){toast('등록된 일정 없음','w');return;}
+  const {q,filterLabel,list,today}=_eventReportList();
+  if(!list.length){toast('해당 조건의 일정 없음','w');return;}
+  const esc=_rptEsc;
+  const rows=list.map(ev=>{
+    const [st,tg]=evStatus(ev,today), dd=evDday(ev.date);
+    const range=ev.dateEnd&&ev.dateEnd!==ev.date?`${dwp(ev.date)}<br>~ ${dwp(ev.dateEnd)}`:dwp(ev.date);
+    return `<tr class="${tg==='r'?'danger':tg==='a'?'warn':''}">
+      <td class="c">${range}</td>
+      <td class="c">${ev.done?'—':esc(dd.label)}</td>
+      <td class="c">${esc(ev.cat||'')||'—'}</td>
+      <td style="font-weight:600;">${esc(ev.title)}</td>
+      <td class="c">${esc(ev.owner||'')||'—'}</td>
+      <td>${esc(ev.content||'').replace(/\n/g,'<br>')||'—'}</td>
+      <td class="c"><span class="tag ${tg}">${st}</span></td>
+    </tr>`;
+  }).join('');
+  const body=`<div class="sum">${_eventReportSums(list,today).map(([l,v])=>`<div>${l}<b>${v}</b></div>`).join('')}</div>
+  <table><thead><tr><th>날짜</th><th>D-day</th><th>구분</th><th>제목</th><th>담당자</th><th>내용</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const meta=`구분/상태: ${esc(filterLabel)} · 검색: ${esc(q||'—')} · 기준일 ${dwp(today)} · 총 ${list.length}건`;
+  downloadFile('일정표_'+localToday()+'.html',reportShell('일정 관리표',meta,body),'text/html');
+  toast('일정표 HTML 다운로드 완료');
+}
+async function exportEventsXLSX(){
+  if(!db.events.length){toast('등록된 일정 없음','w');return;}
+  const {q,filterLabel,list,today}=_eventReportList();
+  if(!list.length){toast('해당 조건의 일정 없음','w');return;}
+  if(!await xrLoad()) return;
+  const wb=xrBook();
+  xrSheet(wb,{name:'일정',title:'일정 관리표',
+    meta:`구분/상태: ${filterLabel} · 검색: ${q||'—'} · 기준일 ${xrDay(today)} · 총 ${list.length}건`,
+    sums:_eventReportSums(list,today).map(([l,v])=>[l,v,'#,##0']),
+    cols:[{h:'날짜',w:17,al:'center'},{h:'D-day',w:9,al:'center'},{h:'구분',w:12,al:'center'},{h:'제목',w:30},{h:'담당자',w:10,al:'center'},
+      {h:'내용',w:50},{h:'상태',w:10,al:'center'}],
+    rows:list.map(ev=>{
+      const [st,tg]=evStatus(ev,today);
+      return {vals:[ev.dateEnd&&ev.dateEnd!==ev.date?`${xrDay(ev.date)}\n~ ${xrDay(ev.dateEnd)}`:xrDay(ev.date),
+        ev.done?'—':evDday(ev.date).label,ev.cat||'—',ev.title,ev.owner||'—',ev.content||'—',st],
+        fill:tg==='r'?XR.ROW.danger:tg==='a'?XR.ROW.warn:null,font:{3:{bold:true}},tag:{6:tg}};
+    })});
+  await xrSave(wb,'일정표_'+localToday()+'.xlsx','일정표 Excel 다운로드 완료');
+}
+
+function renderEvents(){
+  const {q,list,today}=_eventReportList();
 
   const el=document.getElementById('evList');
   if(!list.length){el.innerHTML='<div class="empty"><span class="empty-icon"></span>일정 없음</div>';return;}
@@ -5929,29 +5995,6 @@ function deleteInsp(id){
 }
 
 // ══════ CSV 내보내기 ══════
-function exportAllCSV(){
-  if(!db.maints.length&&!db.eqs.length&&!db.events.length&&!db.boms.length){toast('데이터 없음','w');return;}
-  const rows=['=== 장비 목록 ===','장비명,시리얼번호,설치일,위치,점검주기(일)'];
-  db.eqs.forEach(e=>rows.push([e.name,e.serial||'',e.install||'',e.loc||'',e.cycle||''].join(',')));
-  rows.push('');
-  rows.push('=== 정비 이력 ===');
-  rows.push('날짜,장비명,유형,작업자,시작,종료,작업시간(h),내용,원인,부품비용');
-  db.maints.forEach(m=>rows.push([m.date,m.eqName,m.type,m.worker||'',m.start||'',m.end||'',m.hours?m.hours.toFixed(1):'',`"${m.content}"`,`"${m.cause||''}"`,m.partCost||0].join(',')));
-  rows.push('');
-  rows.push('=== 부품 재고 ===');
-  rows.push('형번,부품명,메이커,타입,단가,현재수량,안전재고,재고가치');
-  db.parts.forEach(p=>rows.push([p.pn,p.name,p.maker||'',p.type,p.price,p.qty,p.safe,p.price*p.qty].join(',')));
-  rows.push('');
-  rows.push('=== 파트(BOM) ===');
-  rows.push('장비명,카테고리,부품명,형번,제조사,수량,비고');
-  db.boms.forEach(b=>rows.push([b.eqName,b.cat,b.name,b.pn||'',b.maker||'',b.qty,b.note||''].join(',')));
-  rows.push('');
-  rows.push('=== 일정 ===');
-  rows.push('날짜,종료일,구분,제목,담당자,내용,완료여부');
-  db.events.forEach(ev=>rows.push([ev.date,ev.dateEnd||'',ev.cat||'',`"${ev.title}"`,ev.owner||'',`"${ev.content||''}"`,ev.done?'완료':'예정'].join(',')));
-  download('설비관리_전체_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
-  toast('전체 CSV 내보내기 완료');
-}
 function exportBomCSV(){
   if(!db.boms.length){toast('등록된 파트 없음','w');return;}
   const rows=['장비명,카테고리,부품명,형번,제조사,수량,비고'];
@@ -5960,36 +6003,16 @@ function exportBomCSV(){
   download('파트BOM_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
   toast('파트(BOM) CSV 저장 완료');
 }
-function exportMaintCSV(){
-  const rows=['날짜,장비명,유형,작업자,시작,종료,작업시간(h),내용,원인,사용부품,부품비용'];
-  db.maints.forEach(m=>{
-    const parts=(m.parts||[]).map(p=>`${p.name}×${p.qty}`).join('|');
-    rows.push([m.date,m.eqName,m.type,m.worker||'',m.start||'',m.end||'',m.hours?m.hours.toFixed(1):'',`"${m.content}"`,`"${m.cause||''}"`,`"${parts}"`,m.partCost||0].join(','));
-  });
-  download('정비이력_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
-  toast('정비이력 CSV 내보내기 완료');
-}
-function exportPartsCSV(){
-  const rows=['형번,부품명,메이커,타입,단가(₩),현재수량,안전재고,재고가치(₩),상태'];
-  db.parts.forEach(p=>rows.push([p.pn,p.name,p.maker||'',p.type,p.price,p.qty,p.safe,p.price*p.qty,p.qty<=p.safe?'부족':p.qty<=p.safe*1.5?'주의':'정상'].join(',')));
-  download('부품재고_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
-  toast('부품재고 CSV 내보내기 완료');
-}
+// 일정 탭 화면 필터 적용
 function exportEventsCSV(){
   if(!db.events.length){toast('등록된 일정 없음','w');return;}
-  const rows=['날짜,종료일,구분,제목,담당자,내용,완료여부'];
-  db.events.sort((a,b)=>a.date.localeCompare(b.date)).forEach(ev=>{
-    rows.push([
-      ev.date,
-      ev.dateEnd||'',
-      ev.cat||'',
-      `"${ev.title}"`,
-      ev.owner||'',
-      `"${(ev.content||'').replace(/"/g,'""')}"`,
-      ev.done?'완료':'예정'
-    ].join(','));
-  });
-  download('일정_'+localToday()+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
+  const today=localToday();
+  const list=_eventReportList().list;
+  if(!list.length){toast('해당 조건의 일정 없음','w');return;}
+  const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=['날짜,종료일,구분,제목,담당자,내용,상태'];
+  list.forEach(ev=>rows.push([ev.date,ev.dateEnd||'',ev.cat||'',ev.title,ev.owner||'',ev.content||'',evStatus(ev,today)[0]].map(esc).join(',')));
+  download('일정_'+today+'.csv','\uFEFF'+rows.join('\n'),'text/csv');
   toast('일정 CSV 내보내기 완료');
 }
 function exportJSON(){
