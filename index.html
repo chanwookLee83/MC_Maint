@@ -1959,7 +1959,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
   <!-- 장비별 파트 트리 -->
   <div class="sec">
-    <div class="sec-title">장비별 파트 목록</div>
+    <div class="sec-title">장비별 파트 목록 <button class="rpt-btn" onclick="exportBomReport()">HTML</button><button class="rpt-btn" style="margin-left:0;" onclick="exportBomXLSX()">Excel</button></div>
     <div style="display:flex;gap:8px;margin-bottom:10px;">
       <div class="fselect-w" style="flex:1;">
         <select class="fselect" id="bomViewEq" onchange="renderBomTree()" style="padding:9px 10px;font-size:14px;">
@@ -2063,6 +2063,13 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
     <button class="share-btn" style="background:transparent;border:1px solid var(--border2);color:var(--muted2);" onclick="testLocalNotification()"><span></span> 테스트 알림 발송</button>
     <div class="share-note">※ 앱이 열려 있을 때 즉시 동작 · 완전한 백그라운드 알림은 functions/ 폴더 참고</div>
+  </div>
+  <div class="share-divider"><span>통합 보고서</span></div>
+  <div class="sec" style="margin-top:16px;">
+    <div class="sec-title">전체 탭 한 번에 내보내기</div>
+    <button class="share-btn sb-green" onclick="exportAllXLSX()"><span></span> 통합 보고서 (Excel · 시트별)</button>
+    <button class="share-btn sb-green" onclick="exportAllReport()"><span></span> 통합 보고서 (HTML · 목차)</button>
+    <div class="share-note">→ 장비 · 정비 · 부품 · 검교정 · 통계 · 점검 · 연간계획 · 파트 · 일정 전체 (화면 필터와 관계없이 전체 데이터, 연간계획은 선택된 연도)</div>
   </div>
   <div class="share-divider"><span>백업 · 복원</span></div>
   <div class="sec" style="margin-top:16px;">
@@ -4813,7 +4820,8 @@ function renderStats(){
   }
 }
 
-function drawMonthlyChart(filteredMaints,exportCanvas,exportW){
+// range={from,to} : 내보내기용 월 범위 (없으면 화면 기간 필터)
+function drawMonthlyChart(filteredMaints,exportCanvas,exportW,range){
   const canvas=exportCanvas||document.getElementById('cvMonthly');if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const dpr=exportCanvas?2:(window.devicePixelRatio||1);
@@ -4828,8 +4836,8 @@ function drawMonthlyChart(filteredMaints,exportCanvas,exportW){
   const gridCol=isLight?'#d4d9e2':'#344155';
   const bgCol=isLight?'#ffffff':'#181c22';
   const maints=filteredMaints||db.maints;
-  const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
-  const fTo=document.getElementById('sFilterDateTo')?.value||'';
+  const fFrom=range?range.from:(document.getElementById('sFilterDateFrom')?.value||'');
+  const fTo=range?range.to:(document.getElementById('sFilterDateTo')?.value||'');
   const months=[];
   if(fFrom&&fTo){
     let cur=new Date(fFrom.slice(0,7)+'-01');
@@ -5910,28 +5918,6 @@ function exportEventsReport(){
   downloadFile('일정표_'+localToday()+'.html',reportShell('일정 관리표',meta,body),'text/html');
   toast('일정표 HTML 다운로드 완료');
 }
-async function exportEventsXLSX(){
-  if(!db.events.length){toast('등록된 일정 없음','w');return;}
-  const {q,filterLabel,list,today}=_eventReportList();
-  if(!list.length){toast('해당 조건의 일정 없음','w');return;}
-  if(!await xrLoad()) return;
-  const wb=xrBook();
-  xrSheet(wb,{name:'일정',title:'일정 관리표',
-    meta:`구분/상태: ${filterLabel} · 검색: ${q||'—'} · 기준일 ${xrDay(today)} · 총 ${list.length}건`,
-    sums:_eventReportSums(list,today).map(([l,v])=>[l,v,'#,##0']),sumW:9,   // 요약 6칸을 한 줄에
-    cols:[{h:'날짜',w:17,al:'center'},{h:'D-day',w:9,al:'center'},{h:'구분',w:12,al:'center'},{h:'제목',w:30},{h:'담당자',w:10,al:'center'},
-      {h:'내용',w:50},{h:'상태',w:10,al:'center'}],
-    rows:list.map(ev=>{
-      const [st,tg]=evStatus(ev,today), drop=ev.state==='drop';
-      // 드롭 : 내용 전체 취소선(빨강) · 완료 : 연한 베이지 행
-      const font={3:{bold:true}};
-      if(drop) for(let i=0;i<6;i++) font[i]=Object.assign({},font[i],{strike:true,color:{argb:'FFDC2626'}});
-      return {vals:[ev.dateEnd&&ev.dateEnd!==ev.date?`${xrDay(ev.date)}\n~ ${xrDay(ev.dateEnd)}`:xrDay(ev.date),
-        evClosed(ev)?'—':evDday(ev.date).label,ev.cat||'—',ev.title,ev.owner||'—',ev.content||'—',st],
-        fill:ev.done?xrArgb(EV_DONE_BG):tg==='r'?XR.ROW.danger:tg==='a'?XR.ROW.warn:null,font,tag:{6:tg}};
-    })});
-  await xrSave(wb,'일정표_'+localToday()+'.xlsx','일정표 Excel 다운로드 완료');
-}
 
 function renderEvents(){
   const {q,list,today}=_eventReportList();
@@ -6187,9 +6173,10 @@ function downloadFile(name,content,type){
   }catch(e){ download(name,content,type); }
 }
 
-function getStatsExportData(){
-  const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
-  const fTo=document.getElementById('sFilterDateTo')?.value||'';
+// all=true : 화면 기간 필터 무시 (통합 보고서)
+function getStatsExportData(all){
+  const fFrom=all?'':(document.getElementById('sFilterDateFrom')?.value||'');
+  const fTo=all?'':(document.getElementById('sFilterDateTo')?.value||'');
   const fm=db.maints.filter(m=>{
     const md=(m.start?m.start.slice(0,10):null)||m.date;
     return (!fFrom||md>=fFrom)&&(!fTo||md<=fTo);
@@ -6367,7 +6354,7 @@ ${projSection}
 
 // ══════ 탭별 HTML 리포트 ══════
 function _rptEsc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
-function reportShell(title,metaLine,bodyHtml){
+function reportShell(title,metaLine,bodyHtml,footNote){
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${title}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'맑은 고딕',Malgun Gothic,Arial,sans-serif;padding:26px 32px;color:#1e293b;font-size:10pt;}
@@ -6393,7 +6380,7 @@ tr.warn td{background:#fffbeb;}
 <h1>${title}</h1>
 <div class="meta">${metaLine}</div>
 ${bodyHtml}
-<div class="footer">※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 표시 내용은 화면에 적용된 필터 기준입니다. · 출력일 ${dwp(localToday())}</div>
+<div class="footer">${footNote||'※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 표시 내용은 화면에 적용된 필터 기준입니다.'} · 출력일 ${dwp(localToday())}</div>
 </body></html>`;
 }
 
@@ -6451,7 +6438,7 @@ function xrDay(s){const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)
 function xrArgb(hex){return 'FF'+String(hex).replace('#','').toUpperCase();}
 const xrFont=(o={})=>Object.assign({name:XR.FN,size:9,color:{argb:XR.INK}},o);
 const xrFill=c=>({type:'pattern',pattern:'solid',fgColor:{argb:c}});
-function xrText(v){if(v==null)return '';if(typeof v==='object'&&v.richText)return v.richText.map(t=>t.text).join('');return String(v);}
+function xrText(v){if(v==null)return '';if(typeof v==='object'&&v.richText)return v.richText.map(t=>t.text).join('');if(typeof v==='object'&&v.text!=null)return String(v.text);return String(v);}
 // 줄바꿈 셀 높이 추정 (한글 ≈ 1.7, 그 외 ≈ 0.95 열너비 단위)
 function xrLines(v,w){return xrText(v).split('\n').reduce((n,ln)=>{
   const u=[...ln].reduce((s,ch)=>s+(/[ㄱ-힝]/.test(ch)?1.7:0.95),0);
@@ -6567,7 +6554,7 @@ function xrSheet(wb,s){
   });
   // 바닥글
   R++;
-  full(R,`※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 표시 내용은 화면에 적용된 필터 기준입니다. · 출력일 ${xrDay(localToday())}`,
+  full(R,`${s.footer||'※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 표시 내용은 화면에 적용된 필터 기준입니다.'} · 출력일 ${xrDay(localToday())}`,
     xrFont({size:8.5,color:{argb:XR.FAINT}}),18);
   for(let k=1;k<=NC;k++) C(R,k).border={top:thin};
   const simple=H&&!rows.some(r=>r.group||r.head);
@@ -6577,17 +6564,18 @@ function xrSheet(wb,s){
   return ws;
 }
 
-// ── 정비 이력 ──
-async function exportMaintXLSX(){
-  if(!db.maints.length){toast('정비 데이터 없음','w');return;}
-  const f=getMaintFilter();
-  const list=f.list.slice().sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
-  if(!list.length){toast('해당 조건의 정비 이력 없음','w');return;}
+// ── 시트 정의 (spec) : 탭별 Excel · 통합 Excel · 통합 HTML 이 같은 정의를 사용 ──
+async function xrExport(specs,file,msg){
   if(!await xrLoad()) return;
   const wb=xrBook();
-  const eqName=f.eq?(db.eqs.find(e=>e.id==f.eq)?.name||'선택 장비'):'전체';
-  xrSheet(wb,{name:'정비 이력',title:'설비 정비 이력서',
-    meta:`장비: ${eqName} · 유형: ${f.type||'전체'} · 기간: ${f.from?xrDay(f.from):'처음'} ~ ${f.to?xrDay(f.to):'현재'} · 총 ${list.length}건`,
+  [].concat(specs).forEach(s=>xrSheet(wb,s));
+  await xrSave(wb,file,msg);
+}
+const xrSortMaint=list=>list.slice().sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
+
+// 정비 이력
+function xrSpecMaint(list,meta){
+  return {name:'정비 이력',title:'설비 정비 이력서',meta,
     sums:[['정비 건수',list.length,'#,##0'],['고장 건수',list.filter(m=>m.type==='고장').length,'#,##0'],['부품비용 합계',maintCostSum(list),XR.WON]],
     cols:[{h:'수리기간',w:17,al:'center'},{h:'장비',w:18},{h:'유형',w:10,al:'center'},{h:'수리시간',w:12,al:'center'},
       {h:'내용',w:46},{h:'원인',w:24},{h:'사용 부품',w:38},{h:'부품비용',w:13,al:'right',fmt:XR.WON},{h:'작업자',w:10,al:'center'}],
@@ -6599,11 +6587,18 @@ async function exportMaintXLSX(){
         rd?(rdEnd&&rdEnd!==rd?`${xrDay(rd)}\n~ ${xrDay(rdEnd)}`:xrDay(rd)):'—',
         m.eqName||'',m.type||'',durH>0?fmtDur(durH):'—',m.content||'',m.cause||'—',
         (m.parts||[]).map(p=>`[${p.pn}] ${p.name} ×${p.qty}`).join('\n')||'—',pc||'—',m.worker||'—']};
-    })});
-  await xrSave(wb,'정비이력서_'+localToday()+'.xlsx','정비 이력 Excel 다운로드 완료');
+    })};
+}
+async function exportMaintXLSX(){
+  if(!db.maints.length){toast('정비 데이터 없음','w');return;}
+  const f=getMaintFilter(), list=xrSortMaint(f.list);
+  if(!list.length){toast('해당 조건의 정비 이력 없음','w');return;}
+  const eqName=f.eq?(db.eqs.find(e=>e.id==f.eq)?.name||'선택 장비'):'전체';
+  await xrExport(xrSpecMaint(list,`장비: ${eqName} · 유형: ${f.type||'전체'} · 기간: ${f.from?xrDay(f.from):'처음'} ~ ${f.to?xrDay(f.to):'현재'} · 총 ${list.length}건`),
+    '정비이력서_'+localToday()+'.xlsx','정비 이력 Excel 다운로드 완료');
 }
 
-// ── 설비 관리대장 ──
+// 설비 관리대장
 function _eqReportList(){
   const q=(typeof eqSearchQ!=='undefined'?eqSearchQ:'').toLowerCase();
   const sf=(typeof eqStatusFilter!=='undefined'?eqStatusFilter:'ALL');
@@ -6615,14 +6610,8 @@ function _eqReportList(){
   }).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
   return {q,sf,list};
 }
-async function exportEqXLSX(){
-  if(!db.eqs.length){toast('장비 데이터 없음','w');return;}
-  const {q,sf,list}=_eqReportList();
-  if(!list.length){toast('해당 조건의 장비 없음','w');return;}
-  if(!await xrLoad()) return;
-  const wb=xrBook();
-  xrSheet(wb,{name:'설비 관리대장',title:'설비 관리대장',
-    meta:`검색: ${q||'—'} · 상태: ${sf==='ALL'?'전체':sf} · 총 ${list.length}대`,
+function xrSpecEq(list,meta){
+  return {name:'장비',title:'설비 관리대장',meta,
     sums:[['대상 장비',list.length,'#,##0'],['고장 상태',list.filter(e=>e.status==='고장').length,'#,##0'],['단종',list.filter(e=>e.status==='단종').length,'#,##0']],
     cols:[{h:'No',w:5,al:'center'},{h:'장비명',w:20},{h:'시리얼',w:15},{h:'제작처',w:13},{h:'위치',w:13},{h:'관리등급',w:8,al:'center'},{h:'상태등급',w:8,al:'center'},
       {h:'상태',w:8,al:'center'},{h:'설치일',w:14,al:'center'},{h:'점검주기',w:8,al:'center'},{h:'MTBF',w:9,al:'right',fmt:'#,##0"h"'},{h:'MTTR',w:9,al:'right',fmt:'0.0"h"'},
@@ -6637,11 +6626,17 @@ async function exportEqXLSX(){
         eq.cycle?eq.cycle+'일':'—',mtbf||'—',mttr||'—',`${maints.length} / ${fails.length}`,lastInsp?xrDay(lastInsp.date):'—',
         lastMaint?xrDay((lastMaint.start?lastMaint.start.slice(0,10):null)||lastMaint.date):'—'],
         tag:{7:st==='고장'?'r':st==='단종'?'m':'g'}};
-    })});
-  await xrSave(wb,'설비관리대장_'+localToday()+'.xlsx','설비 관리대장 Excel 다운로드 완료');
+    })};
+}
+async function exportEqXLSX(){
+  if(!db.eqs.length){toast('장비 데이터 없음','w');return;}
+  const {q,sf,list}=_eqReportList();
+  if(!list.length){toast('해당 조건의 장비 없음','w');return;}
+  await xrExport(xrSpecEq(list,`검색: ${q||'—'} · 상태: ${sf==='ALL'?'전체':sf} · 총 ${list.length}대`),
+    '설비관리대장_'+localToday()+'.xlsx','설비 관리대장 Excel 다운로드 완료');
 }
 
-// ── 부품 재고 현황표 ──
+// 부품 재고 현황표
 function _partsReportList(){
   const q=(typeof partSearchQ!=='undefined'?partSearchQ:'').toLowerCase();
   const tf=(typeof partTypeFilter!=='undefined'?partTypeFilter:'ALL');
@@ -6652,15 +6647,9 @@ function _partsReportList(){
   }).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
   return {q,tf,list};
 }
-async function exportPartsXLSX(){
-  if(!db.parts.length){toast('부품 데이터 없음','w');return;}
-  const {q,tf,list}=_partsReportList();
-  if(!list.length){toast('해당 조건의 부품 없음','w');return;}
-  if(!await xrLoad()) return;
+function xrSpecParts(list,meta){
   const isShort=p=>p.alertOn!==false&&(p.qty||0)<=(p.safe||0);
-  const wb=xrBook();
-  xrSheet(wb,{name:'부품 재고',title:'부품 재고 현황표',
-    meta:`검색: ${q||'—'} · 타입: ${tf==='ALL'?'전체':tf} · 총 ${list.length}품목`,
+  return {name:'부품 재고',title:'부품 재고 현황표',meta,
     sums:[['품목 수',list.length,'#,##0'],['안전재고 미달',list.filter(isShort).length,'#,##0'],
       ['재고 금액 합계',list.reduce((s,p)=>s+(+p.price||0)*(+p.qty||0),0),XR.WON]],
     cols:[{h:'No',w:5,al:'center'},{h:'형번',w:18},{h:'부품명',w:24},{h:'메이커',w:14},{h:'타입',w:12,al:'center'},
@@ -6671,17 +6660,21 @@ async function exportPartsXLSX(){
       return {vals:[i+1,p.pn,p.name,p.maker||'—',p.type||'—',+p.price||0,+p.qty||0,+p.safe||0,(+p.price||0)*(+p.qty||0),
         sh?'부족':(p.alertOn===false?'알림해제':'정상')],
         fill:sh?XR.ROW.danger:null,tag:{9:sh?'r':p.alertOn===false?'m':'g'}};
-    })});
-  await xrSave(wb,'부품재고현황_'+localToday()+'.xlsx','부품 재고 현황표 Excel 다운로드 완료');
+    })};
+}
+async function exportPartsXLSX(){
+  if(!db.parts.length){toast('부품 데이터 없음','w');return;}
+  const {q,tf,list}=_partsReportList();
+  if(!list.length){toast('해당 조건의 부품 없음','w');return;}
+  await xrExport(xrSpecParts(list,`검색: ${q||'—'} · 타입: ${tf==='ALL'?'전체':tf} · 총 ${list.length}품목`),
+    '부품재고현황_'+localToday()+'.xlsx','부품 재고 현황표 Excel 다운로드 완료');
 }
 
-// ── 검교정 관리대장 ──
-async function exportCalibXLSX(){
-  if(!db.calibs||!db.calibs.length){toast('검교정 데이터 없음','w');return;}
-  if(!await xrLoad()) return;
-  const today=localToday();
+// 검교정 관리대장 (필터 없음)
+function xrSpecCalib(){
+  const today=localToday(), calibs=db.calibs||[];
   let over=0,warn=0,ok=0;
-  const rows=db.calibs.map((c,i)=>{
+  const rows=calibs.map((c,i)=>{
     const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
     const remain=next?Math.ceil((new Date(next)-new Date(today))/86400000):null;
     let fill=null,tg='m',txt='—';
@@ -6693,18 +6686,20 @@ async function exportCalibXLSX(){
     return {vals:[i+1,c.name||'—',c.mgmtNo||'—',c.item||'—',c.maker||'—',c.location||'—',c.cycleMon||'—',xrDay(c.lastDate)||'—',
       xrDay(next)||'—',remain!==null?remain:'—',txt,c.manager||'—',c.agency||'—',c.note||''],fill,tag:{10:tg}};
   });
-  const wb=xrBook();
-  xrSheet(wb,{name:'검교정 관리대장',title:'검교정 관리대장',
-    meta:`총 ${db.calibs.length}건 · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${xrDay(today)}`,
-    sums:[['총 항목',db.calibs.length,'#,##0'],['초과',over,'#,##0'],['임박(10일)',warn,'#,##0'],['정상',ok,'#,##0']],
+  return {name:'검교정',title:'검교정 관리대장',
+    meta:`총 ${calibs.length}건 · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${xrDay(today)}`,
+    sums:[['총 항목',calibs.length,'#,##0'],['초과',over,'#,##0'],['임박(10일)',warn,'#,##0'],['정상',ok,'#,##0']],
     cols:[{h:'No',w:5,al:'center'},{h:'설비명',w:18},{h:'관리번호',w:13},{h:'검교정 항목',w:16},{h:'Maker/Model',w:16},{h:'설치위치',w:14},
       {h:'주기(월)',w:8,al:'center'},{h:'최종일',w:14,al:'center'},{h:'차기일',w:14,al:'center'},{h:'잔여',w:8,al:'right',fmt:'#,##0"일"'},
       {h:'상태',w:9,al:'center'},{h:'담당자',w:10},{h:'기관',w:14},{h:'비고',w:18}],
-    rows});
-  await xrSave(wb,'검교정관리대장_'+localToday()+'.xlsx','검교정 관리대장 Excel 다운로드 완료');
+    rows};
+}
+async function exportCalibXLSX(){
+  if(!db.calibs||!db.calibs.length){toast('검교정 데이터 없음','w');return;}
+  await xrExport(xrSpecCalib(),'검교정관리대장_'+localToday()+'.xlsx','검교정 관리대장 Excel 다운로드 완료');
 }
 
-// ── 점검 이력 보고서 ──
+// 점검 이력 보고서
 function _inspReportList(){
   const filterMonth=document.getElementById('inspFilterMonth')?.value||'';
   const filterEq=document.getElementById('inspFilterEq')?.value||'';
@@ -6715,11 +6710,7 @@ function _inspReportList(){
   if(filterVerdict) list=list.filter(d=>d.verdict===filterVerdict);
   return {filterMonth,filterEq,filterVerdict,list};
 }
-async function exportInspXLSX(){
-  if(!db.insps.length){toast('점검 이력 없음','w');return;}
-  const {filterMonth,filterEq,filterVerdict,list}=_inspReportList();
-  if(!list.length){toast('해당 조건의 이력 없음','w');return;}
-  if(!await xrLoad()) return;
+function xrSpecInsp(list,meta){
   const catOrder=['pn','el','vs','fp'], catLabel={pn:'공압',el:'전기',vs:'외관',fp:'F/Proof'};
   const catBg={pn:'FFEFF6FF',el:'FFFFFBEB',vs:'FFF0FDF4',fp:'FFF5F3FF'}, catFg={pn:'FF5A68C0',el:'FF92400E',vs:'FF065F46',fp:'FF4C1D95'};
   const vCol=v=>v==='OK'?XR.OK:v==='NG'?XR.NG:XR.MUTED;
@@ -6752,18 +6743,22 @@ async function exportInspXLSX(){
       rows.push({sep:true});
     });
   });
-  const wb=xrBook();
-  xrSheet(wb,{name:'점검 이력',title:'설비 정기점검 이력 보고서',
-    meta:`출력일: ${xrDay(localToday())} · 기간: ${filterMonth||'전체'} · 장비: ${filterEq||'전체'} · 판정: ${filterVerdict||'전체'} · 총 ${list.length}건`,
+  return {name:'점검 이력',title:'설비 정기점검 이력 보고서',meta,
     legend:catOrder.map(c=>[catLabel[c],catBg[c],catFg[c]]),
     cols:[{h:'장비명',w:18},{h:'날짜',w:14,al:'center'},{h:'점검자',w:10,al:'center'},{h:'점검 항목',w:34},{h:'점검 기준',w:30},
       {h:'결과',w:9,al:'center'},{h:'특이사항',w:30},{h:'최종판정',w:9,al:'center'}],
-    rows});
+    rows};
+}
+async function exportInspXLSX(){
+  if(!db.insps.length){toast('점검 이력 없음','w');return;}
+  const {filterMonth,filterEq,filterVerdict,list}=_inspReportList();
+  if(!list.length){toast('해당 조건의 이력 없음','w');return;}
   const suffix=(filterMonth||filterEq||filterVerdict)?'_필터적용':'';
-  await xrSave(wb,'점검이력보고서'+suffix+'_'+localToday()+'.xlsx','점검이력 Excel 보고서 다운로드 완료');
+  await xrExport(xrSpecInsp(list,`출력일: ${xrDay(localToday())} · 기간: ${filterMonth||'전체'} · 장비: ${filterEq||'전체'} · 판정: ${filterVerdict||'전체'} · 총 ${list.length}건`),
+    '점검이력보고서'+suffix+'_'+localToday()+'.xlsx','점검이력 Excel 보고서 다운로드 완료');
 }
 
-// ── 연간 점검 계획표 ──
+// 연간 점검 계획표
 function annualPlanData(year){
   const today=new Date();
   const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
@@ -6786,15 +6781,12 @@ function annualPlanData(year){
     return {eq,cycle,cells,tot,exp,rate:exp>0?Math.round(tot/exp*100):null};
   });
 }
-async function exportAnnualPlanXLSX(){
-  const year=_annualYear, data=annualPlanData(year);
-  if(!data.length){toast('장비 없음','w');return;}
-  if(!await xrLoad()) return;
+function xrSpecAnnual(year){
+  const data=annualPlanData(year);
   const ST={done:['FFF0FDF4',XR.OK],partial:['FFFFFBEB','FF92400E'],miss:['FFFFF1F2',XR.NG],plan:['FFF8FAFC',XR.FAINT],none:['FFF8FAFC','FFCBD5E1'],na:['FFF8FAFC',XR.FAINT]};
   const txt=c=>c.st==='na'?'해당없음':c.st==='none'?'―':c.st==='plan'?'계획':c.st==='done'?'✓ '+c.done+'회':c.st==='partial'?'△ '+c.done+'/'+c.exp:'미실시';
-  const wb=xrBook();
-  xrSheet(wb,{name:year+'년 점검 계획',title:`${year}년 설비 연간 점검 계획표`,headDark:true,
-    meta:`출력일: ${xrDay(localToday())} · 대상 장비: ${data.length}대`,
+  return {name:year+'년 점검 계획',title:`${year}년 설비 연간 점검 계획표`,headDark:true,
+    meta:`출력일: ${xrDay(localToday())} · 대상 장비: ${data.length}대`,empty:'점검 주기가 설정된 장비 없음',
     legend:[['완료',...ST.done],['부분완료',...ST.partial],['미실시',...ST.miss],['계획(미도래)',...ST.plan],['해당없음(설치 전·유예기간)',...ST.na]],
     cols:[{h:'장비명',w:22},{h:'주기',w:7,al:'center'},...Array.from({length:12},(_,m)=>({h:(m+1)+'월',w:9,al:'center'})),{h:'연간합계',w:17,al:'center'}],
     rows:data.map(r=>{
@@ -6802,51 +6794,53 @@ async function exportAnnualPlanXLSX(){
       r.cells.forEach((c,m)=>{fills[m+2]=ST[c.st][0];font[m+2]={color:{argb:ST[c.st][1]},bold:c.st==='done'||c.st==='partial'||c.st==='miss'};});
       font[14]={bold:true,color:{argb:r.rate===null?XR.MUTED:r.rate>=100?XR.OK:r.rate>=50?'FF92400E':XR.NG}};
       return {vals:[r.eq.name,r.cycle+'일',...r.cells.map(txt),r.rate!==null?`${r.tot}/${r.exp}회 (${r.rate}%)`:r.tot+'회'],fills,font};
-    })});
-  await xrSave(wb,'연간점검계획표_'+year+'년_'+localToday()+'.xlsx',year+'년 연간 점검 계획표 Excel 다운로드 완료');
+    })};
+}
+async function exportAnnualPlanXLSX(){
+  const year=_annualYear;
+  if(!annualPlanData(year).length){toast('장비 없음','w');return;}
+  await xrExport(xrSpecAnnual(year),'연간점검계획표_'+year+'년_'+localToday()+'.xlsx',year+'년 연간 점검 계획표 Excel 다운로드 완료');
 }
 
-// ── 통계 리포트 (요약 · 그래프 + 섹션별 시트) ──
-async function exportStatsXLSX(){
-  if(!db.maints.length&&!(db.projects||[]).length){toast('정비 · 프로젝트 데이터 없음','w');return;}
-  if(!await xrLoad()) return;
-  const d=getStatsExportData(), wb=xrBook();
+// 통계 (요약 · 그래프 + 섹션별 시트) — pre: 통합 보고서에서 시트 이름 앞에 붙일 말
+function xrSpecsStats(d,pre=''){
   const meta=`대상 기간: ${d.periodLabel} · 정비 ${d.kpi.maintCount}건 · 출력일 ${xrDay(localToday())}`;
   const nz=v=>v==null?'—':v;
   const images=[];
   try{
-    const c1=document.createElement('canvas');drawMonthlyChart(d.fm,c1,760);images.push({base64:c1.toDataURL('image/png'),w:760,h:190});
+    const c1=document.createElement('canvas');drawMonthlyChart(d.fm,c1,760,{from:d.fFrom,to:d.fTo});images.push({base64:c1.toDataURL('image/png'),w:760,h:190});
     const c2=document.createElement('canvas');drawTypeChart(d.fm,c2,760);images.push({base64:c2.toDataURL('image/png'),w:760,h:210});
   }catch(e){}
-  // 요약 : KPI + 유형 분포 + 그래프
-  xrSheet(wb,{name:'요약',title:'설비 정비 통계 리포트',meta,sumAccent:'FF5A68C0',sumW:1,
-    sums:[['TOTAL 장비 (대)',d.kpi.eqCount,'#,##0'],['총 정비건',d.kpi.maintCount,'#,##0'],
-      ['고장 건수',d.kpi.failCount,'#,##0',XR.NG],['총 정비비용',d.kpi.totalCost,XR.WON,'FF5A68C0']],
-    cols:[{h:'정비 유형',w:20},{h:'건수',w:14,al:'right',fmt:'#,##0'},{h:'비율',w:14,al:'right',fmt:'0.0"%"'},{h:'분포',w:34}],
-    rows:d.perType.map(t=>{
-      const pct=d.kpi.maintCount?t.count/d.kpi.maintCount*100:0;
-      return {vals:[t.type,t.count,pct,'█'.repeat(Math.max(1,Math.round(pct/4)))],font:{3:{color:{argb:xrArgb(getMaintTypeColor(t.type))}}}};
-    }),images});
-  xrSheet(wb,{name:'장비별 MTBF·MTBM·MTTR',title:'장비별 MTBF / MTBM / MTTR',
-    meta:meta+' · MTBF=고장 간격 · MTBM=전체 정비 간격 · MTTR=평균 수리시간',empty:'해당 기간 정비 기록 있는 장비 없음',
-    cols:[{h:'장비명',w:22},{h:'정비건',w:8,al:'right',fmt:'#,##0'},{h:'고장',w:8,al:'right',fmt:'#,##0'},
-      {h:'MTBF(h)',w:10,al:'right',fmt:'#,##0'},{h:'MTBF(일)',w:9,al:'right',fmt:'#,##0'},{h:'MTBM(h)',w:10,al:'right',fmt:'#,##0'},{h:'MTBM(일)',w:9,al:'right',fmt:'#,##0'},
-      {h:'MTTR(h)',w:9,al:'right',fmt:'0.0'},{h:'MTTR(분)',w:9,al:'right',fmt:'#,##0'},{h:'정비비용',w:14,al:'right',fmt:XR.WON}],
-    rows:d.perEq.map(e=>({vals:[e.name,e.maints,e.fails,nz(e.mtbf),e.mtbf==null?'—':Math.round(e.mtbf/24),nz(e.mtbm),e.mtbm==null?'—':Math.round(e.mtbm/24),
-      nz(e.mttr),e.mttr==null?'—':Math.round(e.mttr*60),e.cost],font:{0:{bold:true},2:e.fails?{bold:true,color:{argb:XR.NG}}:{}}}))});
-  xrSheet(wb,{name:'월별 추이',title:'월별 추이',meta,
-    cols:[{h:'월',w:12,al:'center'},{h:'정비건수',w:10,al:'right',fmt:'#,##0'},{h:'고장건수',w:10,al:'right',fmt:'#,##0'},{h:'MTBF(h)',w:10,al:'right',fmt:'#,##0'},
-      {h:'MTBM(h)',w:10,al:'right',fmt:'#,##0'},{h:'평균 MTTR(h)',w:12,al:'right',fmt:'0.0'},{h:'정비비용',w:14,al:'right',fmt:XR.WON}],
-    rows:d.perMonth.map(m=>({vals:[m.month,m.maints,m.fails,nz(m.mtbf),nz(m.mtbm),nz(m.mttr),m.cost],font:{2:m.fails?{bold:true,color:{argb:XR.NG}}:{}}})),
-    images:images.slice(0,1)});
-  xrSheet(wb,{name:'부품 사용',title:'부품 사용 내역',meta,
-    sums:[['사용 품목',d.parts.length,'#,##0'],['사용 수량',d.parts.reduce((s,p)=>s+p.qty,0),'#,##0'],['부품 금액',d.parts.reduce((s,p)=>s+p.cost,0),XR.WON]],
-    cols:[{h:'순위',w:6,al:'center'},{h:'부품명',w:26},{h:'형번',w:20},{h:'사용수량',w:10,al:'right',fmt:'#,##0'},{h:'금액',w:14,al:'right',fmt:XR.WON}],
-    rows:d.parts.map((p,i)=>({vals:[i+1,p.name,p.pn,p.qty,p.cost]}))});
+  const specs=[
+    {name:pre+'요약',title:'설비 정비 통계 리포트',meta,sumAccent:'FF5A68C0',sumW:1,
+      sums:[['TOTAL 장비 (대)',d.kpi.eqCount,'#,##0'],['총 정비건',d.kpi.maintCount,'#,##0'],
+        ['고장 건수',d.kpi.failCount,'#,##0',XR.NG],['총 정비비용',d.kpi.totalCost,XR.WON,'FF5A68C0']],
+      cols:[{h:'정비 유형',w:20},{h:'건수',w:14,al:'right',fmt:'#,##0'},{h:'비율',w:14,al:'right',fmt:'0.0"%"'},{h:'분포',w:34}],
+      rows:d.perType.map(t=>{
+        const pct=d.kpi.maintCount?t.count/d.kpi.maintCount*100:0;
+        return {vals:[t.type,t.count,pct,'█'.repeat(Math.max(1,Math.round(pct/4)))],font:{3:{color:{argb:xrArgb(getMaintTypeColor(t.type))}}}};
+      }),images},
+    {name:pre+'장비별 MTBF·MTBM·MTTR',title:'장비별 MTBF / MTBM / MTTR',
+      meta:meta+' · MTBF=고장 간격 · MTBM=전체 정비 간격 · MTTR=평균 수리시간',empty:'해당 기간 정비 기록 있는 장비 없음',
+      cols:[{h:'장비명',w:22},{h:'정비건',w:8,al:'right',fmt:'#,##0'},{h:'고장',w:8,al:'right',fmt:'#,##0'},
+        {h:'MTBF(h)',w:10,al:'right',fmt:'#,##0'},{h:'MTBF(일)',w:9,al:'right',fmt:'#,##0'},{h:'MTBM(h)',w:10,al:'right',fmt:'#,##0'},{h:'MTBM(일)',w:9,al:'right',fmt:'#,##0'},
+        {h:'MTTR(h)',w:9,al:'right',fmt:'0.0'},{h:'MTTR(분)',w:9,al:'right',fmt:'#,##0'},{h:'정비비용',w:14,al:'right',fmt:XR.WON}],
+      rows:d.perEq.map(e=>({vals:[e.name,e.maints,e.fails,nz(e.mtbf),e.mtbf==null?'—':Math.round(e.mtbf/24),nz(e.mtbm),e.mtbm==null?'—':Math.round(e.mtbm/24),
+        nz(e.mttr),e.mttr==null?'—':Math.round(e.mttr*60),e.cost],font:{0:{bold:true},2:e.fails?{bold:true,color:{argb:XR.NG}}:{}}}))},
+    {name:pre+'월별 추이',title:'월별 추이',meta,
+      cols:[{h:'월',w:12,al:'center'},{h:'정비건수',w:10,al:'right',fmt:'#,##0'},{h:'고장건수',w:10,al:'right',fmt:'#,##0'},{h:'MTBF(h)',w:10,al:'right',fmt:'#,##0'},
+        {h:'MTBM(h)',w:10,al:'right',fmt:'#,##0'},{h:'평균 MTTR(h)',w:12,al:'right',fmt:'0.0'},{h:'정비비용',w:14,al:'right',fmt:XR.WON}],
+      rows:d.perMonth.map(m=>({vals:[m.month,m.maints,m.fails,nz(m.mtbf),nz(m.mtbm),nz(m.mttr),m.cost],font:{2:m.fails?{bold:true,color:{argb:XR.NG}}:{}}})),
+      images:images.slice(0,1)},
+    {name:pre+'부품 사용',title:'부품 사용 내역',meta,
+      sums:[['사용 품목',d.parts.length,'#,##0'],['사용 수량',d.parts.reduce((s,p)=>s+p.qty,0),'#,##0'],['부품 금액',d.parts.reduce((s,p)=>s+p.cost,0),XR.WON]],
+      cols:[{h:'순위',w:6,al:'center'},{h:'부품명',w:26},{h:'형번',w:20},{h:'사용수량',w:10,al:'right',fmt:'#,##0'},{h:'금액',w:14,al:'right',fmt:XR.WON}],
+      rows:d.parts.map((p,i)=>({vals:[i+1,p.name,p.pn,p.qty,p.cost]}))}
+  ];
   if(d.projects.length||(db.projects||[]).length){
     const pj=d.projects, cnt=[0,0,0];pj.forEach(p=>cnt[projStatus(p)]++);
     const DOC=['FF94A3B8',XR.AMB,'FF047857'], EQC=['FF94A3B8',XR.AMB,XR.AMB,'FF047857','FFCBD5E1'];
-    xrSheet(wb,{name:'프로젝트 진행',title:'프로젝트 진행 현황',meta:meta+' · 진행률 = 공정문서 · 설비(해당 없음 제외) · 공정 설계 5단계 평균 · 등록일 기준',
+    specs.push({name:pre+'프로젝트 진행',title:'프로젝트 진행 현황',meta:meta+' · 진행률 = 공정문서 · 설비(해당 없음 제외) · 공정 설계 5단계 평균 · 등록일 기준',
       empty:'해당 기간 등록된 프로젝트 없음',
       sums:[['전체',pj.length,'#,##0'],['진행중',cnt[1],'#,##0',XR.AMB],['완료',cnt[2],'#,##0','FF047857'],['지연',pj.filter(projLate).length,'#,##0',XR.NG],
         ['평균 진행률',pj.length?Math.round(pj.reduce((s,p)=>s+projPct(p),0)/pj.length):0,'0"%"','FF5A68C0']],
@@ -6864,8 +6858,186 @@ async function exportStatsXLSX(){
           font,tag:{15:st===2?'g':st===1?'a':'m'}};
       })});
   }
+  return specs;
+}
+async function exportStatsXLSX(){
+  if(!db.maints.length&&!(db.projects||[]).length){toast('정비 · 프로젝트 데이터 없음','w');return;}
+  const d=getStatsExportData();
   const suffix=(d.fFrom||d.fTo)?'_'+(d.fFrom||'')+'_'+(d.fTo||''):'';
-  await xrSave(wb,'설비통계리포트'+suffix+'_'+localToday()+'.xlsx','통계 리포트 Excel 다운로드 완료');
+  await xrExport(xrSpecsStats(d),'설비통계리포트'+suffix+'_'+localToday()+'.xlsx','통계 리포트 Excel 다운로드 완료');
+}
+
+// 파트(BOM) — 장비별 남색 구분 바 + 카테고리 순
+const BOM_CAT_ORDER=['구동부','공압부','전장부','센서부','소모품','구조물','기타'];
+function _bomReportList(){
+  const fEq=document.getElementById('bomViewEq')?.value||'', fCat=document.getElementById('bomViewCat')?.value||'';
+  let list=db.boms||[];
+  if(fEq) list=list.filter(b=>b.eqId==fEq);
+  if(fCat) list=list.filter(b=>b.cat===fCat);
+  return {fEq,fCat,list,eqName:fEq?(db.eqs.find(e=>e.id==fEq)?.name||'선택 장비'):'전체'};
+}
+function xrSpecBom(list,meta){
+  const byEq={};
+  list.forEach(b=>{(byEq[b.eqName||'(장비 없음)']=byEq[b.eqName||'(장비 없음)']||[]).push(b);});
+  const ci=c=>{const i=BOM_CAT_ORDER.indexOf(c);return i<0?99:i;};
+  const rows=[];
+  Object.keys(byEq).sort((a,b)=>a.localeCompare(b,'ko')).forEach(eq=>{
+    const parts=byEq[eq].slice().sort((a,b)=>ci(a.cat)-ci(b.cat)||(a.name||'').localeCompare(b.name||'','ko'));
+    rows.push({group:`${eq} · ${parts.length}개 파트`},{head:true});
+    parts.forEach(p=>rows.push({vals:[p.cat||'—',p.name,p.pn||'—',p.maker||'—',+p.qty||1,p.note||''],font:{1:{bold:true}}}));
+  });
+  return {name:'파트(BOM)',title:'장비별 파트(BOM) 목록',meta,empty:'등록된 파트 없음',
+    sums:[['장비 수',Object.keys(byEq).length,'#,##0'],['파트 종류',list.length,'#,##0'],['총 수량',list.reduce((s,b)=>s+(+b.qty||1),0),'#,##0']],
+    cols:[{h:'카테고리',w:12,al:'center'},{h:'부품명',w:28},{h:'형번',w:22},{h:'제조사',w:16},{h:'수량',w:8,al:'right',fmt:'#,##0'},{h:'비고',w:32}],
+    rows};
+}
+function _bomMeta(r){return `장비: ${r.eqName} · 카테고리: ${r.fCat||'전체'} · 총 ${r.list.length}개 파트`;}
+async function exportBomXLSX(){
+  const r=_bomReportList();
+  if(!r.list.length){toast('해당 조건의 파트 없음','w');return;}
+  await xrExport(xrSpecBom(r.list,_bomMeta(r)),'파트BOM_'+localToday()+'.xlsx','파트(BOM) Excel 다운로드 완료');
+}
+function exportBomReport(){
+  const r=_bomReportList();
+  if(!r.list.length){toast('해당 조건의 파트 없음','w');return;}
+  const s=xrSpecBom(r.list,_bomMeta(r));
+  downloadFile('파트BOM_'+localToday()+'.html',reportShell(s.title,_rptEsc(s.meta),XR_HTML_CSS+xrSpecHtml(s,'',true)),'text/html');
+  toast('파트(BOM) HTML 다운로드 완료');
+}
+
+// 일정
+function xrSpecEvents(list,meta,today){
+  return {name:'일정',title:'일정 관리표',meta,
+    sums:_eventReportSums(list,today).map(([l,v])=>[l,v,'#,##0']),sumW:9,   // 요약 6칸을 한 줄에
+    cols:[{h:'날짜',w:17,al:'center'},{h:'D-day',w:9,al:'center'},{h:'구분',w:12,al:'center'},{h:'제목',w:30},{h:'담당자',w:10,al:'center'},
+      {h:'내용',w:50},{h:'상태',w:10,al:'center'}],
+    rows:list.map(ev=>{
+      const [st,tg]=evStatus(ev,today), drop=ev.state==='drop';
+      // 드롭 : 내용 전체 취소선(빨강) · 완료 : 연한 베이지 행
+      const font={3:{bold:true}};
+      if(drop) for(let i=0;i<6;i++) font[i]=Object.assign({},font[i],{strike:true,color:{argb:'FFDC2626'}});
+      return {vals:[ev.dateEnd&&ev.dateEnd!==ev.date?`${xrDay(ev.date)}\n~ ${xrDay(ev.dateEnd)}`:xrDay(ev.date),
+        evClosed(ev)?'—':evDday(ev.date).label,ev.cat||'—',ev.title,ev.owner||'—',ev.content||'—',st],
+        fill:ev.done?xrArgb(EV_DONE_BG):tg==='r'?XR.ROW.danger:tg==='a'?XR.ROW.warn:null,font,tag:{6:tg}};
+    })};
+}
+async function exportEventsXLSX(){
+  if(!db.events.length){toast('등록된 일정 없음','w');return;}
+  const {q,filterLabel,list,today}=_eventReportList();
+  if(!list.length){toast('해당 조건의 일정 없음','w');return;}
+  await xrExport(xrSpecEvents(list,`구분/상태: ${filterLabel} · 검색: ${q||'—'} · 기준일 ${xrDay(today)} · 총 ${list.length}건`,today),
+    '일정표_'+localToday()+'.xlsx','일정표 Excel 다운로드 완료');
+}
+
+// ══════ 통합 보고서 : 장비 · 정비 · 부품 · 검교정 · 통계 · 점검 · 연간계획 · 파트 · 일정 (화면 필터 무시 · 전체 데이터) ══════
+const XR_ALL_FOOT='※ 본 문서는 설비관리 시스템에서 자동 생성되었습니다. 화면 필터와 관계없이 전체 데이터 기준입니다.';
+function xrAllSpecs(){
+  const today=localToday(), all='전체 데이터';
+  const eqs=db.eqs.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  const parts=db.parts.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  const maints=xrSortMaint(db.maints), insps=[...db.insps].sort((a,b)=>b.date.localeCompare(a.date));
+  const events=[...db.events].sort((a,b)=>b.date.localeCompare(a.date));
+  const sections=[
+    ['장비',[xrSpecEq(eqs,`${all} · 총 ${eqs.length}대`)]],
+    ['정비',[xrSpecMaint(maints,`${all} · 총 ${maints.length}건`)]],
+    ['부품',[xrSpecParts(parts,`${all} · 총 ${parts.length}품목`)]],
+    ['검교정',[xrSpecCalib()]],
+    ['통계',xrSpecsStats(getStatsExportData(true),'통계 ')],
+    ['점검',[xrSpecInsp(insps,`${all} · 총 ${insps.length}건 · 출력일 ${xrDay(today)}`)]],
+    ['연간계획',[xrSpecAnnual(_annualYear)]],
+    ['파트',[xrSpecBom(db.boms||[],`${all} · 총 ${(db.boms||[]).length}개 파트`)]],
+    ['일정',[xrSpecEvents(events,`${all} · 기준일 ${xrDay(today)} · 총 ${events.length}건`,today)]],
+  ];
+  sections.forEach(([,ss])=>ss.forEach(s=>s.footer=XR_ALL_FOOT));
+  return sections;
+}
+async function exportAllXLSX(){
+  const sections=xrAllSpecs(), specs=sections.flatMap(([,ss])=>ss);
+  // 목차 시트 : 시트 이름을 누르면 해당 시트로 이동
+  const cover={name:'목차',title:'설비관리 통합 보고서',footer:XR_ALL_FOOT,
+    meta:`출력일 ${xrDay(localToday())} · 시트 ${specs.length}개 · 화면 필터와 관계없이 전체 데이터`,
+    sums:[['장비',db.eqs.length,'#,##0"대"'],['정비 이력',db.maints.length,'#,##0"건"'],['부품',db.parts.length,'#,##0"품목"'],['일정',db.events.length,'#,##0"건"']],sumW:1,
+    cols:[{h:'탭',w:14,al:'center'},{h:'시트',w:30},{h:'건수',w:14,al:'right',fmt:'#,##0'},{h:'내용',w:60}],
+    rows:sections.flatMap(([tab,ss])=>ss.map(s=>({vals:[tab,{text:s.name,hyperlink:`#'${s.name}'!A1`},(s.rows||[]).filter(r=>r.vals).length,s.meta||''],
+      font:{0:{bold:true},1:{color:{argb:'FF2563EB'},underline:true}}})))};
+  await xrExport([cover,...specs],'설비관리_통합보고서_'+localToday()+'.xlsx','통합 보고서 Excel 다운로드 완료');
+}
+
+// ── 시트 정의 → HTML (reportShell 디자인) ──
+const xrCss=argb=>'#'+String(argb).slice(2);
+// Excel 숫자 서식 → 표시 문자열 ('"₩"#,##0' · '0.0"h"' · '#,##0"일"' 등)
+function xrFmtVal(v,fmt){
+  if(!fmt) return v.toLocaleString('ko-KR');
+  const pre=(fmt.match(/^"([^"]*)"/)||[])[1]||'', suf=(fmt.match(/"([^"]*)"$/)||[])[1]||'';
+  const dec=((fmt.replace(/"[^"]*"/g,'').split('.')[1]||'').match(/0/g)||[]).length;
+  return pre+v.toLocaleString('ko-KR',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suf;
+}
+function xrFontCss(f){
+  let s='';
+  if(f.bold) s+='font-weight:700;';
+  if(f.color&&f.color.argb) s+=`color:${xrCss(f.color.argb)};`;
+  if(f.strike) s+='text-decoration:line-through;text-decoration-thickness:2px;';
+  if(f.underline) s+='text-decoration:underline;';
+  if(f.size&&f.size<9) s+='font-size:8.5pt;';
+  return s;
+}
+function xrCellHtml(v,fmt){
+  const esc=_rptEsc;
+  if(v==null||v==='') return '';
+  if(typeof v==='number') return xrFmtVal(v,fmt);
+  if(typeof v==='object'&&v.richText) return v.richText.map(t=>`<span style="${xrFontCss(t.font||{})}">${esc(t.text)}</span>`).join('');
+  if(typeof v==='object'&&v.hyperlink) return esc(v.text);
+  return esc(v).replace(/\n/g,'<br>');
+}
+// id: 목차 링크용 앵커 · bare: true면 제목 · 메타 생략 (reportShell 이 이미 출력)
+function xrSpecHtml(s,id,bare){
+  const esc=_rptEsc, n=s.cols.length;
+  const head=`<tr>${s.cols.map(c=>`<th style="text-align:${c.al||'left'};${s.headDark?'background:#1e293b;color:#fff;border-color:#1e293b;':''}">${esc(c.h)}</th>`).join('')}</tr>`;
+  const rows=s.rows||[];
+  let body=rows.length?'':`<tr><td colspan="${n}" class="empty">${esc(s.empty||'데이터 없음')}</td></tr>`;
+  rows.forEach(r=>{
+    if(r.group){body+=`<tr><td colspan="${n}" class="xr-grp">${esc(r.group)}</td></tr>`;return;}
+    if(r.head){body+=head;return;}
+    if(r.sep){body+=`<tr><td colspan="${n}" class="xr-sep"></td></tr>`;return;}
+    body+='<tr>'+s.cols.map((c,i)=>{
+      const tg=r.tag&&r.tag[i], inner=xrCellHtml(r.vals[i],c.fmt);
+      const bg=(r.fills&&r.fills[i])||r.fill;
+      const st=`text-align:${tg?'center':(c.al||'left')};${bg?`background:${xrCss(bg)};`:''}`+xrFontCss(Object.assign({},r.bold?{bold:true}:{},(r.font&&r.font[i])||{}));
+      return `<td style="${st}">${tg?`<span class="tag ${tg}">${inner}</span>`:inner}</td>`;
+    }).join('')+'</tr>';
+  });
+  const sums=s.sums&&s.sums.length?`<div class="sum">${s.sums.map(([l,v,fmt,color])=>
+    `<div style="border-left-color:${xrCss(s.sumAccent||XR.MUTED)};">${esc(l)}<b${color?` style="color:${xrCss(color)};"`:''}>${typeof v==='number'?xrFmtVal(v,fmt):esc(v)}</b></div>`).join('')}</div>`:'';
+  const legend=s.legend&&s.legend.length?`<div class="xr-legend">${s.legend.map(([l,bg,fg])=>
+    `<span style="background:${xrCss(bg)};color:${xrCss(fg||XR.HEADTX)};">${esc(l)}</span>`).join('')}</div>`:'';
+  const imgs=(s.images||[]).map(im=>`<div class="xr-chart"><img src="${im.base64}" alt=""></div>`).join('');
+  const firstGroup=rows.length&&rows[0].group;
+  return `<section class="xr-sec"${id?` id="${id}"`:''}>${bare?'':`<h2>${esc(s.title)}</h2><div class="meta">${esc(s.meta||'')}</div>`}
+    ${sums}${legend}<table>${firstGroup?'':`<thead>${head}</thead>`}<tbody>${body}</tbody></table>${imgs}</section>`;
+}
+const XR_HTML_CSS=`<style>
+.xr-grp{background:#1e293b;color:#fff;font-weight:700;font-size:10.5pt;padding:8px 12px !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.xr-sep{height:3px;padding:0 !important;background:#e2e8f0;border:none !important;}
+.xr-legend{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.xr-legend span{font-size:8.5pt;font-weight:700;padding:3px 10px;border-radius:4px;border:1px solid #e2e8f0;}
+.xr-chart{margin:8px 0;border:1px solid #e2e8f0;border-radius:8px;padding:8px;}
+.xr-chart img{width:100%;max-width:760px;display:block;}
+td,th,.xr-legend span{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin:6px 0 4px;}
+.toc a{display:block;border:1px solid #e2e8f0;border-left:3px solid #5a68c0;border-radius:6px;padding:7px 10px;color:#1e293b;text-decoration:none;font-size:9.5pt;}
+.toc a small{display:block;color:#64748b;font-size:8.5pt;margin-top:2px;}
+.xr-tab{margin-top:30px;padding:6px 12px;background:#5a68c0;color:#fff;border-radius:6px;font-size:12pt;font-weight:800;}
+@media print{.xr-tab{break-before:page;}.xr-sec{break-inside:auto;}}
+</style>`;
+function exportAllReport(){
+  const sections=xrAllSpecs();
+  let n=0;
+  const toc=`<h2>목차</h2><div class="toc">${sections.map(([tab,ss])=>ss.map(s=>`<a href="#xr${n++}">${_rptEsc(tab)} · ${_rptEsc(s.title)}<small>${_rptEsc(s.meta||'')}</small></a>`).join('')).join('')}</div>`;
+  n=0;
+  const body=XR_HTML_CSS+toc+sections.map(([tab,ss])=>`<div class="xr-tab">${_rptEsc(tab)}</div>`+ss.map(s=>xrSpecHtml(s,'xr'+(n++))).join('')).join('');
+  const meta=`출력일 ${dwp(localToday())} · 장비 ${db.eqs.length}대 · 정비 ${db.maints.length}건 · 부품 ${db.parts.length}품목 · 일정 ${db.events.length}건 · 화면 필터와 관계없이 전체 데이터`;
+  downloadFile('설비관리_통합보고서_'+localToday()+'.html',reportShell('설비관리 통합 보고서',meta,body,XR_ALL_FOOT),'text/html');
+  toast('통합 보고서 HTML 다운로드 완료');
 }
 
 function exportEqReport(){
