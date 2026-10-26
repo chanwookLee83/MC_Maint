@@ -308,9 +308,14 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 .topbar{background:rgba(13,17,23,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:calc(var(--st)+9px) 16px 9px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;z-index:10;}
 .topbar::after{display:none;content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--amber) 30%,var(--amber2) 50%,var(--amber) 70%,transparent 95%);opacity:.65;}
 .tl{display:flex;align-items:center;gap:10px;}
-.tlogo{width:34px;height:34px;border-radius:9px;background:#3747ac;display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:0;font-family:var(--cond);font-weight:900;color:#fff;box-shadow:none;}
-.ttitle{font-family:var(--cond);font-size:20px;font-weight:900;letter-spacing:2px;color:var(--text);}
+.ttitle{font-family:var(--cond);font-size:20px;font-weight:900;letter-spacing:2px;color:var(--text);line-height:1.1;}
 .ttitle span{color:var(--amber);}
+.ttitle-full,.ttitle-dash{font-style:normal;}
+/* 폰 : MMS 아래 작은 글씨로 전체 이름 (날짜 · 버튼과 겹치지 않게) */
+@media (max-width:767px){
+  .ttitle-full{display:block;font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--muted);margin-top:1px;white-space:nowrap;}
+  .ttitle-dash{display:none;}
+}
 .tr{display:flex;align-items:center;gap:6px;}
 .alarm-btn{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-size:17px;padding:6px 9px;cursor:pointer;position:relative;flex-shrink:0;transition:border-color .2s,color .2s;}
 .alarm-btn:hover{border-color:var(--amber);color:var(--amber);}
@@ -999,8 +1004,7 @@ body.light{--cp-day:#3747ac;--cp-week:#0f8578;--cp-month:#a8690f;--cp-year:#b833
 @media (min-width: 768px){
   body{font-size:17px;}
   .main{max-width:980px;margin:0 auto;padding:22px 32px calc(var(--sb)+22px);}
-  .tlogo{width:42px;height:42px;font-size:13px;}
-  .ttitle{font-size:26px;}
+  .ttitle{font-size:24px;}
   .tsub{font-size:13px;}
   .topbar-date{font-size:15px;}
   .alarm-btn{font-size:21px;padding:7px 11px;}
@@ -1171,8 +1175,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="tl">
-    <div class="tlogo" style="font-size:11px;letter-spacing:0;">MMS</div>
-    <div class="ttitle">Maintenance <span>History</span></div>
+    <div class="ttitle"><span>MMS</span><em class="ttitle-full"><i class="ttitle-dash"> — </i>Maintenance &amp; Manufacturing System</em></div>
   </div>
   <div class="tr">
     <div class="topbar-date" id="topDate"></div>
