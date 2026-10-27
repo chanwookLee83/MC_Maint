@@ -47,6 +47,16 @@ window._uploadReqPhoto = async function(reqId, file, index) {
   return { path, url };
 };
 
+// 검교정 성적서 (PDF · 이미지)
+window._uploadCalibCert = async function(calibId, file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `calib-certs/${calibId}/${Date.now()}_${safeName}`;
+  const sRef = storageRef(fStorage, path);
+  await uploadBytes(sRef, file, { contentType: file.type || undefined });
+  const url = await getDownloadURL(sRef);
+  return { path, url, name: file.name };
+};
+
 window._deleteReqPhotos = async function(photos) {
   if (!photos || !photos.length) return;
   for (const photo of photos) {
@@ -1533,6 +1543,8 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
             <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">차기 검교정일</th>
             <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">잔여일수</th>
             <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">상태</th>
+            <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">최근 결과</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">성적서</th>
             <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">담당자</th>
             <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">검교정 기관</th>
             <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">비고</th>
@@ -1540,7 +1552,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
           </tr>
         </thead>
         <tbody id="calibBody">
-          <tr><td colspan="15" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음</td></tr>
+          <tr><td colspan="17" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음</td></tr>
         </tbody>
       </table>
     </div>
@@ -1572,7 +1584,69 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <div class="field"><label class="flabel">비고</label><input class="finput" id="cNote" placeholder=""></div>
     </div>
     <input type="hidden" id="cId">
+    <!-- 검교정 이력 · 성적서 · 제품 영향 평가 (IATF 16949 7.1.5.2.1) -->
+    <div id="calibHistWrap" style="margin:6px 0 14px;padding-top:12px;border-top:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <label class="flabel" style="margin:0;">검교정 이력 · 성적서</label>
+        <button class="btn-sm" id="calibResAddBtn" style="background:var(--blue);color:#fff;" onclick="openCalibRes()">+ 결과 등록</button>
+      </div>
+      <div id="calibHistList"></div>
+    </div>
     <button class="btn-primary" onclick="saveCalib()">저장</button>
+  </div>
+</div>
+
+<!-- 검교정 결과 등록/수정 모달 -->
+<div class="modal-bg" id="calibResModal" onclick="closeModal('calibResModal',event)">
+  <div class="modal">
+    <div class="modal-title"><span id="crTitle">검교정 결과 등록</span> <button class="modal-close" onclick="closeModal('calibResModal')">✕</button></div>
+    <div id="crTarget" style="font-size:12px;color:var(--muted);margin:-6px 0 12px;"></div>
+    <div class="frow">
+      <div class="field"><label class="flabel">검교정일 *</label><input class="finput" id="crDate" type="date" onchange="calibResDefaults()"></div>
+      <div class="field"><label class="flabel">결과 *</label><div class="fselect-w"><select class="fselect" id="crResult" onchange="calibResToggle()">
+        <option value="합격">합격</option><option value="불합격">불합격 (기준 벗어남)</option></select></div></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">성적서 번호</label><input class="finput" id="crCertNo" placeholder="KC-2026-0001"></div>
+      <div class="field"><label class="flabel">검교정 기관</label><input class="finput" id="crAgency" placeholder="주식회사 키스트"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">확인자</label><input class="finput" id="crBy" placeholder="이름"></div>
+      <div class="field"><label class="flabel">비고</label><input class="finput" id="crNote" placeholder=""></div>
+    </div>
+    <div class="field">
+      <label class="flabel">성적서 첨부 (PDF · 이미지 · 최대 5개)</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label for="crFileInput" class="req-photo-label">파일 선택</label>
+        <input type="file" id="crFileInput" accept="application/pdf,image/*" multiple style="display:none;" onchange="calibResFileSelect(event)">
+      </div>
+      <div id="crFileList" style="margin-top:8px;display:flex;flex-direction:column;gap:5px;"></div>
+    </div>
+    <div id="crNgWrap" style="display:none;border:1.5px solid var(--red);border-radius:12px;padding:12px;margin-bottom:14px;background:#ef444408;">
+      <div style="font-weight:700;color:var(--red);margin-bottom:4px;">기준 벗어남 — 제품 영향 평가</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">직전 합격일(시작 기본값) 이후 이 장비로 판정 · 측정한 제품에 대한 영향을 평가하고 조치를 기록합니다. 평가 완료일을 입력하면 완료 처리됩니다.</div>
+      <div class="field"><label class="flabel">벗어난 내용 (측정값 / 허용 기준)</label><textarea class="ftextarea" id="crNgDetail" style="height:60px;" placeholder="예) 누설량 지시값 +0.8 cc/min 편차 / 허용 ±0.5"></textarea></div>
+      <div class="frow">
+        <div class="field"><label class="flabel">영향 기간 시작</label><input class="finput" id="crNgFrom" type="date"></div>
+        <div class="field"><label class="flabel">영향 기간 종료</label><input class="finput" id="crNgTo" type="date"></div>
+      </div>
+      <div class="field"><label class="flabel">영향 제품 · LOT · 수량</label><textarea class="ftextarea" id="crNgProducts" style="height:60px;" placeholder="품번 / LOT / 생산 · 출하 수량"></textarea></div>
+      <div class="frow">
+        <div class="field"><label class="flabel">영향 판정</label><div class="fselect-w"><select class="fselect" id="crNgJudge">
+          <option value="">— 평가 중 —</option><option value="영향 없음">영향 없음</option><option value="영향 있음">영향 있음</option></select></div></div>
+        <div class="field"><label class="flabel">고객 통보</label><div class="fselect-w"><select class="fselect" id="crNgCustomer">
+          <option value="">— 선택 —</option><option value="해당 없음">해당 없음 (미출하 · 영향 없음)</option><option value="통보 필요">통보 필요</option><option value="통보 완료">통보 완료</option></select></div></div>
+      </div>
+      <div class="field"><label class="flabel">제품 조치 (재검사 · 선별 · 격리 · 폐기 등)</label><textarea class="ftextarea" id="crNgAction" style="height:60px;" placeholder="재고 재검사 결과, 격리 · 선별 수량 등"></textarea></div>
+      <div class="field"><label class="flabel">장비 조치 (수리 · 조정 · 재교정 · 폐기)</label><input class="finput" id="crNgEqAction" placeholder="조정 후 재교정 합격 (성적서 KC-...)"></div>
+      <div class="frow" style="margin-bottom:0;">
+        <div class="field" style="margin-bottom:0;"><label class="flabel">평가자</label><input class="finput" id="crNgBy" placeholder="이름"></div>
+        <div class="field" style="margin-bottom:0;"><label class="flabel">평가 완료일</label><input class="finput" id="crNgDate" type="date"></div>
+      </div>
+    </div>
+    <input type="hidden" id="crId">
+    <div id="crStatus" style="font-size:12px;color:var(--amber);min-height:16px;margin-bottom:6px;"></div>
+    <button class="btn-primary" id="crSaveBtn" onclick="saveCalibRes()">저장</button>
   </div>
 </div>
 
@@ -2854,20 +2928,27 @@ function renderCalib(){
   if(!tbody) return;
   const today=localToday();
   if(!db.calibs.length){
-    tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음 — + 추가 버튼으로 등록하세요</td></tr>';
+    tbody.innerHTML='<tr><td colspan="17" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음 — + 추가 버튼으로 등록하세요</td></tr>';
     if(summary) summary.innerHTML='';
     return;
   }
-  let overCnt=0,warnCnt=0,okCnt=0;
+  let overCnt=0,warnCnt=0,okCnt=0,failCnt=0,ngCnt=0;
   tbody.innerHTML=db.calibs.map((c,i)=>{
     const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
     const remain=next?Math.ceil((new Date(next)-new Date(today))/86400000):null;
     let statusTxt='—',statusCol='var(--muted)',rowBg='';
-    if(remain!==null){
+    if(calibFailed(c)){statusTxt='불합격';statusCol='var(--red)';rowBg='background:#ef444418;';failCnt++;}
+    else if(remain!==null){
       if(remain<=0){statusTxt='초과';statusCol='var(--red)';rowBg='background:#ef444410;';overCnt++;}
       else if(remain<=10){statusTxt=`D-${remain}`;statusCol='var(--amber)';rowBg='background:#5a68c010;';warnCnt++;}
       else{statusTxt='정상';statusCol='var(--green)';okCnt++;}
     }
+    const last=calibHist(c)[0], ngOpen=calibNgOpen(c).length;
+    if(ngOpen) ngCnt++;
+    const resTxt=last?`<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${last.result==='불합격'?'var(--red)':'var(--green)'};">${last.result}</span>`:'<span style="color:var(--muted);">—</span>';
+    const ngTxt=ngOpen?` <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:#ef444425;color:var(--red);">영향평가 미결</span>`:'';
+    const certFile=last&&last.files&&last.files[0];
+    const certTxt=last?(`${_rptEsc(last.certNo||'')}`+(certFile?` <a href="${certFile.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--blue);text-decoration:none;">📎${last.files.length}</a>`:''))||'—':'—';
     const isLight=document.body.classList.contains('light');
     const borderCol=isLight?'#e5e7eb':'#1e2530';
     const td=`padding:7px 6px;border-bottom:1px solid ${borderCol};white-space:nowrap;`;
@@ -2883,6 +2964,8 @@ function renderCalib(){
       <td style="${td}text-align:center;font-family:var(--mono);font-weight:600;color:${statusCol};">${dw(next)||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);font-weight:bold;color:${statusCol};">${remain!==null?remain+'일':'—'}</td>
       <td style="${td}text-align:center;"><span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${statusCol};">${statusTxt}</span></td>
+      <td style="${td}text-align:center;">${resTxt}${ngTxt}</td>
+      <td style="${td}color:var(--muted);">${certTxt}</td>
       <td style="${td}color:var(--muted);">${c.manager||'—'}</td>
       <td style="${td}color:var(--muted);">${c.agency||'—'}</td>
       <td style="${td}color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;">${c.note||''}</td>
@@ -2891,6 +2974,8 @@ function renderCalib(){
   }).join('');
   if(summary){
     summary.innerHTML=[
+      failCnt?`<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#ef444435;color:var(--red);font-weight:700;">불합격 ${failCnt}건</span>`:'',
+      ngCnt?`<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#ef444435;color:var(--red);font-weight:700;">영향평가 미결 ${ngCnt}건</span>`:'',
       `<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#ef444420;color:var(--red);">초과 ${overCnt}건</span>`,
       `<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#5a68c020;color:var(--amber);">임박(10일) ${warnCnt}건</span>`,
       `<span style="font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:6px;background:#10b98120;color:var(--green);">정상 ${okCnt}건</span>`,
@@ -2910,6 +2995,7 @@ function openCalibForm(id){
   document.getElementById('cManager').value=c?c.manager:'';
   document.getElementById('cAgency').value=c?c.agency:'';
   document.getElementById('cNote').value=c?c.note:'';
+  renderCalibHist();
   openModal('calibModal');
 }
 function saveCalib(){
@@ -2919,7 +3005,9 @@ function saveCalib(){
   const cycle=parseInt(document.getElementById('cCycle').value)||12;
   if(!name||!item||!lastDate){toast('설비명, 검교정 항목, 최종 검교정일은 필수입니다','e');return;}
   const id=document.getElementById('cId').value;
-  const data={
+  const old=id?db.calibs.find(x=>x.id===id):null;
+  // 이력(hist) 등 폼에 없는 필드는 유지
+  const data={...(old||{}),
     id:id||('c'+Date.now()),
     name,item,lastDate,cycleMon:cycle,
     mgmtNo:document.getElementById('cMgmtNo').value.trim(),
@@ -2938,12 +3026,199 @@ function saveCalib(){
   toast(id?'검교정 정보 수정됨':'검교정 항목 추가됨','s');
 }
 function deleteCalib(id){
-  if(!confirm('검교정 항목을 삭제할까요?')) return;
+  const c=db.calibs.find(x=>x.id===id);
+  const nH=(c&&c.hist||[]).length;
+  if(!confirm(nH?`검교정 항목을 삭제할까요?\n검교정 이력 ${nH}건과 첨부된 성적서도 함께 삭제됩니다.`:'검교정 항목을 삭제할까요?')) return;
+  if(c&&typeof window._deleteReqPhotos==='function') window._deleteReqPhotos((c.hist||[]).flatMap(r=>r.files||[]));
   db.calibs=db.calibs.filter(x=>x.id!==id);
   save();
   renderCalib();
   checkAlarms();
   toast('삭제됨','w');
+}
+
+// ── 검교정 이력 (IATF 16949 7.1.5.2.1) ──
+// c.hist : [{id,date,result:'합격'|'불합격',certNo,agency,by,note,files:[{path,url,name}],
+//            ng:{detail,from,to,products,judge,customer,action,eqAction,by,date}}] — 불합격 건은 ng.date(평가 완료일) 입력 시 평가 완료
+// 합격 결과를 등록하면 최종 검교정일(lastDate)이 갱신되어 차기 일정이 다시 계산됨
+function calibHist(c){return (c&&c.hist||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||String(b.id).localeCompare(String(a.id)));}
+function calibNgOpen(c){return (c&&c.hist||[]).filter(r=>r.result==='불합격'&&!(r.ng&&r.ng.date));}
+// 최근 결과가 불합격이고 그 뒤 합격(재교정) 기록이 없으면 사용 금지 상태
+function calibFailed(c){const r=calibHist(c)[0];return !!r&&r.result==='불합격'&&!(c.lastDate&&c.lastDate>r.date);}
+function calibNgState(r){return r.result!=='불합격'?'—':(r.ng&&r.ng.date?'완료':'미결');}
+
+function renderCalibHist(){
+  const id=document.getElementById('cId').value, el=document.getElementById('calibHistList');
+  const btn=document.getElementById('calibResAddBtn');
+  if(!el) return;
+  const c=id?db.calibs.find(x=>x.id===id):null;
+  if(btn) btn.style.display=c?'':'none';
+  if(!c){el.innerHTML='<div style="font-size:12px;color:var(--muted);">항목을 먼저 저장한 뒤 다시 열면 검교정 결과 · 성적서를 등록할 수 있습니다.</div>';return;}
+  const list=calibHist(c), esc=_rptEsc;
+  if(!list.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);">등록된 검교정 결과 없음 — + 결과 등록으로 회차별 결과와 성적서를 남기세요.</div>';return;}
+  el.innerHTML=list.map(r=>{
+    const ng=r.result==='불합격', st=calibNgState(r);
+    const files=(r.files||[]).map(f=>`<a href="${f.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-size:12px;word-break:break-all;">📎 ${esc(f.name||'성적서')}</a>`).join('<br>');
+    const ngBox=ng?`<div style="margin-top:6px;font-size:11.5px;line-height:1.55;color:var(--text);">
+        ${r.ng&&r.ng.detail?`<div><b>벗어남</b> ${esc(r.ng.detail)}</div>`:''}
+        <div><b>영향 기간</b> ${dw(r.ng&&r.ng.from)||'—'} ~ ${dw(r.ng&&r.ng.to)||'—'}</div>
+        ${r.ng&&r.ng.products?`<div><b>영향 제품</b> ${esc(r.ng.products)}</div>`:''}
+        <div><b>판정</b> ${esc(r.ng&&r.ng.judge||'평가 중')} · <b>고객 통보</b> ${esc(r.ng&&r.ng.customer||'—')}</div>
+        ${r.ng&&r.ng.action?`<div><b>제품 조치</b> ${esc(r.ng.action)}</div>`:''}
+        ${r.ng&&r.ng.eqAction?`<div><b>장비 조치</b> ${esc(r.ng.eqAction)}</div>`:''}
+        <div><b>평가</b> ${st==='완료'?`${esc(r.ng.by||'')} ${dw(r.ng.date)} 완료`:'<span style="color:var(--red);font-weight:700;">미결 — 평가 완료일 미입력</span>'}</div>
+      </div>`:'';
+    return `<div style="border:1px solid ${ng?'var(--red)':'var(--border)'};border-radius:10px;padding:9px 11px;margin-bottom:7px;${ng?'background:#ef444408;':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="font-size:13px;">
+          <span style="font-family:var(--mono);">${dw(r.date)}</span>
+          <span style="font-family:var(--mono);font-size:11px;font-weight:700;margin-left:6px;color:${ng?'var(--red)':'var(--green)'};">${r.result}</span>
+          ${st==='미결'?'<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:#ef444425;color:var(--red);margin-left:4px;">영향평가 미결</span>':''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="btn-sm" style="background:var(--card2);color:var(--text);padding:5px 10px;" onclick="openCalibRes('${r.id}')">수정</button>
+          <button class="btn-sm" style="background:#ef444420;color:var(--red);padding:5px 10px;" onclick="deleteCalibRes('${r.id}')">삭제</button>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">성적서 ${esc(r.certNo||'—')} · ${esc(r.agency||'—')}${r.by?' · 확인 '+esc(r.by):''}${r.note?' · '+esc(r.note):''}</div>
+      ${files?`<div style="margin-top:4px;">${files}</div>`:''}
+      ${ngBox}
+    </div>`;
+  }).join('');
+}
+
+let _crKeep=[], _crNew=[], _crDrop=[];   // 결과 모달 : 유지할 첨부 · 새 파일 · 삭제할 첨부
+let _crAuto={};                           // 영향 기간 자동 입력값 (직접 고친 값은 덮어쓰지 않음)
+function _crCalib(){return db.calibs.find(x=>x.id===document.getElementById('cId').value);}
+function openCalibRes(rid){
+  const c=_crCalib(); if(!c) return;
+  const r=rid?(c.hist||[]).find(x=>x.id===rid):null;
+  const g=k=>document.getElementById(k), ng=(r&&r.ng)||{};
+  g('crId').value=r?r.id:'';
+  g('crTitle').textContent=r?'검교정 결과 수정':'검교정 결과 등록';
+  g('crTarget').textContent=`${c.name||''}${c.mgmtNo?' · '+c.mgmtNo:''} · ${c.item||''}`;
+  g('crDate').value=r?r.date:localToday();
+  g('crResult').value=r?r.result:'합격';
+  g('crCertNo').value=r?r.certNo||'':'';
+  g('crAgency').value=r?r.agency||'':(c.agency||'');
+  g('crBy').value=r?r.by||'':(c.manager||'');
+  g('crNote').value=r?r.note||'':'';
+  g('crNgDetail').value=ng.detail||'';
+  g('crNgFrom').value=ng.from||'';
+  g('crNgTo').value=ng.to||'';
+  g('crNgProducts').value=ng.products||'';
+  g('crNgJudge').value=ng.judge||'';
+  g('crNgCustomer').value=ng.customer||'';
+  g('crNgAction').value=ng.action||'';
+  g('crNgEqAction').value=ng.eqAction||'';
+  g('crNgBy').value=ng.by||'';
+  g('crNgDate').value=ng.date||'';
+  g('crStatus').textContent='';
+  _crAuto={};
+  _crKeep=r?(r.files||[]).slice():[]; _crNew=[]; _crDrop=[];
+  calibResDefaults(); calibResToggle(); renderCalibResFiles();
+  openModal('calibResModal');
+}
+// 영향 기간 기본값 : 직전 합격일 ~ 이번 검교정일
+function calibResDefaults(){
+  const c=_crCalib(), g=k=>document.getElementById(k), date=g('crDate').value, rid=g('crId').value;
+  if(!c||!date) return;
+  const auto=(k,val)=>{const el=g(k);if(!el.value||el.value===_crAuto[k]){el.value=val;_crAuto[k]=val;}};
+  const prev=(c.hist||[]).filter(r=>r.id!==rid&&r.result==='합격'&&r.date<date).map(r=>r.date).sort().pop()
+    ||(c.lastDate&&c.lastDate<date?c.lastDate:'');
+  if(prev) auto('crNgFrom',prev);
+  auto('crNgTo',date);
+}
+function calibResToggle(){
+  const ng=document.getElementById('crResult').value==='불합격';
+  document.getElementById('crNgWrap').style.display=ng?'':'none';
+}
+function calibResFileSelect(e){
+  const files=Array.from(e.target.files||[]);
+  e.target.value='';
+  const room=5-_crKeep.length-_crNew.length;
+  if(files.length>room) toast(`성적서는 최대 5개까지 첨부할 수 있습니다`,'w');
+  files.slice(0,Math.max(0,room)).forEach(f=>{
+    if(f.size>15*1024*1024){toast(`${f.name} — 15MB 이하 파일만 첨부할 수 있습니다`,'w');return;}
+    _crNew.push(f);
+  });
+  renderCalibResFiles();
+}
+function calibResFileRm(kind,i){
+  if(kind==='keep') _crDrop.push(..._crKeep.splice(i,1));
+  else _crNew.splice(i,1);
+  renderCalibResFiles();
+}
+function renderCalibResFiles(){
+  const esc=_rptEsc, row=(name,href,kind,i,tag)=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:8px;">
+      ${href?`<a href="${href}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;flex:1;word-break:break-all;">📎 ${esc(name)}</a>`:`<span style="flex:1;word-break:break-all;">📎 ${esc(name)}</span>`}
+      ${tag?`<span style="font-size:10px;color:var(--amber);">${tag}</span>`:''}
+      <span style="color:var(--red);cursor:pointer;font-size:14px;" onclick="calibResFileRm('${kind}',${i})">✕</span></div>`;
+  document.getElementById('crFileList').innerHTML=_crKeep.map((f,i)=>row(f.name||'성적서',f.url,'keep',i,''))
+    .concat(_crNew.map((f,i)=>row(f.name,'','new',i,'저장 시 업로드'))).join('');
+}
+async function saveCalibRes(){
+  const c=_crCalib(); if(!c) return;
+  const g=k=>document.getElementById(k), v=k=>g(k).value.trim();
+  const date=g('crDate').value, result=g('crResult').value, rid=g('crId').value;
+  if(!date){toast('검교정일을 입력해주세요','e');return;}
+  let ng=null;
+  if(result==='불합격'){
+    ng={detail:v('crNgDetail'),from:g('crNgFrom').value,to:g('crNgTo').value,products:v('crNgProducts'),judge:g('crNgJudge').value,
+      customer:g('crNgCustomer').value,action:v('crNgAction'),eqAction:v('crNgEqAction'),by:v('crNgBy'),date:g('crNgDate').value};
+    if(ng.date&&(!ng.judge||!ng.by)){toast('평가 완료 처리하려면 영향 판정과 평가자를 입력해주세요','e');return;}
+    if(ng.date&&ng.judge==='영향 있음'&&!ng.action){toast('영향 있음 판정은 제품 조치 내용을 입력해주세요','e');return;}
+  }
+  const btn=g('crSaveBtn'), st=g('crStatus');
+  let files=_crKeep.slice();
+  if(_crNew.length){
+    if(typeof window._uploadCalibCert!=='function'||!navigator.onLine){toast('성적서 업로드는 인터넷 연결이 필요합니다','e');return;}
+    btn.disabled=true;
+    try{
+      for(let i=0;i<_crNew.length;i++){
+        st.textContent=`성적서 업로드 중... (${i+1}/${_crNew.length})`;
+        files.push(await window._uploadCalibCert(c.id,_crNew[i]));
+      }
+    }catch(e){
+      console.warn('성적서 업로드 실패:',e);
+      // 이번에 올라간 파일은 정리 — 다시 저장하면 처음부터 업로드
+      if(typeof window._deleteReqPhotos==='function') window._deleteReqPhotos(files.slice(_crKeep.length));
+      st.textContent=''; btn.disabled=false;
+      toast('성적서 업로드 실패 — 연결 확인 후 다시 저장해주세요','e');
+      return;
+    }
+    btn.disabled=false; st.textContent='';
+  }
+  if(_crDrop.length&&typeof window._deleteReqPhotos==='function') window._deleteReqPhotos(_crDrop);
+  // 저장 대기 중 동기화로 c 가 교체됐을 수 있어 다시 찾음
+  const cc=db.calibs.find(x=>x.id===c.id)||c;
+  if(!cc.hist) cc.hist=[];
+  const old=rid?cc.hist.find(x=>x.id===rid):null;
+  const rec={id:rid||('h'+Date.now()),date,result,certNo:v('crCertNo'),agency:v('crAgency'),by:v('crBy'),note:v('crNote'),files,ng};
+  if(old) cc.hist[cc.hist.indexOf(old)]=rec; else cc.hist.push(rec);
+  calibSyncLast(cc, old);
+  save();
+  g('cLastDate').value=cc.lastDate||'';
+  closeModal('calibResModal');
+  renderCalibHist(); renderCalib(); checkAlarms();
+  toast(result==='불합격'?(ng.date?'불합격 결과 · 영향 평가 저장됨':'불합격 저장됨 — 제품 영향 평가를 완료해주세요'):'검교정 결과 저장됨 — 최종 검교정일 갱신',result==='불합격'&&!ng.date?'w':'s');
+}
+// 최종 검교정일 = 합격 이력 중 최신일 (이력 없으면 직접 입력한 값 유지)
+function calibSyncLast(c, removed){
+  const pass=(c.hist||[]).filter(r=>r.result==='합격').map(r=>r.date).sort().pop();
+  if(pass&&(!c.lastDate||pass>c.lastDate||(removed&&removed.result==='합격'&&removed.date===c.lastDate))) c.lastDate=pass;
+}
+function deleteCalibRes(rid){
+  const c=_crCalib(); if(!c) return;
+  const r=(c.hist||[]).find(x=>x.id===rid); if(!r) return;
+  if(!confirm(`${dw(r.date)} ${r.result} 기록을 삭제할까요?${(r.files||[]).length?'\n첨부된 성적서도 함께 삭제됩니다.':''}`)) return;
+  if((r.files||[]).length&&typeof window._deleteReqPhotos==='function') window._deleteReqPhotos(r.files);
+  c.hist=c.hist.filter(x=>x.id!==rid);
+  calibSyncLast(c, r);
+  save();
+  document.getElementById('cLastDate').value=c.lastDate||'';
+  renderCalibHist(); renderCalib(); checkAlarms();
+  toast('검교정 결과 삭제됨','w');
 }
 
 // ── 알람 ──
@@ -3022,6 +3297,15 @@ function checkAlarms(){
   // ── 검교정 만료 알람 ──
   let calibWarnCount=0;
   (db.calibs||[]).forEach(c=>{
+    calibNgOpen(c).forEach(r=>{
+      alarms.push({type:'critical',icon:'',text:`[${c.name}] 제품 영향 평가 미완료`,sub:`${dw(r.date)} 검교정 불합격 — 영향 제품 · 조치 · 평가 완료일 기록 필요`,tab:'calib'});
+      calibWarnCount++;
+    });
+    if(calibFailed(c)){
+      alarms.push({type:'critical',icon:'',text:`[${c.name}] 검교정 불합격 — 사용 금지`,sub:`수리 · 조정 후 재교정 합격 결과를 등록하세요`,tab:'calib'});
+      calibWarnCount++;
+      return;
+    }
     if(!c.lastDate||!c.cycleMon) return;
     const next=addCalibMonths(c.lastDate,c.cycleMon);
     const remain=Math.ceil((new Date(next)-new Date(today))/86400000);
@@ -6907,31 +7191,73 @@ async function exportPartsXLSX(){
 // 검교정 관리대장 (필터 없음)
 function xrSpecCalib(){
   const today=localToday(), calibs=db.calibs||[];
-  let over=0,warn=0,ok=0;
+  let over=0,warn=0,ok=0,fail=0,ngOpen=0;
   const rows=calibs.map((c,i)=>{
     const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
     const remain=next?Math.ceil((new Date(next)-new Date(today))/86400000):null;
+    const last=calibHist(c)[0], ngN=calibNgOpen(c).length;
+    if(ngN) ngOpen++;
     let fill=null,tg='m',txt='—';
-    if(remain!==null){
+    if(calibFailed(c)){fill=XR.ROW.danger;tg='r';txt='불합격';fail++;}
+    else if(remain!==null){
       if(remain<=0){fill=XR.ROW.danger;tg='r';txt='초과';over++;}
       else if(remain<=10){fill=XR.ROW.warn;tg='a';txt='D-'+remain;warn++;}
       else{tg='g';txt='정상';ok++;}
     }
     return {vals:[i+1,c.name||'—',c.mgmtNo||'—',c.item||'—',c.maker||'—',c.location||'—',c.cycleMon||'—',xrDay(c.lastDate)||'—',
-      xrDay(next)||'—',remain!==null?remain:'—',txt,c.manager||'—',c.agency||'—',c.note||''],fill,tag:{10:tg}};
+      xrDay(next)||'—',remain!==null?remain:'—',txt,
+      last?last.result:'—',last?xrCertCell(last):'—',ngN?'미결':'—',
+      c.manager||'—',c.agency||'—',c.note||''],fill,tag:Object.assign({10:tg},last?{11:last.result==='불합격'?'r':'g'}:{},ngN?{13:'r'}:{})};
   });
   return {name:'검교정',title:'검교정 관리대장',
-    meta:`총 ${calibs.length}건 · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${xrDay(today)}`,
-    sums:[['총 항목',calibs.length,'#,##0',null,{fn:'count',col:1}],['초과',over,'#,##0',null,{fn:'countIf',col:10,eq:'초과'}],
+    meta:`총 ${calibs.length}건 · 불합격 ${fail} · 영향평가 미결 ${ngOpen} · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${xrDay(today)}`,
+    sums:[['총 항목',calibs.length,'#,##0',null,{fn:'count',col:1}],['불합격',fail,'#,##0',XR.NG,{fn:'countIf',col:10,eq:'불합격'}],
+      ['영향평가 미결',ngOpen,'#,##0',XR.NG,{fn:'countIf',col:13,eq:'미결'}],['초과',over,'#,##0',null,{fn:'countIf',col:10,eq:'초과'}],
       ['임박(10일)',warn,'#,##0',null,{fn:'countIf',col:10,pre:'D-'}],['정상',ok,'#,##0',null,{fn:'countIf',col:10,eq:'정상'}]],
     cols:[{h:'No',w:5,al:'center'},{h:'설비명',w:18},{h:'관리번호',w:13},{h:'검교정 항목',w:16},{h:'Maker/Model',w:16},{h:'설치위치',w:14},
       {h:'주기(월)',w:8,al:'center'},{h:'최종일',w:14,al:'center'},{h:'차기일',w:14,al:'center'},{h:'잔여',w:8,al:'right',fmt:'#,##0"일"'},
-      {h:'상태',w:9,al:'center'},{h:'담당자',w:10},{h:'기관',w:14},{h:'비고',w:18}],
+      {h:'상태',w:9,al:'center'},{h:'최근 결과',w:9,al:'center'},{h:'성적서',w:18},{h:'영향평가',w:9,al:'center'},
+      {h:'담당자',w:10},{h:'기관',w:14},{h:'비고',w:18}],
     rows};
+}
+// 성적서 셀 : 번호 + 첫 파일 링크 (HTML 은 모든 파일 링크)
+function xrCertCell(r){
+  const fs=r.files||[], no=r.certNo||'';
+  if(!fs.length) return no||'—';
+  const text=(no?no+'\n':'')+'📎 '+(fs[0].name||'성적서')+(fs.length>1?` 외 ${fs.length-1}`:'');
+  return {text,hyperlink:fs[0].url,links:fs.map(f=>({text:'📎 '+(f.name||'성적서'),url:f.url})),pre:no};
+}
+// 검교정 이력 : 회차별 결과 · 성적서 · 기준 벗어남 제품 영향 평가 (IATF 16949 7.1.5.2.1)
+function xrSpecCalibHist(){
+  const list=(db.calibs||[]).flatMap(c=>(c.hist||[]).map(r=>({c,r})))
+    .sort((a,b)=>(b.r.date||'').localeCompare(a.r.date||'')||(a.c.name||'').localeCompare(b.c.name||'','ko'));
+  let pass=0,fail=0,open=0;
+  const rows=list.map(({c,r},i)=>{
+    const ng=r.ng||{}, st=calibNgState(r);
+    if(r.result==='불합격') fail++; else pass++;
+    if(st==='미결') open++;
+    return {vals:[i+1,c.name||'—',c.mgmtNo||'—',c.item||'—',xrDay(r.date),r.result,xrCertCell(r),r.agency||'—',r.by||'—',
+      r.result==='불합격'?ng.detail||'—':'',
+      r.result==='불합격'?(ng.from||ng.to?`${xrDay(ng.from)||'—'}\n~ ${xrDay(ng.to)||'—'}`:'—'):'',
+      r.result==='불합격'?ng.products||'—':'',r.result==='불합격'?ng.judge||'평가 중':'',r.result==='불합격'?ng.customer||'—':'',
+      r.result==='불합격'?ng.action||'—':'',r.result==='불합격'?ng.eqAction||'—':'',r.result==='불합격'?ng.by||'—':'',
+      r.result==='불합격'?xrDay(ng.date)||'—':'',st,r.note||''],
+      fill:st==='미결'?XR.ROW.danger:null,
+      tag:Object.assign({5:r.result==='불합격'?'r':'g'},st==='미결'?{18:'r'}:st==='완료'?{18:'g'}:{},ng.judge==='영향 있음'?{12:'r'}:ng.judge==='영향 없음'?{12:'g'}:{})};
+  });
+  return {name:'검교정 이력',title:'검교정 이력 · 제품 영향 평가',
+    meta:`IATF 16949 7.1.5.2.1 · 총 ${list.length}건 · 합격 ${pass} · 불합격 ${fail} · 영향평가 미결 ${open} · 기준일 ${xrDay(localToday())}`,
+    sums:[['총 이력',list.length,'#,##0',null,{fn:'count',col:1}],['합격',pass,'#,##0',XR.OK,{fn:'countIf',col:5,eq:'합격'}],
+      ['불합격',fail,'#,##0',XR.NG,{fn:'countIf',col:5,eq:'불합격'}],['영향평가 미결',open,'#,##0',XR.NG,{fn:'countIf',col:18,eq:'미결'}]],
+    cols:[{h:'No',w:5,al:'center'},{h:'설비명',w:16},{h:'관리번호',w:12},{h:'검교정 항목',w:14},{h:'검교정일',w:14,al:'center'},{h:'결과',w:8,al:'center'},
+      {h:'성적서',w:20},{h:'기관',w:13},{h:'확인자',w:9},{h:'벗어난 내용',w:20},{h:'영향 기간',w:14,al:'center'},{h:'영향 제품 · LOT',w:20},
+      {h:'영향 판정',w:10,al:'center'},{h:'고객 통보',w:10,al:'center'},{h:'제품 조치',w:22},{h:'장비 조치',w:18},{h:'평가자',w:9},
+      {h:'평가 완료일',w:14,al:'center'},{h:'평가 상태',w:9,al:'center'},{h:'비고',w:14}],
+    empty:'등록된 검교정 결과 없음',rows};
 }
 async function exportCalibXLSX(){
   if(!db.calibs||!db.calibs.length){toast('검교정 데이터 없음','w');return;}
-  await xrExport(xrSpecCalib(),'검교정관리대장_'+localToday()+'.xlsx','검교정 관리대장 Excel 다운로드 완료');
+  await xrExport([xrSpecCalib(),xrSpecCalibHist()],'검교정관리대장_'+localToday()+'.xlsx','검교정 관리대장 Excel 다운로드 완료');
 }
 
 // 점검 이력 보고서
@@ -7179,7 +7505,7 @@ function xrAllSpecs(){
     ['장비',[xrSpecEq(eqs,`${all} · 총 ${eqs.length}대`)]],
     ['정비',[xrSpecMaint(maints,`${all} · 총 ${maints.length}건`)]],
     ['부품',[xrSpecParts(parts,`${all} · 총 ${parts.length}품목`)]],
-    ['검교정',[xrSpecCalib()]],
+    ['검교정',[xrSpecCalib(),xrSpecCalibHist()]],
     ['통계',xrSpecsStats(getStatsExportData(true),'통계 ')],
     ['점검',[xrSpecInsp(insps,`${all} · 총 ${insps.length}건 · 출력일 ${xrDay(today)}`)]],
     ['연간계획',[xrSpecAnnual(_annualYear)]],
@@ -7224,7 +7550,11 @@ function xrCellHtml(v,fmt){
   if(v==null||v==='') return '';
   if(typeof v==='number') return xrFmtVal(v,fmt);
   if(typeof v==='object'&&v.richText) return v.richText.map(t=>`<span style="${xrFontCss(t.font||{})}">${esc(t.text)}</span>`).join('');
-  if(typeof v==='object'&&v.hyperlink) return esc(v.text);
+  if(typeof v==='object'&&v.hyperlink){
+    const ls=v.links||(/^https?:/.test(v.hyperlink)?[{text:v.text,url:v.hyperlink}]:null);
+    if(!ls) return esc(v.text);
+    return (v.pre?esc(v.pre)+'<br>':'')+ls.map(l=>`<a href="${esc(l.url).replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${esc(l.text)}</a>`).join('<br>');
+  }
   return esc(v).replace(/\n/g,'<br>');
 }
 // id: 목차 링크용 앵커 · bare: true면 제목 · 메타 생략 (reportShell 이 이미 출력)
@@ -7360,44 +7690,9 @@ function exportPartsReport(){
 
 function exportCalibReport(){
   if(!db.calibs||!db.calibs.length){toast('검교정 데이터 없음','w');return;}
-  const esc=_rptEsc;
-  const today=localToday();
-  let over=0,warn=0,ok=0;
-  const rows=db.calibs.map((c,i)=>{
-    const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
-    const remain=next?Math.ceil((new Date(next)-new Date(today))/86400000):null;
-    let cls='',tag='<span class="tag m">—</span>';
-    if(remain!==null){
-      if(remain<=0){cls='danger';tag='<span class="tag r">초과</span>';over++;}
-      else if(remain<=10){cls='warn';tag=`<span class="tag a">D-${remain}</span>`;warn++;}
-      else{tag='<span class="tag g">정상</span>';ok++;}
-    }
-    return `<tr class="${cls}">
-      <td class="c">${i+1}</td>
-      <td>${esc(c.name||'')||'—'}</td>
-      <td>${esc(c.mgmtNo||'')||'—'}</td>
-      <td>${esc(c.item||'')||'—'}</td>
-      <td>${esc(c.maker||'')||'—'}</td>
-      <td>${esc(c.location||'')||'—'}</td>
-      <td class="c">${c.cycleMon||'—'}</td>
-      <td class="c">${dwp(c.lastDate)||'—'}</td>
-      <td class="c">${dwp(next)||'—'}</td>
-      <td class="num">${remain!==null?remain+'일':'—'}</td>
-      <td class="c">${tag}</td>
-      <td>${esc(c.manager||'')||'—'}</td>
-      <td>${esc(c.agency||'')||'—'}</td>
-      <td>${esc(c.note||'')}</td>
-    </tr>`;
-  }).join('');
-  const body=`<div class="sum">
-    <div>총 항목<b>${db.calibs.length}</b></div>
-    <div>초과<b>${over}</b></div>
-    <div>임박(10일)<b>${warn}</b></div>
-    <div>정상<b>${ok}</b></div>
-  </div>
-  <table><thead><tr><th>No</th><th>설비명</th><th>관리번호</th><th>검교정 항목</th><th>Maker/Model</th><th>설치위치</th><th>주기(월)</th><th>최종일</th><th>차기일</th><th>잔여</th><th>상태</th><th>담당자</th><th>기관</th><th>비고</th></tr></thead><tbody>${rows}</tbody></table>`;
-  const meta=`총 ${db.calibs.length}건 · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${dwp(today)}`;
-  downloadFile('검교정관리대장_'+localToday()+'.html',reportShell('검교정 관리대장',meta,body),'text/html');
+  const spec=xrSpecCalib(), hist=xrSpecCalibHist();
+  const body=XR_HTML_CSS+xrSpecHtml(spec,null,true)+xrSpecHtml(hist);
+  downloadFile('검교정관리대장_'+localToday()+'.html',reportShell('검교정 관리대장',spec.meta,body),'text/html');
   toast('검교정 관리대장 다운로드 완료');
 }
 
@@ -8677,6 +8972,8 @@ function _fireScheduledNotification(hour) {
       if (days >= cycle) issues.push(eq.name + ' 점검초과');
     });
     (db.calibs || []).forEach(c => {
+      if (calibNgOpen(c).length) issues.push(c.name + ' 영향평가 미결');
+      if (calibFailed(c)) { issues.push(c.name + ' 검교정 불합격'); return; }
       if (!c.lastDate || !c.cycleMon) return;
       const next = addCalibMonths(c.lastDate, c.cycleMon);
       const remain = Math.ceil((new Date(next) - new Date(today)) / 86400000);
@@ -9054,6 +9351,8 @@ function _fireCatchupNotification() {
     if (days >= cycle) issues.push(`${eq.name} 점검초과 (${days}일)`);
   });
   (db.calibs || []).forEach(c => {
+    if (calibNgOpen(c).length) issues.push(`${c.name} 영향평가 미결`);
+    if (calibFailed(c)) { issues.push(`${c.name} 검교정 불합격`); return; }
     if (!c.lastDate || !c.cycleMon) return;
     const next = addCalibMonths(c.lastDate, c.cycleMon);
     const remain = Math.ceil((new Date(next) - new Date(today)) / 86400000);
