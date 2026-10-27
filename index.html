@@ -3870,6 +3870,17 @@ function getMaintFilter(){
   });
   return f;
 }
+// 정비 수리 일시 : '10-01(목) 09:00 ~ 11:30' / 날짜가 다르면 종료에도 날짜 · 시각 미입력 기록은 날짜만
+// day : 날짜 표기 함수 (보고서 dwp · Excel xrDay) · br : 줄바꿈 ('<br>' · '\n')
+function maintPeriodTxt(m,day,br){
+  const s=m.start||'', e=m.end||'';
+  const sd=s.slice(0,10)||m.date, st=s.slice(11,16), ed=e.slice(0,10), et=e.slice(11,16);
+  if(!sd) return '—';
+  let t=day(sd)+(st?' '+st:'');
+  if(ed&&ed!==sd) t+=br+'~ '+day(ed)+(et?' '+et:'');
+  else if(et) t+=br+'~ '+et;
+  return t;
+}
 function maintCostSum(list){return list.reduce((s,m)=>s+(m.partCost||0),0);}
 function updateMaintSummary(){
   const countEl=document.getElementById('maintSummaryCount');
@@ -6590,7 +6601,7 @@ function exportMaintReport(){
   const rows=list.map(m=>{
     const rd=(m.start?m.start.slice(0,10):null)||m.date;
     const rdEnd=m.end?m.end.slice(0,10):null;
-    const rdTxt=rd?(rdEnd&&rdEnd!==rd?`${dwp(rd)}<br>~ ${dwp(rdEnd)}`:dwp(rd)):'—';
+    const rdTxt=maintPeriodTxt(m,dwp,'<br>');
     const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
     const parts=(m.parts||[]).map(p=>`[${esc(p.pn)}] ${esc(p.name)} ×${p.qty}`).join('<br>')||'—';
     const pc=(m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;
@@ -6613,7 +6624,7 @@ function exportMaintReport(){
     <div>고장 건수<b>${totFail}</b></div>
     <div>부품비용 합계<b>${fmtCost(totCost)}</b></div>
   </div>
-  <table><thead><tr><th>수리기간</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}</tbody></table>`;
+  <table><thead><tr><th>수리 일시</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}</tbody></table>`;
   const meta=`장비: ${esc(eqName)} · 유형: ${esc(fType||'전체')} · 기간: ${dwp(fFrom)||'처음'} ~ ${dwp(fTo)||'현재'} · 총 ${list.length}건`;
   downloadFile('정비이력서_'+localToday()+'.html',reportShell('설비 정비 이력서',meta,body),'text/html');
   toast('정비 이력서 다운로드 완료');
@@ -6799,14 +6810,14 @@ function xrSpecMaint(list,meta){
   return {name:'정비 이력',title:'설비 정비 이력서',meta,
     sums:[['정비 건수',list.length,'#,##0',null,{fn:'count',col:0}],['고장 건수',list.filter(m=>m.type==='고장').length,'#,##0',null,{fn:'countIf',col:2,eq:'고장'}],
       ['부품비용 합계',maintCostSum(list),XR.WON,null,{fn:'sum',col:7}]],totals:[7],
-    cols:[{h:'수리기간',w:17,al:'center'},{h:'장비',w:18},{h:'유형',w:10,al:'center'},{h:'수리시간',w:12,al:'center'},
+    cols:[{h:'수리 일시',w:23,al:'center'},{h:'장비',w:18},{h:'유형',w:10,al:'center'},{h:'수리시간',w:12,al:'center'},
       {h:'내용',w:46},{h:'원인',w:24},{h:'사용 부품',w:38},{h:'부품비용',w:13,al:'right',fmt:XR.WON},{h:'작업자',w:10,al:'center'}],
     rows:list.map(m=>{
       const rd=(m.start?m.start.slice(0,10):null)||m.date, rdEnd=m.end?m.end.slice(0,10):null;
       const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
       const pc=(m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;
       return {vals:[
-        rd?(rdEnd&&rdEnd!==rd?`${xrDay(rd)}\n~ ${xrDay(rdEnd)}`:xrDay(rd)):'—',
+        maintPeriodTxt(m,xrDay,'\n'),
         m.eqName||'',m.type||'',durH>0?fmtDur(durH):'—',m.content||'',m.cause||'—',
         (m.parts||[]).map(p=>`[${p.pn}] ${p.name} ×${p.qty}`).join('\n')||'—',pc||'—',m.worker||'—']};
     })};
