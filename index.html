@@ -1266,14 +1266,17 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <div class="field"><label class="flabel">장비명 *</label><div class="ac-wrap"><input class="finput" id="eqName" placeholder="예) EOL #1" autocomplete="off" oninput="acShow('eqName','eqNames')"><div class="ac-list" id="ac-eqName"></div></div></div>
       <div class="frow">
         <div class="field"><label class="flabel">시리얼번호</label><div class="ac-wrap"><input class="finput" id="eqSerial" placeholder="예) WR-2024-001" autocomplete="off" oninput="acShow('eqSerial','eqSerials')"><div class="ac-list" id="ac-eqSerial"></div></div></div>
-        <div class="field"><label class="flabel">제작처 / 메이커</label><div class="ac-wrap"><input class="finput" id="eqMaker" placeholder="예) KYENCE, SMC" autocomplete="off" oninput="acShow('eqMaker','makers')"><div class="ac-list" id="ac-eqMaker"></div></div></div>
+        <div class="field"><label class="flabel">장비 자산처</label><div class="ac-wrap"><input class="finput" id="eqAsset" placeholder="예) 자사, 고객사 대여" autocomplete="off" oninput="acShow('eqAsset','assets')"><div class="ac-list" id="ac-eqAsset"></div></div></div>
       </div>
       <div class="frow">
-        <div class="field"><label class="flabel">설치일</label><input class="finput" id="eqInstall" type="date"></div>
+        <div class="field"><label class="flabel">제작처 / 메이커</label><div class="ac-wrap"><input class="finput" id="eqMaker" placeholder="예) KYENCE, SMC" autocomplete="off" oninput="acShow('eqMaker','makers')"><div class="ac-list" id="ac-eqMaker"></div></div></div>
         <div class="field"><label class="flabel">위치</label><div class="ac-wrap"><input class="finput" id="eqLoc" placeholder="예) A라인 3번" autocomplete="off" oninput="acShow('eqLoc','locs')"><div class="ac-list" id="ac-eqLoc"></div></div></div>
       </div>
       <div class="frow">
+        <div class="field"><label class="flabel">설치일</label><input class="finput" id="eqInstall" type="date"></div>
         <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eqInspCycle" type="number" placeholder="30" min="1"></div>
+      </div>
+      <div class="frow">
         <div class="field"><label class="flabel">사용 여부</label>
           <div class="fselect-w"><select class="fselect" id="eqStatus">
             <option value="정상">정상</option>
@@ -1333,7 +1336,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div class="sec-title">등록 장비 목록 <button class="rpt-btn" onclick="exportEqReport()">HTML</button><button class="rpt-btn" style="margin-left:0;" onclick="exportEqXLSX()">Excel</button></div>
     <div class="search-bar-wrap">
       <span class="search-bar-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5"/></svg></span>
-      <input class="search-bar" id="eqSearch" type="text" placeholder="장비명 · 시리얼번호 · 위치 검색..." oninput="onEqSearch()" autocomplete="off">
+      <input class="search-bar" id="eqSearch" type="text" placeholder="장비명 · 시리얼번호 · 자산처 · 위치 검색..." oninput="onEqSearch()" autocomplete="off">
       <button class="search-bar-clear" id="eqSearchClear" onclick="clearEqSearch()">✕</button>
     </div>
     <!-- 상태 필터 -->
@@ -2270,14 +2273,17 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div class="field"><label class="flabel">장비명</label><div class="ac-wrap"><input class="finput" id="eEqName" autocomplete="off" oninput="acShow('eEqName','eqNames')"><div class="ac-list" id="ac-eEqName"></div></div></div>
     <div class="frow">
       <div class="field"><label class="flabel">시리얼번호</label><div class="ac-wrap"><input class="finput" id="eEqSerial" autocomplete="off" oninput="acShow('eEqSerial','eqSerials')"><div class="ac-list" id="ac-eEqSerial"></div></div></div>
-      <div class="field"><label class="flabel">제작처 / 메이커</label><div class="ac-wrap"><input class="finput" id="eEqMaker" autocomplete="off" oninput="acShow('eEqMaker','makers')"><div class="ac-list" id="ac-eEqMaker"></div></div></div>
+      <div class="field"><label class="flabel">장비 자산처</label><div class="ac-wrap"><input class="finput" id="eEqAsset" autocomplete="off" oninput="acShow('eEqAsset','assets')"><div class="ac-list" id="ac-eEqAsset"></div></div></div>
     </div>
     <div class="frow">
-      <div class="field"><label class="flabel">설치일</label><input class="finput" id="eEqInstall" type="date"></div>
+      <div class="field"><label class="flabel">제작처 / 메이커</label><div class="ac-wrap"><input class="finput" id="eEqMaker" autocomplete="off" oninput="acShow('eEqMaker','makers')"><div class="ac-list" id="ac-eEqMaker"></div></div></div>
       <div class="field"><label class="flabel">위치</label><div class="ac-wrap"><input class="finput" id="eEqLoc" autocomplete="off" oninput="acShow('eEqLoc','locs')"><div class="ac-list" id="ac-eEqLoc"></div></div></div>
     </div>
     <div class="frow">
+      <div class="field"><label class="flabel">설치일</label><input class="finput" id="eEqInstall" type="date"></div>
       <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eEqCycle" type="number" min="1"></div>
+    </div>
+    <div class="frow">
       <div class="field"><label class="flabel">사용 여부</label>
         <div class="fselect-w"><select class="fselect" id="eEqStatus">
           <option value="정상">정상</option>
@@ -3305,6 +3311,7 @@ function getAcSources(){
   return {
     eqNames:   uniq(db.eqs.map(e=>e.name)).sort((a,b)=>a.localeCompare(b,'ko')),
     eqSerials: uniq(db.eqs.map(e=>e.serial)),
+    assets:    uniq(db.eqs.map(e=>e.asset)).sort((a,b)=>a.localeCompare(b,'ko')),
     makers:    uniq([...db.eqs.map(e=>e.maker),...db.parts.map(p=>p.maker),...db.boms.map(b=>b.maker)]),
     locs:      uniq(db.eqs.map(e=>e.loc)),
     workers:   uniq([...db.maints.map(m=>m.worker),...db.insps.map(i=>i.worker)]),
@@ -3443,6 +3450,7 @@ function registerEq(){
   db.eqs.push({
     id:Date.now(),name,
     serial:document.getElementById('eqSerial').value.trim(),
+    asset:document.getElementById('eqAsset').value.trim(),
 
     maker:document.getElementById('eqMaker').value.trim(),
     install:document.getElementById('eqInstall').value,
@@ -3463,7 +3471,7 @@ function registerEq(){
   toast('장비 등록 완료: '+name);
 }
 function clearEqForm(){
-  ['eqName','eqSerial','eqMaker','eqInstall','eqLoc','eqInspCycle','eqMemo','eqAirPres','eqGrade','eqCond'].forEach(id=>{
+  ['eqName','eqSerial','eqAsset','eqMaker','eqInstall','eqLoc','eqInspCycle','eqMemo','eqAirPres','eqGrade','eqCond'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
   const pw=document.getElementById('eqPower');if(pw)pw.value='';
@@ -3484,6 +3492,7 @@ function renderEqList(){
     if(!q) return true;
     return (eq.name||'').toLowerCase().includes(q)||
            (eq.serial||'').toLowerCase().includes(q)||
+           (eq.asset||'').toLowerCase().includes(q)||
            (eq.loc||'').toLowerCase().includes(q)||
            (eq.memo||'').toLowerCase().includes(q)||
            (eq.maker||'').toLowerCase().includes(q)||
@@ -3526,7 +3535,7 @@ function renderEqList(){
           <div style="display:flex;align-items:center;gap:7px;">
             <div class="eq-name">${hlText(eq.name,eqSearchQ)}</div>
           </div>
-          <div class="eq-serial">S/N: ${hlText(eq.serial||'미등록',eqSearchQ)}</div>
+          <div class="eq-serial">S/N: ${hlText(eq.serial||'미등록',eqSearchQ)}${eq.asset?` <span style="color:var(--muted2);">· 자산처 ${hlText(eq.asset,eqSearchQ)}</span>`:''}</div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;">
             ${eq.maker?`<span style="color:var(--muted2);">${hlText(eq.maker,eqSearchQ)}</span>`:''}
           </div>
@@ -3660,6 +3669,7 @@ function openEqEdit(i){
   eqEditIdx=i;const eq=db.eqs[i];
   document.getElementById('eEqName').value=eq.name;
   document.getElementById('eEqSerial').value=eq.serial||'';
+  document.getElementById('eEqAsset').value=eq.asset||'';
   document.getElementById('eEqMaker').value=eq.maker||'';
   document.getElementById('eEqInstall').value=eq.install||'';
   document.getElementById('eEqLoc').value=eq.loc||'';
@@ -3680,6 +3690,7 @@ function saveEqEdit(){
   db.eqs[eqEditIdx]={...db.eqs[eqEditIdx],
     name:document.getElementById('eEqName').value.trim(),
     serial:document.getElementById('eEqSerial').value.trim(),
+    asset:document.getElementById('eEqAsset').value.trim(),
     maker:document.getElementById('eEqMaker').value.trim(),
     install:document.getElementById('eEqInstall').value,
     loc:document.getElementById('eEqLoc').value.trim(),
@@ -6817,15 +6828,15 @@ function _eqReportList(){
     const mStatus=sf==='ALL'||(eq.status||'정상')===sf;
     if(!mStatus)return false;
     if(!q)return true;
-    return (eq.name||'').toLowerCase().includes(q)||(eq.serial||'').toLowerCase().includes(q)||(eq.loc||'').toLowerCase().includes(q)||(eq.maker||'').toLowerCase().includes(q)||(eq.power||'').toLowerCase().includes(q);
+    return (eq.name||'').toLowerCase().includes(q)||(eq.serial||'').toLowerCase().includes(q)||(eq.asset||'').toLowerCase().includes(q)||(eq.loc||'').toLowerCase().includes(q)||(eq.maker||'').toLowerCase().includes(q)||(eq.power||'').toLowerCase().includes(q);
   }).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
   return {q,sf,list};
 }
 function xrSpecEq(list,meta){
   return {name:'장비',title:'설비 관리대장',meta,
-    sums:[['대상 장비',list.length,'#,##0',null,{fn:'count',col:1}],['고장 상태',list.filter(e=>e.status==='고장').length,'#,##0',null,{fn:'countIf',col:7,eq:'고장'}],
-      ['단종',list.filter(e=>e.status==='단종').length,'#,##0',null,{fn:'countIf',col:7,eq:'단종'}]],
-    cols:[{h:'No',w:5,al:'center'},{h:'장비명',w:20},{h:'시리얼',w:15},{h:'제작처',w:13},{h:'위치',w:13},{h:'관리등급',w:8,al:'center'},{h:'상태등급',w:8,al:'center'},
+    sums:[['대상 장비',list.length,'#,##0',null,{fn:'count',col:1}],['고장 상태',list.filter(e=>e.status==='고장').length,'#,##0',null,{fn:'countIf',col:8,eq:'고장'}],
+      ['단종',list.filter(e=>e.status==='단종').length,'#,##0',null,{fn:'countIf',col:8,eq:'단종'}]],
+    cols:[{h:'No',w:5,al:'center'},{h:'장비명',w:20},{h:'시리얼',w:15},{h:'자산처',w:13},{h:'제작처',w:13},{h:'위치',w:13},{h:'관리등급',w:8,al:'center'},{h:'상태등급',w:8,al:'center'},
       {h:'상태',w:8,al:'center'},{h:'설치일',w:14,al:'center'},{h:'점검주기',w:8,al:'center'},{h:'MTBF',w:9,al:'right',fmt:'#,##0"h"'},{h:'MTTR',w:9,al:'right',fmt:'0.0"h"'},
       {h:'정비/고장',w:9,al:'center'},{h:'최근점검',w:14,al:'center'},{h:'최근정비',w:14,al:'center'}],
     rows:list.map((eq,i)=>{
@@ -6834,10 +6845,10 @@ function xrSpecEq(list,meta){
       const lastInsp=db.insps.filter(d=>d.eqId===eq.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
       const lastMaint=maints.slice().sort((a,b)=>((b.start||b.date)||'').localeCompare((a.start||a.date)||''))[0];
       const st=eq.status||'정상';
-      return {vals:[i+1,eq.name,eq.serial||'—',eq.maker||'—',eq.loc||'—',eq.grade||'—',eq.cond||'—',st,xrDay(eq.install)||'—',
+      return {vals:[i+1,eq.name,eq.serial||'—',eq.asset||'—',eq.maker||'—',eq.loc||'—',eq.grade||'—',eq.cond||'—',st,xrDay(eq.install)||'—',
         eq.cycle?eq.cycle+'일':'—',mtbf||'—',mttr||'—',`${maints.length} / ${fails.length}`,lastInsp?xrDay(lastInsp.date):'—',
         lastMaint?xrDay((lastMaint.start?lastMaint.start.slice(0,10):null)||lastMaint.date):'—'],
-        tag:{7:st==='고장'?'r':st==='단종'?'m':'g'}};
+        tag:{8:st==='고장'?'r':st==='단종'?'m':'g'}};
     })};
 }
 async function exportEqXLSX(){
@@ -7276,6 +7287,7 @@ function exportEqReport(){
       <td class="c">${i+1}</td>
       <td>${esc(eq.name)}</td>
       <td>${esc(eq.serial||'')||'—'}</td>
+      <td>${esc(eq.asset||'')||'—'}</td>
       <td>${esc(eq.maker||'')||'—'}</td>
       <td>${esc(eq.loc||'')||'—'}</td>
       <td class="c">${esc(eq.grade||'')||'—'}</td>
@@ -7295,7 +7307,7 @@ function exportEqReport(){
     <div>고장 상태<b>${list.filter(e=>e.status==='고장').length}</b></div>
     <div>단종<b>${list.filter(e=>e.status==='단종').length}</b></div>
   </div>
-  <table><thead><tr><th>No</th><th>장비명</th><th>시리얼</th><th>제작처</th><th>위치</th><th>관리등급</th><th>상태등급</th><th>상태</th><th>설치일</th><th>점검주기</th><th>MTBF</th><th>MTTR</th><th>정비/고장</th><th>최근점검</th><th>최근정비</th></tr></thead><tbody>${rows}</tbody></table>`;
+  <table><thead><tr><th>No</th><th>장비명</th><th>시리얼</th><th>자산처</th><th>제작처</th><th>위치</th><th>관리등급</th><th>상태등급</th><th>상태</th><th>설치일</th><th>점검주기</th><th>MTBF</th><th>MTTR</th><th>정비/고장</th><th>최근점검</th><th>최근정비</th></tr></thead><tbody>${rows}</tbody></table>`;
   const meta=`검색: ${esc(q||'—')} · 상태: ${esc(sf==='ALL'?'전체':sf)} · 총 ${list.length}대`;
   downloadFile('설비관리대장_'+localToday()+'.html',reportShell('설비 관리대장',meta,body),'text/html');
   toast('설비 관리대장 다운로드 완료');
