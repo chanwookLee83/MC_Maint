@@ -97,30 +97,30 @@ async function pollFirestore() {
       localStorage.setItem('mms_v1', data.db);
 
       // ── 새 정비 의뢰 로컬 알림 (FCM 푸시 미도달 대비 폴백) ──
-      // 앱이 백그라운드/포그라운드로 살아있는 동안 폴링으로 새 의뢰를 감지하면
-      // OS 알림을 직접 띄운다. 최초 동기화분은 시드 처리하여 중복 알림을 막는다.
+      // 이 기기에서 이미 알린 의뢰 id 를 localStorage 에 기억 → 앱이 꺼진 동안 들어온 의뢰도
+      // 다음에 앱을 열 때 알림 (최근 3일 · 미완료만). 이 기기에서 처음 쓸 때만 기존 의뢰를 알린 것으로 처리.
+      // tag 를 의뢰마다 다르게 → 여러 건이 알림창에서 서로 덮어쓰지 않음 (FCM 푸시와는 같은 tag 라 중복 표시 안 됨)
       try {
-        if (!window._notifiedReqIds) window._notifiedReqIds = new Set();
-        const _firstReqSeed = !window._reqNotiSeeded;
+        const _seen = window._reqSeen();
+        const _firstUse = localStorage.getItem('mms_req_seen') === null;
         const _canNotifyReq = ('Notification' in window) &&
                               Notification.permission === 'granted' &&
                               localStorage.getItem('fcm_enabled') === '1';
         (db.reqs || []).forEach(r => {
-          if (!r || r.id == null) return;
-          if (_firstReqSeed) { window._notifiedReqIds.add(r.id); return; }
-          if (r.done || window._notifiedReqIds.has(r.id)) return;
-          window._notifiedReqIds.add(r.id);
+          if (!r || r.id == null || _seen.has(r.id)) return;
+          window._markReqSeen(r.id);
+          if (_firstUse || r.done || Date.now() - Number(r.id) > 3 * 86400000) return;
           if (_canNotifyReq && typeof window._showOsNotification === 'function') {
             const _when = [r.reqDate, r.reqTime].filter(Boolean).join(' ');
             const _who  = r.requester ? ' · ' + r.requester : '';
             window._showOsNotification(
               '정비 의뢰 접수',
               (r.eqName || '설비') + _who + '\n' + (r.content || '') + (_when ? '\n(' + _when + ')' : ''),
-              { tab: 'req', tag: 'mms-req' }
+              { tab: 'req', tag: 'mms-req-' + r.id }
             );
           }
         });
-        window._reqNotiSeeded = true;
+        if (_firstUse) window._markReqSeen(null);
       } catch(e) { console.warn('정비 의뢰 알림 처리 오류:', e); }
 
       if (typeof renderEqList === 'function') {
@@ -152,6 +152,8 @@ window.pollFirestore = pollFirestore;
 // ── 앱 → Firestore 저장 (디바운스 500ms) ──
 window.saveToFirestore = function(dbData) {
   clearTimeout(saveTimer);
+  // 저장 대기(0.5초) 중에 폴링이 이전 서버 데이터로 덮어써 방금 바꾼 내용(예: 의뢰 확인)이 사라지지 않도록 즉시 표시
+  lastServerAt = Date.now();
   saveTimer = setTimeout(async () => {
     try {
       const now = Date.now();
@@ -365,6 +367,11 @@ span.flatpickr-weekday:last-child{color:#3b82f6;}
     box-shadow:0 0 0 100vmax #00000080,0 10px 30px #00000088;}
   .flatpickr-calendar.open:before,.flatpickr-calendar.open:after{display:none;}
 }
+/* 날짜 입력칸 오른쪽 달력 아이콘 (누르면 달력이 뜬다는 표시) — 라이트모드 .finput 의 background 단축 속성에 지워지지 않게 !important */
+input.kr-date{cursor:pointer;padding-right:40px !important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b97a8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='2'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3Cpath d='M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2' stroke-width='2'/%3E%3C/svg%3E") !important;
+  background-repeat:no-repeat !important;background-position:right 12px center !important;background-size:20px 20px !important;}
+input.kr-date:hover,input.kr-date:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a68c0' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='2'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3Cpath d='M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2' stroke-width='2'/%3E%3C/svg%3E") !important;}
 .kr-foot{border-top:1px solid var(--border);padding:7px 10px 8px;font-size:11px;color:var(--muted2);}
 .kr-hols{display:flex;flex-wrap:wrap;gap:3px 10px;min-height:16px;}
 .kr-hols b{color:#ef4444;font-weight:700;margin-right:2px;}
@@ -1233,7 +1240,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
 <!-- TABBAR -->
 <div class="tabbar">
-  <div class="tab active" onclick="gotoTab('req')"   id="tab-req">  <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg></span>의뢰</div>
+  <div class="tab active" onclick="gotoTab('req')"   id="tab-req">  <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg></span>의뢰<div class="tbadge" id="reqBadge"></div></div>
   <div class="tab" onclick="gotoTab('eq')"    id="tab-eq">   <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20M4 20V10l5 3v-3l5 3V6l6-2v16"/></svg></span>장비</div>
   <div class="tab" onclick="gotoTab('maint')"  id="tab-maint"> <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></span>정비</div>
   <div class="tab" onclick="gotoTab('parts')"  id="tab-parts"> <span class="tab-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg></span>부품</div>
@@ -2756,6 +2763,8 @@ function initDatePickers(){
     const fp=el._fp=flatpickr(el,{locale:'ko',disableMobile:true,dateFormat:fmt,enableTime:dt,time_24hr:true,
       altInput:dt,altFormat:'Y-m-d H:i',defaultDate:init||null,
       onDayCreate:_krDayCreate,onReady:_krFoot,onMonthChange:_krFoot,onYearChange:_krFoot});
+    // 달력 아이콘 : 보이는 입력칸에 (일시 입력은 flatpickr 가 만든 표시용 칸)
+    (fp.altInput||el).classList.add('kr-date');
     // min 은 flatpickr minDate 대신 직접 처리 — minDate 는 바뀔 때마다 그 이전 값을 지워버림
     fp._minStr=min||'';
     let busy=false;
@@ -3020,6 +3029,20 @@ function checkAlarms(){
   });
   const calibBadge=document.getElementById('calibBadge');
   if(calibBadge){if(calibWarnCount){calibBadge.textContent=calibWarnCount;calibBadge.classList.add('show');}else calibBadge.classList.remove('show');}
+
+  // ── 미처리 정비 의뢰 (완료 처리 전까지 · 목록 맨 위) — 미확인 10분 지나면 빨간색, 확인된 건은 '수리 중' ──
+  const openReqs=(db.reqs||[]).filter(r=>r&&!r.done).sort((a,b)=>(Number(a.id)||0)-(Number(b.id)||0));
+  openReqs.slice().reverse().forEach(r=>{
+    const mins=Math.max(0,Math.floor((Date.now()-Number(r.id))/60000));
+    const ago=!(Number(r.id)>0)?'':mins<60?`${mins}분 경과`:mins<1440?`${Math.floor(mins/60)}시간 ${mins%60}분 경과`:`${Math.floor(mins/1440)}일 경과`;
+    const nm=(r.eqName||'설비').replace(/</g,'&lt;');
+    alarms.unshift({type:!r.ack&&mins>=10?'critical':'warning',icon:'',
+      text:r.ack?`[의뢰] ${nm} 수리 중`:`[의뢰] ${nm} 미확인`,
+      sub:`${r.reqDate?dw(r.reqDate):''} ${r.reqTime||''} 접수${ago?' · '+ago:''}`
+        +(r.ack?` · 확인 ${String(r.ack.by||'').replace(/</g,'&lt;')} ${r.ack.at?r.ack.at.slice(11):''}`:(r.requester?' · '+String(r.requester).replace(/</g,'&lt;'):'')),tab:'req'});
+  });
+  const reqBadge=document.getElementById('reqBadge');
+  if(reqBadge){if(openReqs.length){reqBadge.textContent=openReqs.length;reqBadge.classList.add('show');}else reqBadge.classList.remove('show');}
 
   // ── 등록된 일정 알람 (당일/D-7 이내/기한 초과) ──
   (db.events||[]).forEach(ev=>{
@@ -8686,6 +8709,10 @@ function testLocalNotification() {
 
 // ══════ 정비 의뢰 탭 ══════
 
+// 이 기기에서 이미 알린(또는 직접 등록한) 정비 의뢰 id — 앱을 다시 열어도 유지, 최근 300건만 보관
+window._reqSeen = function(){ try { return new Set(JSON.parse(localStorage.getItem('mms_req_seen') || '[]')); } catch(e) { return new Set(); } };
+window._markReqSeen = function(id){ const s = [...window._reqSeen()]; if (id != null && !s.includes(id)) s.push(id); try { localStorage.setItem('mms_req_seen', JSON.stringify(s.slice(-300))); } catch(e) {} };
+
 const MAINT_REQ_FUNC_URL = 'https://asia-northeast3-maintenance-app-3632e.cloudfunctions.net/sendMaintenanceRequest';
 
 let _reqPhotoFiles = [];
@@ -8788,7 +8815,7 @@ async function submitMaintenanceRequest() {
   if (!db.reqs) db.reqs = [];
   db.reqs.unshift({ id: reqId, eqName, reqDate, reqTime, content, requester, photos });
   // 의뢰를 등록한 본인 기기에서는 폴백 알림이 다시 뜨지 않도록 미리 처리 표시
-  (window._notifiedReqIds = window._notifiedReqIds || new Set()).add(reqId);
+  window._markReqSeen(reqId);
   save();
 
   let fcmSent = false;
@@ -8796,7 +8823,7 @@ async function submitMaintenanceRequest() {
     const resp = await fetch(MAINT_REQ_FUNC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eqName, reqDate, reqTime, content, requester })
+      body: JSON.stringify({ eqName, reqDate, reqTime, content, requester, reqId })
     });
     const data = await resp.json();
     fcmSent = !!data.ok;
@@ -8819,7 +8846,33 @@ async function submitMaintenanceRequest() {
   setTimeout(() => { statusEl.textContent = ''; }, 6000);
 
   renderReqLog();
+  checkAlarms();
   toast('정비 의뢰 전송 완료');
+}
+
+// ── 정비 의뢰 확인 : 확인 전까지 서버가 10분마다 반복 알림 → 확인하면 멈추고 '수리 중' 으로 표시 ──
+// 확인자 이름은 카드 안 입력칸으로 받음 (prompt 창은 카카오톡 인앱 브라우저 · 대화상자 차단 시 뜨지 않아 버튼이 무반응이 됨)
+let _ackingReqId = null;
+function ackReq(reqId, ev) {
+  if (ev) ev.stopPropagation();
+  _ackingReqId = (_ackingReqId === reqId) ? null : reqId;
+  _completingReqId = null;
+  renderReqLog();
+  const inp = document.getElementById('reqAckName_' + reqId);
+  if (inp) inp.focus();
+}
+function saveReqAck(reqId, ev) {
+  if (ev) ev.stopPropagation();
+  const req = (db.reqs || []).find(r => r.id === reqId);
+  if (!req || req.done || req.ack) return;
+  const name = (document.getElementById('reqAckName_' + reqId)?.value || '').trim();
+  if (name) localStorage.setItem('mms_ack_name', name);
+  req.ack = { by: name, at: localToday() + ' ' + new Date().toTimeString().slice(0,5) };
+  _ackingReqId = null;
+  save();
+  renderReqLog();
+  checkAlarms();
+  toast('의뢰 확인 — 반복 알림 중지');
 }
 
 // ── 정비 의뢰 완료 처리 ──
@@ -8828,6 +8881,7 @@ let _completingReqId = null;
 function completeReq(reqId, ev) {
   if (ev) ev.stopPropagation();
   _completingReqId = (_completingReqId === reqId) ? null : reqId;
+  _ackingReqId = null;
   renderReqLog();
 }
 
@@ -8841,6 +8895,7 @@ function saveReqDone(reqId) {
   _completingReqId = null;
   save();
   renderReqLog();
+  checkAlarms();
   toast('수리 완료 처리됨');
 }
 
@@ -8851,6 +8906,7 @@ function deleteReq(reqId, ev) {
   db.reqs = (db.reqs || []).filter(r => r.id !== reqId);
   save();
   renderReqLog();
+  checkAlarms();
   toast('삭제됐습니다');
   if (req && req.photos && req.photos.length && typeof window._deleteReqPhotos === 'function') {
     window._deleteReqPhotos(req.photos);
@@ -8884,11 +8940,18 @@ function renderReqLog() {
   }
   el.innerHTML = reqs.map(r => {
     const isDone = !!r.done;
+    const isAck = !isDone && !!r.ack;   // 확인됨 · 수리 중
     const isCompleting = _completingReqId === r.id;
-    const borderCol = isDone ? '#10b981' : '#ef4444';
-    const bg = isDone ? '#10b9810a' : 'var(--card)';
+    // 미확인 빨강 · 수리 중 주황 · 완료 초록
+    const borderCol = isDone ? '#10b981' : isAck ? '#f59e0b' : '#ef4444';
+    const bg = isDone ? '#10b9810a' : isAck ? '#f59e0b0a' : 'var(--card)';
     const emoji = isDone ? '' : '';
-    const nameCol = isDone ? '#10b981' : '#ef4444';
+    const nameCol = borderCol;
+
+    const ackSection = isAck ? `
+      <div style="margin-top:8px;padding:6px 10px;background:#f59e0b14;border:1px solid #f59e0b40;border-radius:8px;font-size:12px;color:#d97706;font-weight:700;">
+        🔧 수리 중 — 확인 ${r.ack.by ? r.ack.by.replace(/</g,'&lt;') + ' · ' : ''}${r.ack.at || ''}
+      </div>` : '';
 
     const doneSection = isDone ? `
       <div style="margin-top:8px;padding:8px 10px;background:#10b98118;border:1px solid #10b98140;border-radius:8px;">
@@ -8910,6 +8973,20 @@ function renderReqLog() {
                font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">
         ${isCompleting ? '취소' : '✓ 완료'}
       </button>` : '';
+    // 미확인일 때만 : 누르면 카드 안에 확인자 입력칸 → [확인 저장] 으로 반복 알림 중지
+    const isAcking = _ackingReqId === r.id;
+    const ackBtn = (!isDone && !isAck) ? `
+      <button onclick="ackReq(${r.id},event)"
+        style="background:${isAcking?'var(--card2)':'#f59e0b'};border:1px solid ${isAcking?'var(--border2)':'#f59e0b'};color:${isAcking?'var(--muted)':'#fff'};
+               border-radius:7px;padding:4px 10px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;">${isAcking?'취소':'확인'}</button>` : '';
+    const ackForm = (isAcking && !isDone && !isAck) ? `
+      <div style="margin-top:8px;display:flex;gap:6px;" onclick="event.stopPropagation()">
+        <input id="reqAckName_${r.id}" class="finput" placeholder="확인자 이름 (선택)" autocomplete="off"
+          value="${(localStorage.getItem('mms_ack_name')||'').replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
+          onkeydown="if(event.key==='Enter')saveReqAck(${r.id},event)" style="flex:1;min-width:0;padding:9px 12px;">
+        <button onclick="saveReqAck(${r.id},event)"
+          style="background:#f59e0b;border:none;color:#fff;border-radius:9px;padding:0 14px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;">확인 · 알림 중지</button>
+      </div>` : '';
 
     return `
     <div style="background:${bg};border:1px solid ${borderCol}40;border-radius:11px;padding:12px 14px;margin-bottom:8px;cursor:pointer;"
@@ -8918,7 +8995,7 @@ function renderReqLog() {
         <span style="font-weight:700;color:${nameCol};font-size:15px;">${emoji} ${r.eqName.replace(/</g,'&lt;')}</span>
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">${dw(r.reqDate)} ${r.reqTime}</span>
-          ${actionBtn}
+          ${ackBtn}${actionBtn}
           <button onclick="deleteReq(${r.id},event)"
             style="background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:7px;
                    padding:4px 8px;font-size:12px;cursor:pointer;flex-shrink:0;">삭제</button>
@@ -8927,7 +9004,7 @@ function renderReqLog() {
       ${r.requester ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">의뢰자: <strong style="color:var(--text);">${r.requester.replace(/</g,'&lt;')}</strong></div>` : ''}
       <div style="font-size:13px;color:var(--text);line-height:1.6;">${r.content.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
       ${(r.photos && r.photos.length) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;" onclick="event.stopPropagation()">${r.photos.map((p,i)=>`<a href="${p.url}" target="_blank" rel="noopener"><img src="${p.url}" alt="사진${i+1}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border2);display:block;"></a>`).join('')}</div>` : ''}
-      ${doneSection}${completingForm}
+      ${ackSection}${ackForm}${doneSection}${completingForm}
     </div>`;
   }).join('');
 }
@@ -8977,7 +9054,7 @@ function _fireCatchupNotification() {
 
 // ── 초기화 ──
 initDatePickers();
-renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();initReqForm();
+renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();initReqForm();renderReqLog();  // 첫 화면(의뢰) 목록 — 동기화 전 · 오프라인에서도 저장된 의뢰 표시
 // 초기 히스토리 상태 설정 (모바일 뒤로가기 대응)
 {const _initTab=document.querySelector('.tab.active')?.id?.replace('tab-','')||'req';history.replaceState({tab:_initTab},'','#'+_initTab);}
 // 알림 활성화 상태면 로컬 스케줄러 시작 + 놓친 알림 즉시 확인
