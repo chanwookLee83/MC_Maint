@@ -280,6 +280,8 @@ window.addEventListener('load', async () => {
   }
 });
 </script>
+<!-- 날짜 입력 달력 기본 스타일 (앱 스타일보다 먼저 — 앱 테마가 덮어씀) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Share+Tech+Mono&family=Barlow+Condensed:wght@500;600;700;900&display=swap');
 :root{
@@ -325,6 +327,51 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
 .dow{font-weight:700;margin-left:2px;}
 .dow-sat{color:#3b82f6 !important;}
 .dow-sun{color:#ef4444 !important;}
+/* ── 날짜 입력 달력 (flatpickr) : 앱 테마 · 토요일 파랑 · 일요일/공휴일 빨강 ── */
+.flatpickr-calendar{background:var(--card);border:1px solid var(--border2);box-shadow:0 10px 30px #00000055;border-radius:12px;font-family:var(--sans);}
+.flatpickr-calendar.arrowTop:before,.flatpickr-calendar.arrowTop:after{border-bottom-color:var(--border2);}
+.flatpickr-calendar.arrowBottom:before,.flatpickr-calendar.arrowBottom:after{border-top-color:var(--border2);}
+.flatpickr-months .flatpickr-month,.flatpickr-current-month .flatpickr-monthDropdown-months,.flatpickr-current-month input.cur-year{color:var(--text);fill:var(--text);background:transparent;}
+.flatpickr-current-month .flatpickr-monthDropdown-months option{background:var(--card);}
+.flatpickr-months .flatpickr-prev-month,.flatpickr-months .flatpickr-next-month{color:var(--muted2);fill:var(--muted2);}
+.flatpickr-months .flatpickr-prev-month:hover svg,.flatpickr-months .flatpickr-next-month:hover svg{fill:var(--amber);}
+span.flatpickr-weekday{color:var(--muted);font-weight:700;}
+span.flatpickr-weekday:first-child{color:#ef4444;}
+span.flatpickr-weekday:last-child{color:#3b82f6;}
+.flatpickr-day{color:var(--text);}
+.flatpickr-day:hover,.flatpickr-day:focus{background:var(--card2);border-color:var(--border2);}
+.flatpickr-day.today{border-color:var(--amber);}
+.flatpickr-day.kr-sat{color:#3b82f6;}
+.flatpickr-day.kr-sun,.flatpickr-day.kr-hol{color:#ef4444;}
+.flatpickr-day.kr-hol{font-weight:700;}
+.flatpickr-day.kr-hol::after{content:'';position:absolute;left:50%;bottom:3px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#ef4444;}
+.flatpickr-day.prevMonthDay,.flatpickr-day.nextMonthDay,.flatpickr-day.flatpickr-disabled{opacity:.35;}
+.flatpickr-day.selected,.flatpickr-day.selected:hover{background:#3747ac;border-color:#3747ac;color:#fff;}
+.flatpickr-day.selected.kr-hol::after{background:#fff;}
+.flatpickr-calendar.hasTime .flatpickr-time{border-top:1px solid var(--border);height:52px;max-height:52px;line-height:52px;}
+.flatpickr-time input,.flatpickr-time .flatpickr-am-pm,.flatpickr-time .flatpickr-time-separator{color:var(--text);font-size:18px;font-weight:700;}
+.flatpickr-time input:hover,.flatpickr-time input:focus{background:var(--card2);}
+/* 시 · 분 올림/내림 화살표 : 마우스를 올려야 보이던 것을 항상 표시 (폰에서 보이지 않던 문제) */
+.flatpickr-time .numInputWrapper span{opacity:1;width:26px;border-color:var(--border);}
+.flatpickr-time .numInputWrapper span:hover{background:var(--card2);}
+.flatpickr-time .numInputWrapper span.arrowUp:after{border-bottom-color:var(--text);border-width:0 6px 7px;top:40%;left:7px;}
+.flatpickr-time .numInputWrapper span.arrowDown:after{border-top-color:var(--text);border-width:7px 6px 0;top:25%;left:7px;}
+.flatpickr-time .numInputWrapper input{padding-right:26px;}
+.flatpickr-months .numInputWrapper span.arrowUp:after{border-bottom-color:var(--text);}
+.flatpickr-months .numInputWrapper span.arrowDown:after{border-top-color:var(--text);}
+/* 폰 : 입력칸 위치와 관계없이 화면 가운데에 띄우고 뒤를 어둡게 (위 · 아래로 잘리지 않게) */
+@media (max-width:767px){
+  .flatpickr-calendar.open{position:fixed !important;top:50% !important;left:50% !important;right:auto !important;transform:translate(-50%,-50%);
+    box-shadow:0 0 0 100vmax #00000080,0 10px 30px #00000088;}
+  .flatpickr-calendar.open:before,.flatpickr-calendar.open:after{display:none;}
+}
+.kr-foot{border-top:1px solid var(--border);padding:7px 10px 8px;font-size:11px;color:var(--muted2);}
+.kr-hols{display:flex;flex-wrap:wrap;gap:3px 10px;min-height:16px;}
+.kr-hols b{color:#ef4444;font-weight:700;margin-right:2px;}
+.kr-none{color:var(--muted);}
+.kr-btns{display:flex;gap:6px;margin-top:7px;}
+.kr-btns button{flex:1;border:1px solid var(--border2);background:var(--card2);color:var(--text);border-radius:7px;padding:6px 0;font-size:12px;font-weight:700;cursor:pointer;}
+.kr-btns button[data-a="clear"]{color:var(--red);}
 .theme-btn{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-size:16px;padding:6px 9px;cursor:pointer;transition:all .2s;}
 .theme-btn:hover,.theme-btn:active{border-color:var(--amber);color:var(--amber);}
 /* 동기화 뱃지 */
@@ -2600,6 +2647,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 <div class="toast" id="toast"></div>
 <div class="sync-badge" id="syncBadge"></div>
 
+<!-- 날짜 입력 달력 (공휴일 · 주말 색 구분) — 로드 실패 시 기본 날짜 입력 사용 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/ko.min.js"></script>
+
 
 <script>
 // ── Service Worker ──
@@ -2610,9 +2661,111 @@ if('serviceWorker' in navigator){
 // ── 유틸 ──
 function localToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 // 날짜(YYYY-MM-DD…) 뒤에 요일 표기 — 토요일 파랑, 일요일 빨강
-function dw(s){if(!s)return s||'';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return s;const d=new Date(+m[1],+m[2]-1,+m[3]).getDay();if(isNaN(d))return s;return s+'<span class="dow'+(d===6?' dow-sat':d===0?' dow-sun':'')+'">('+'일월화수목금토'[d]+')</span>';}
+// ══════ 한국 공휴일 (2024~2030) ══════
+// 음력 공휴일은 매년 날짜가 달라 표로 관리 · 대체공휴일은 규칙으로 계산 · 선거일 등 임시공휴일은 KR_HOL_EXTRA 에 추가
+const KR_LUNAR={   // 설날 · 추석은 당일 (앞뒤 하루 포함 3일 연휴)
+  2024:{seol:'02-10',buddha:'05-15',chuseok:'09-17'},
+  2025:{seol:'01-29',buddha:'05-05',chuseok:'10-06'},
+  2026:{seol:'02-17',buddha:'05-24',chuseok:'09-25'},
+  2027:{seol:'02-07',buddha:'05-13',chuseok:'09-15'},
+  2028:{seol:'01-27',buddha:'05-02',chuseok:'10-03'},
+  2029:{seol:'02-13',buddha:'05-20',chuseok:'09-22'},
+  2030:{seol:'02-03',buddha:'05-09',chuseok:'09-12'},
+};
+const KR_HOL_EXTRA={'2024-04-10':'국회의원 선거','2024-10-01':'국군의 날(임시)','2025-01-27':'임시공휴일','2025-06-03':'대통령 선거',
+  '2026-06-03':'지방선거','2028-04-12':'국회의원 선거','2030-06-05':'지방선거'};
+let _krHol=null;
+function _buildKrHolidays(){
+  const map={}, ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const add=(d,n)=>{const k=ymd(d);map[k]=map[k]?map[k]+' · '+n:n;};
+  const subs=[];   // 대체공휴일 대상 : {from:마지막날, n:이름, need:필요 여부}
+  Object.entries(KR_LUNAR).forEach(([y,l])=>{
+    y=+y;
+    const fixed=[['01-01','신정',0],['03-01','삼일절',2],['05-05','어린이날',2],['06-06','현충일',0],['08-15','광복절',2],['10-03','개천절',2],['10-09','한글날',2],['12-25','성탄절',2],[l.buddha,'부처님오신날',2]];
+    fixed.forEach(([md,n])=>add(new Date(y,+md.slice(0,2)-1,+md.slice(3)),n));
+    [[l.seol,'설날'],[l.chuseok,'추석']].forEach(([md,n])=>{
+      const c=new Date(y,+md.slice(0,2)-1,+md.slice(3));
+      [-1,0,1].forEach(o=>{const d=new Date(c);d.setDate(d.getDate()+o);add(d,o?n+' 연휴':n);});
+    });
+  });
+  Object.entries(KR_HOL_EXTRA).forEach(([k,n])=>{map[k]=map[k]?map[k]+' · '+n:n;});
+  // 대체공휴일 : 설날·추석 연휴가 일요일과 겹치거나, 국경일·어린이날·부처님오신날·성탄절이 토·일요일이면
+  // 그 날 · 연휴 다음 첫 평일 (공휴일끼리 겹쳐도 하루). 신정·현충일은 대상 아님
+  Object.entries(KR_LUNAR).forEach(([y,l])=>{
+    y=+y;
+    [[l.seol,'설날'],[l.chuseok,'추석']].forEach(([md,n])=>{
+      const c=new Date(y,+md.slice(0,2)-1,+md.slice(3)), days=[-1,0,1].map(o=>{const d=new Date(c);d.setDate(d.getDate()+o);return d;});
+      const need=days.filter(d=>d.getDay()===0||map[ymd(d)].includes(' · ')).length;
+      for(let i=0;i<need;i++) subs.push({from:days[2],n});
+    });
+    [['03-01','삼일절'],['05-05','어린이날'],['08-15','광복절'],['10-03','개천절'],['10-09','한글날'],['12-25','성탄절'],[l.buddha,'부처님오신날']].forEach(([md,n])=>{
+      const d=new Date(y,+md.slice(0,2)-1,+md.slice(3)), dow=d.getDay();
+      // 다른 공휴일과 겹친 경우는 설·추석 쪽에서 이미 셌으면 제외 (같은 날 하루만)
+      const over=map[ymd(d)].includes(' · ')&&!/설날|추석/.test(map[ymd(d)]);
+      if(dow===0||dow===6||(over&&map[ymd(d)].split(' · ')[0]===n)) subs.push({from:d,n});
+    });
+  });
+  subs.sort((a,b)=>a.from-b.from).forEach(s=>{
+    const d=new Date(s.from);
+    do d.setDate(d.getDate()+1); while(d.getDay()===0||d.getDay()===6||map[ymd(d)]);
+    add(d,'대체공휴일('+s.n+')');
+  });
+  return map;
+}
+function krHoliday(s){if(!_krHol)_krHol=_buildKrHolidays();return _krHol[String(s||'').slice(0,10)]||null;}
+// 날짜(YYYY-MM-DD…) 뒤에 요일 표기 — 토요일 파랑, 일요일 · 공휴일 빨강 (공휴일 이름은 마우스를 올리면 표시)
+function dw(s){if(!s)return s||'';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return s;const d=new Date(+m[1],+m[2]-1,+m[3]).getDay();if(isNaN(d))return s;const h=krHoliday(s);return s+'<span class="dow'+((d===0||h)?' dow-sun':d===6?' dow-sat':'')+'"'+(h?' title="'+h+'"':'')+'>('+'일월화수목금토'[d]+')</span>';}
 // 인쇄 보고서용 (인라인 색상)
-function dwp(s){if(!s)return s||'';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return s;const d=new Date(+m[1],+m[2]-1,+m[3]).getDay();if(isNaN(d))return s;return s+'<span style="font-weight:700;'+(d===6?'color:#2563eb;':d===0?'color:#dc2626;':'')+'">('+'일월화수목금토'[d]+')</span>';}
+function dwp(s){if(!s)return s||'';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return s;const d=new Date(+m[1],+m[2]-1,+m[3]).getDay();if(isNaN(d))return s;const h=krHoliday(s);return s+'<span style="font-weight:700;'+((d===0||h)?'color:#dc2626;':d===6?'color:#2563eb;':'')+'"'+(h?' title="'+h+'"':'')+'>('+'일월화수목금토'[d]+')</span>';}
+
+// ══════ 날짜 입력 달력 (flatpickr) : 토요일 파랑 · 일요일 · 공휴일 빨강, 아래에 이달 공휴일 목록 ══════
+// CDN 로드 실패 시 기본 날짜 입력 그대로 사용. 코드에서 el.value= / el.min= 으로 넣는 값도 달력과 동기화됨
+function _krDayCreate(_,__,fp,el){
+  const d=el.dateObj, k=fp.formatDate(d,'Y-m-d'), h=krHoliday(k);
+  // 최소일(min) 이전 날짜는 고를 수 없게만 표시 (코드로 넣은 값은 지우지 않음)
+  if(fp._minStr&&k<fp._minStr) el.classList.add('flatpickr-disabled');
+  if(h){el.classList.add('kr-hol');el.title=h;}
+  else if(d.getDay()===0) el.classList.add('kr-sun');
+  else if(d.getDay()===6) el.classList.add('kr-sat');
+}
+function _krFoot(_,__,fp){
+  let f=fp.calendarContainer.querySelector('.kr-foot');
+  if(!f){
+    f=document.createElement('div');f.className='kr-foot';
+    f.innerHTML='<div class="kr-hols"></div><div class="kr-btns"><button type="button" data-a="today">오늘</button><button type="button" data-a="clear">지우기</button></div>';
+    f.addEventListener('click',e=>{
+      const a=e.target.dataset&&e.target.dataset.a;if(!a) return;
+      if(a==='clear') fp.clear(); else fp.setDate(new Date(),true);
+      fp.close();
+    });
+    fp.calendarContainer.appendChild(f);
+  }
+  const y=fp.currentYear, m=String(fp.currentMonth+1).padStart(2,'0'), hs=[];
+  for(let i=1;i<=31;i++){const k=`${y}-${m}-${String(i).padStart(2,'0')}`, h=krHoliday(k);if(h) hs.push(`<span><b>${i}일</b> ${h}</span>`);}
+  f.querySelector('.kr-hols').innerHTML=hs.length?hs.join(''):'<span class="kr-none">이달 공휴일 없음</span>';
+}
+function initDatePickers(){
+  if(typeof flatpickr==='undefined') return;
+  const vDesc=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  const mDesc=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'min');
+  document.querySelectorAll('input[type="date"],input[type="datetime-local"]').forEach(el=>{
+    if(el._fp) return;
+    const dt=el.type==='datetime-local', fmt=dt?'Y-m-d\\TH:i':'Y-m-d';
+    const init=el.value, min=el.min;
+    el.type='text';
+    const fp=el._fp=flatpickr(el,{locale:'ko',disableMobile:true,dateFormat:fmt,enableTime:dt,time_24hr:true,
+      altInput:dt,altFormat:'Y-m-d H:i',defaultDate:init||null,
+      onDayCreate:_krDayCreate,onReady:_krFoot,onMonthChange:_krFoot,onYearChange:_krFoot});
+    // min 은 flatpickr minDate 대신 직접 처리 — minDate 는 바뀔 때마다 그 이전 값을 지워버림
+    fp._minStr=min||'';
+    let busy=false;
+    Object.defineProperty(el,'value',{configurable:true,get(){return vDesc.get.call(el);},set(v){
+      vDesc.set.call(el,v);if(busy) return;
+      busy=true;try{v?fp.setDate(v,false,fmt):fp.clear(false);}finally{busy=false;}
+    }});
+    Object.defineProperty(el,'min',{configurable:true,get(){return mDesc.get.call(el);},set(v){mDesc.set.call(el,v);fp._minStr=String(v||'').slice(0,10);fp.redraw();}});
+  });
+}
 function localNow(){const d=new Date();return localToday()+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function fmtCost(n){return'₩'+Number(n||0).toLocaleString();}
 function diffHours(s,e){if(!s||!e)return 0;return Math.max(0,((new Date(e)-new Date(s))/3600000));}
@@ -8823,6 +8976,7 @@ function _fireCatchupNotification() {
 }
 
 // ── 초기화 ──
+initDatePickers();
 renderEqList();renderParts();renderMaintLog();checkAlarms();updateEvBadge();initReqForm();
 // 초기 히스토리 상태 설정 (모바일 뒤로가기 대응)
 {const _initTab=document.querySelector('.tab.active')?.id?.replace('tab-','')||'req';history.replaceState({tab:_initTab},'','#'+_initTab);}
