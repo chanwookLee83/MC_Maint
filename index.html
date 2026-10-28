@@ -47,10 +47,10 @@ window._uploadReqPhoto = async function(reqId, file, index) {
   return { path, url };
 };
 
-// 검교정 성적서 (PDF · 이미지)
+// 검교정 성적서 (PDF · 이미지) — Storage 규칙이 req-photos/ 아래만 쓰기를 허용하므로 그 안에 calib-<id> 폴더로 저장
 window._uploadCalibCert = async function(calibId, file) {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const path = `calib-certs/${calibId}/${Date.now()}_${safeName}`;
+  const path = `req-photos/calib-${calibId}/${Date.now()}_${safeName}`;
   const sRef = storageRef(fStorage, path);
   await uploadBytes(sRef, file, { contentType: file.type || undefined });
   const url = await getDownloadURL(sRef);
@@ -1527,6 +1527,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
         <button class="btn-sm" style="background:var(--blue);color:#fff;border-color:var(--blue);" onclick="openCalibForm()">+ 추가</button>
       </div>
     </div>
+    <div class="search-bar-wrap">
+      <span class="search-bar-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5"/></svg></span>
+      <input class="search-bar" id="calibSearch" type="text" placeholder="설비명 · 관리번호 · 항목 · 시리얼 · 위치 · 성적서번호 검색..." oninput="onCalibSearch()" autocomplete="off">
+      <button class="search-bar-clear" id="calibSearchClear" onclick="clearCalibSearch()">✕</button>
+    </div>
+    <div class="search-result-count" id="calibSearchCount"></div>
     <div id="calibSummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;border:1px solid var(--border);">
       <table id="calibTable" style="width:100%;border-collapse:collapse;min-width:900px;font-size:12px;">
@@ -1649,6 +1655,19 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <input type="hidden" id="crId">
     <div id="crStatus" style="font-size:12px;color:var(--amber);min-height:16px;margin-bottom:6px;"></div>
     <button class="btn-primary" id="crSaveBtn" onclick="saveCalibRes()">저장</button>
+  </div>
+</div>
+
+<!-- 검교정 성적서 미리보기 -->
+<div class="modal-bg" id="certViewModal" onclick="closeModal('certViewModal',event)">
+  <div class="modal" style="max-width:900px;">
+    <div class="modal-title"><span id="cvTitle" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">성적서</span> <button class="modal-close" onclick="closeModal('certViewModal')">✕</button></div>
+    <div id="cvTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <div id="cvBody"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn-ghost" style="margin-bottom:0;" onclick="openCertTab()">새 탭에서 열기</button>
+      <button class="btn-primary" style="margin-bottom:0;" onclick="downloadCert()">다운로드</button>
+    </div>
   </div>
 </div>
 
@@ -2924,6 +2943,79 @@ function addCalibMonths(dateStr,months){
   d.setMonth(d.getMonth()+parseInt(months));
   return d.toLocaleDateString('sv-SE');
 }
+// ── 검교정 검색 (설비 정보 + 이력의 성적서 번호 · 기관 · 첨부 파일명) ──
+let calibSearchQ='';
+function onCalibSearch(){
+  calibSearchQ=document.getElementById('calibSearch').value.trim();
+  document.getElementById('calibSearchClear').style.display=calibSearchQ?'block':'none';
+  renderCalib();
+}
+function clearCalibSearch(){
+  document.getElementById('calibSearch').value='';
+  onCalibSearch();
+}
+function calibFiltered(){
+  const q=calibSearchQ.toLowerCase(), calibs=db.calibs||[];
+  if(!q) return calibs;
+  return calibs.filter(c=>[c.name,c.mgmtNo,c.item,c.maker,c.serial,c.location,c.manager,c.agency,c.note,
+    ...(c.hist||[]).flatMap(r=>[r.certNo,r.agency,r.by,...(r.files||[]).map(f=>f.name)])]
+    .some(v=>String(v||'').toLowerCase().includes(q)));
+}
+
+// ── 성적서 미리보기 · 다운로드 ──
+let _cvFiles=[],_cvIdx=0;
+function certKind(f){
+  const n=String(f.name||f.path||'').toLowerCase();
+  return /\.pdf$/.test(n)?'pdf':/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(n)?'img':'';
+}
+function viewCertRec(e,cid,hid,i){
+  if(e){e.preventDefault();e.stopPropagation();}
+  const c=db.calibs.find(x=>x.id===cid), r=c&&(c.hist||[]).find(x=>x.id===hid);
+  if(r&&(r.files||[]).length) openCertView(r.files,i,`${c.name||''} · ${r.date||''}${r.certNo?' · '+r.certNo:''}`);
+  return false;
+}
+function viewCertKeep(e,i){
+  if(e){e.preventDefault();e.stopPropagation();}
+  openCertView(_crKeep,i,'성적서');
+  return false;
+}
+function openCertView(files,i,title){
+  _cvFiles=files.slice(); _cvIdx=i||0;
+  document.getElementById('cvTitle').textContent=title||'성적서';
+  renderCertView();
+  openModal('certViewModal');
+}
+function renderCertView(){
+  const f=_cvFiles[_cvIdx]; if(!f) return;
+  const esc=s=>_rptEsc(s).replace(/"/g,'&quot;');
+  document.getElementById('cvTabs').innerHTML=_cvFiles.length>1?_cvFiles.map((x,i)=>
+    `<button class="filter-chip${i===_cvIdx?' active':''}" onclick="_cvIdx=${i};renderCertView()">📎 ${esc(x.name||'성적서 '+(i+1))}</button>`).join(''):'';
+  const k=certKind(f), box='border:1px solid var(--border);border-radius:10px;background:var(--card2);';
+  document.getElementById('cvBody').innerHTML=
+    k==='img'?`<div style="${box}padding:6px;text-align:center;"><img src="${esc(f.url)}" alt="${esc(f.name||'')}" style="max-width:100%;max-height:70dvh;display:inline-block;"></div>`
+    :k==='pdf'?`<iframe src="${esc(f.url)}" title="${esc(f.name||'')}" style="width:100%;height:70dvh;${box}"></iframe>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">PDF가 보이지 않으면 (일부 휴대폰 브라우저) '새 탭에서 열기'를 누르세요.</div>`
+    :`<div class="empty" style="${box}">미리보기를 지원하지 않는 파일입니다 — 새 탭에서 열거나 다운로드하세요.<br>${esc(f.name||'')}</div>`;
+}
+function openCertTab(){
+  const f=_cvFiles[_cvIdx]; if(f) window.open(f.url,'_blank','noopener');
+}
+async function downloadCert(){
+  const f=_cvFiles[_cvIdx]; if(!f) return;
+  try{
+    const res=await fetch(f.url);
+    if(!res.ok) throw new Error(res.status);
+    const url=URL.createObjectURL(await res.blob()), a=document.createElement('a');
+    a.href=url; a.download=f.name||'성적서'; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
+    toast('다운로드: '+(f.name||'성적서'));
+  }catch(e){
+    // 저장소 CORS 미설정 등으로 직접 받기가 막히면 새 탭으로 열어 브라우저 저장 사용
+    window.open(f.url,'_blank','noopener');
+    toast('새 탭에서 열었습니다 — 브라우저의 저장/다운로드를 사용하세요','w');
+  }
+}
+
 function renderCalib(){
   const tbody=document.getElementById('calibBody');
   const summary=document.getElementById('calibSummary');
@@ -2934,8 +3026,17 @@ function renderCalib(){
     if(summary) summary.innerHTML='';
     return;
   }
+  const q=calibSearchQ.toLowerCase(), list=calibFiltered();
+  const cntEl=document.getElementById('calibSearchCount');
+  if(cntEl) cntEl.innerHTML=q?`검색결과 <span>${list.length}</span> / ${db.calibs.length}건`:'';
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="18" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">"${_rptEsc(calibSearchQ)}" 검색 결과 없음</td></tr>`;
+    if(summary) summary.innerHTML='';
+    return;
+  }
+  const hl=t=>hlText(_rptEsc(t),calibSearchQ);
   let overCnt=0,warnCnt=0,okCnt=0,failCnt=0,ngCnt=0;
-  tbody.innerHTML=db.calibs.map((c,i)=>{
+  tbody.innerHTML=list.map((c,i)=>{
     const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
     const remain=next?Math.ceil((new Date(next)-new Date(today))/86400000):null;
     let statusTxt='—',statusCol='var(--muted)',rowBg='';
@@ -2950,18 +3051,18 @@ function renderCalib(){
     const resTxt=last?`<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${last.result==='불합격'?'var(--red)':'var(--green)'};">${last.result}</span>`:'<span style="color:var(--muted);">—</span>';
     const ngTxt=ngOpen?` <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:#ef444425;color:var(--red);">영향평가 미결</span>`:'';
     const certFile=last&&last.files&&last.files[0];
-    const certTxt=last?(`${_rptEsc(last.certNo||'')}`+(certFile?` <a href="${certFile.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--blue);text-decoration:none;">📎${last.files.length}</a>`:''))||'—':'—';
+    const certTxt=last?(`${hl(last.certNo||'')}`+(certFile?` <a href="${certFile.url}" onclick="return viewCertRec(event,'${c.id}','${last.id}',0)" title="미리보기" style="color:var(--blue);text-decoration:none;">📎${last.files.length}</a>`:''))||'—':'—';
     const isLight=document.body.classList.contains('light');
     const borderCol=isLight?'#e5e7eb':'#1e2530';
     const td=`padding:7px 6px;border-bottom:1px solid ${borderCol};white-space:nowrap;`;
     return `<tr style="${rowBg}cursor:pointer;" onclick="openCalibForm('${c.id}')">
       <td style="${td}text-align:center;color:var(--muted);">${i+1}</td>
-      <td style="${td}font-weight:600;color:var(--text);">${c.name||'—'}</td>
-      <td style="${td}font-family:var(--mono);font-size:14px;color:var(--blue);">${c.mgmtNo||'—'}</td>
-      <td style="${td}color:var(--text);">${c.item||'—'}</td>
-      <td style="${td}color:var(--muted);">${c.maker||'—'}</td>
-      <td style="${td}font-family:var(--mono);font-size:13px;color:var(--muted);">${_rptEsc(c.serial||'')||'—'}</td>
-      <td style="${td}color:var(--muted);">${c.location||'—'}</td>
+      <td style="${td}font-weight:600;color:var(--text);">${hl(c.name)||'—'}</td>
+      <td style="${td}font-family:var(--mono);font-size:14px;color:var(--blue);">${hl(c.mgmtNo)||'—'}</td>
+      <td style="${td}color:var(--text);">${hl(c.item)||'—'}</td>
+      <td style="${td}color:var(--muted);">${hl(c.maker)||'—'}</td>
+      <td style="${td}font-family:var(--mono);font-size:13px;color:var(--muted);">${hl(c.serial)||'—'}</td>
+      <td style="${td}color:var(--muted);">${hl(c.location)||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);">${c.cycleMon||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);">${dw(c.lastDate)||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);font-weight:600;color:${statusCol};">${dw(next)||'—'}</td>
@@ -2969,9 +3070,9 @@ function renderCalib(){
       <td style="${td}text-align:center;"><span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${statusCol};">${statusTxt}</span></td>
       <td style="${td}text-align:center;">${resTxt}${ngTxt}</td>
       <td style="${td}color:var(--muted);">${certTxt}</td>
-      <td style="${td}color:var(--muted);">${c.manager||'—'}</td>
-      <td style="${td}color:var(--muted);">${c.agency||'—'}</td>
-      <td style="${td}color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;">${c.note||''}</td>
+      <td style="${td}color:var(--muted);">${hl(c.manager)||'—'}</td>
+      <td style="${td}color:var(--muted);">${hl(c.agency)||'—'}</td>
+      <td style="${td}color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;">${hl(c.note)}</td>
       <td style="${td}text-align:center;" onclick="event.stopPropagation();deleteCalib('${c.id}')"><span style="color:var(--red);cursor:pointer;font-size:14px;">✕</span></td>
     </tr>`;
   }).join('');
@@ -3063,7 +3164,7 @@ function renderCalibHist(){
   if(!list.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);">등록된 검교정 결과 없음 — + 결과 등록으로 회차별 결과와 성적서를 남기세요.</div>';return;}
   el.innerHTML=list.map(r=>{
     const ng=r.result==='불합격', st=calibNgState(r);
-    const files=(r.files||[]).map(f=>`<a href="${f.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-size:12px;word-break:break-all;">📎 ${esc(f.name||'성적서')}</a>`).join('<br>');
+    const files=(r.files||[]).map((f,fi)=>`<a href="${f.url}" onclick="return viewCertRec(event,'${c.id}','${r.id}',${fi})" style="color:var(--blue);text-decoration:none;font-size:12px;word-break:break-all;">📎 ${esc(f.name||'성적서')}</a>`).join('<br>');
     const ngBox=ng?`<div style="margin-top:6px;font-size:11.5px;line-height:1.55;color:var(--text);">
         ${r.ng&&r.ng.detail?`<div><b>벗어남</b> ${esc(r.ng.detail)}</div>`:''}
         <div><b>영향 기간</b> ${dw(r.ng&&r.ng.from)||'—'} ~ ${dw(r.ng&&r.ng.to)||'—'}</div>
@@ -3156,7 +3257,7 @@ function calibResFileRm(kind,i){
 }
 function renderCalibResFiles(){
   const esc=_rptEsc, row=(name,href,kind,i,tag)=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:8px;">
-      ${href?`<a href="${href}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;flex:1;word-break:break-all;">📎 ${esc(name)}</a>`:`<span style="flex:1;word-break:break-all;">📎 ${esc(name)}</span>`}
+      ${href?`<a href="${href}" onclick="return viewCertKeep(event,${i})" style="color:var(--blue);text-decoration:none;flex:1;word-break:break-all;">📎 ${esc(name)}</a>`:`<span style="flex:1;word-break:break-all;">📎 ${esc(name)}</span>`}
       ${tag?`<span style="font-size:10px;color:var(--amber);">${tag}</span>`:''}
       <span style="color:var(--red);cursor:pointer;font-size:14px;" onclick="calibResFileRm('${kind}',${i})">✕</span></div>`;
   document.getElementById('crFileList').innerHTML=_crKeep.map((f,i)=>row(f.name||'성적서',f.url,'keep',i,''))
@@ -3189,7 +3290,7 @@ async function saveCalibRes(){
       // 이번에 올라간 파일은 정리 — 다시 저장하면 처음부터 업로드
       if(typeof window._deleteReqPhotos==='function') window._deleteReqPhotos(files.slice(_crKeep.length));
       st.textContent=''; btn.disabled=false;
-      toast('성적서 업로드 실패 — 연결 확인 후 다시 저장해주세요','e');
+      toast('성적서 업로드 실패 ('+(e&&e.code||e&&e.message||'알 수 없음')+') — 다시 저장해주세요','e');
       return;
     }
     btn.disabled=false; st.textContent='';
@@ -6952,8 +7053,27 @@ async function xrSave(wb,name,okMsg){
 // s: {name,title,meta,sums:[[라벨,값,서식,색,수식]],sumAccent,sumW,legend:[[라벨,배경,글자색]],cols:[{h,w,al,fmt}],headDark,rows,totals:[열번호],images:[{base64,w,h}],empty,footer}
 // 수식(필터 반영) : {fn:'sum'|'count'|'avg',col} · {fn:'countIf',col,eq:'값'} · {fn:'countIf',col,pre:'앞글자'} — col 은 0부터
 // rows: {vals,fill,fills:{i},font:{i},tag:{i:'r|a|g|m'},bold} · {group:'제목'} 남색 구분 바 · {head:true} 머리글 반복 · {sep:true} 구분선
+// 한 줄 표시 : 셀 안 줄바꿈을 공백으로 (자동 줄바꿈 해제)
+function xrOne(v){
+  if(typeof v==='string') return v.replace(/\s*\n\s*/g,' ');
+  if(v&&typeof v==='object'){
+    if(v.richText) return {richText:v.richText.map(t=>Object.assign({},t,{text:xrOne(t.text)}))};
+    if(v.text!=null) return Object.assign({},v,{text:xrOne(v.text)});
+  }
+  return v;
+}
+// 데이터 셀 가로 정렬 : 가운데 맞춤 → 오른쪽 정렬
+const xrAl=a=>a==='center'?'right':(a||'left');
 function xrSheet(wb,s){
-  const cols=s.cols,NC=cols.length,rows=s.rows||[];
+  const rows=s.rows||[];
+  // 줄바꿈 없이 한 줄로 보이도록 열 너비를 내용 길이에 맞춤 (최대 80)
+  const units=v=>[...xrOne(xrText(v))].reduce((n,ch)=>n+(/[ㄱ-힝]/.test(ch)?1.7:0.95),0);
+  const cols=s.cols.map((c,i)=>{
+    let w=Math.max(c.w,units(c.h)+2);
+    rows.forEach(r=>{if(!r.vals) return;const v=r.vals[i];
+      w=Math.max(w,(typeof v==='number'?xrFmtVal(v,c.fmt).length*1.1:units(v))+2);});
+    return Object.assign({},c,{w:Math.min(80,Math.ceil(w))});
+  }),NC=cols.length;
   const thin={style:'thin',color:{argb:XR.LINE}},box={top:thin,left:thin,bottom:thin,right:thin};
   const ws=wb.addWorksheet(s.name,{pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,
     margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.2,footer:0.2}}});
@@ -7004,14 +7124,12 @@ function xrSheet(wb,s){
   let H=0;
   const head=()=>{
     if(!H) H=R;
-    let mx=1;
-    cols.forEach((c,i)=>{const x=C(R,i+1);x.value=c.h;
+    cols.forEach((c,i)=>{const x=C(R,i+1);x.value=xrOne(c.h);
       x.font=xrFont({bold:true,color:{argb:s.headDark?'FFFFFFFF':XR.HEADTX}});
       x.fill=xrFill(s.headDark?XR.NAVY:XR.HEAD);
       x.border=s.headDark?{top:{style:'thin',color:{argb:XR.NAVY}},left:{style:'thin',color:{argb:XR.NAVY}},bottom:{style:'thin',color:{argb:XR.NAVY}},right:{style:'thin',color:{argb:XR.NAVY}}}:box;
-      x.alignment={horizontal:c.al||'left',vertical:'middle',wrapText:true};
-      mx=Math.max(mx,xrLines(c.h,c.w));});
-    ws.getRow(R).height=Math.max(22,mx*12+8);R++;
+      x.alignment={horizontal:c.al||'left',vertical:'middle'};});
+    ws.getRow(R).height=22;R++;
   };
   if(!rows.length||!rows[0].group) head();
   if(!rows.length){
@@ -7023,20 +7141,18 @@ function xrSheet(wb,s){
     if(row.group){const x=full(R,row.group,xrFont({size:11,bold:true,color:{argb:'FFFFFFFF'}}),22);x.fill=xrFill(XR.NAVY);x.alignment={vertical:'middle',indent:1};R++;return;}
     if(row.head){head();return;}
     if(row.sep){full(R,'',xrFont(),4).fill=xrFill(XR.LINE);R++;return;}
-    let mx=1;
     cols.forEach((c,i)=>{
       const x=C(R,i+1),v=row.vals[i],tg=row.tag&&row.tag[i];
-      x.value=v==null?'':v; x.border=box;
+      x.value=v==null?'':xrOne(v); x.border=box;
       const f=Object.assign({},row.bold?{bold:true}:{},(row.font&&row.font[i])||{});
       if(tg){f.bold=true;f.color={argb:XR.TAG[tg][1]};}
       x.font=xrFont(f);
       const bg=(tg&&XR.TAG[tg][0])||(row.fills&&row.fills[i])||row.fill;
       if(bg) x.fill=xrFill(bg);
       if(c.fmt&&typeof v==='number') x.numFmt=c.fmt;
-      x.alignment={horizontal:tg?'center':(c.al||'left'),vertical:'top',wrapText:true};
-      mx=Math.max(mx,xrLines(typeof v==='number'?String(Math.round(v))+'000':v,c.w));
+      x.alignment={horizontal:xrAl(tg?'center':c.al),vertical:'middle'};
     });
-    ws.getRow(R).height=Math.max(20,mx*13+6);R++;
+    ws.getRow(R).height=20;R++;
   });
   // 필터 반영 수식 : 단순 표(구분 바 · 반복 머리글 없음)이면 요약 박스와 합계 행을 SUBTOTAL 로 — 자동 필터로 숨긴 행은 계산에서 빠짐
   const simple=H&&!rows.some(r=>r.group||r.head);
@@ -7058,7 +7174,7 @@ function xrSheet(wb,s){
       cols.forEach((c,i)=>{
         const x=C(R,i+1);
         x.border={top:{style:'medium',color:{argb:XR.NAVY}},bottom:thin,left:thin,right:thin};
-        x.fill=xrFill(XR.HEAD);x.font=xrFont({bold:true});x.alignment={horizontal:i?(c.al||'left'):'left',vertical:'middle'};
+        x.fill=xrFill(XR.HEAD);x.font=xrFont({bold:true});x.alignment={horizontal:i?xrAl(c.al):'left',vertical:'middle'};
         if(s.totals.includes(i)){
           x.value={formula:fx({fn:'sum',col:i}),result:rows.reduce((a,r)=>a+(typeof r.vals[i]==='number'?r.vals[i]:0),0)};
           if(c.fmt) x.numFmt=c.fmt;
@@ -7194,8 +7310,9 @@ async function exportPartsXLSX(){
 }
 
 // 검교정 관리대장 (필터 없음)
-function xrSpecCalib(){
-  const today=localToday(), calibs=db.calibs||[];
+// calibs : 대상 항목 (기본 전체) · pre : 메타 앞 문구 (검색 조건 등)
+function xrSpecCalib(calibs=db.calibs||[],pre=''){
+  const today=localToday();
   let over=0,warn=0,ok=0,fail=0,ngOpen=0;
   const rows=calibs.map((c,i)=>{
     const next=c.lastDate&&c.cycleMon?addCalibMonths(c.lastDate,c.cycleMon):'';
@@ -7215,7 +7332,7 @@ function xrSpecCalib(){
       c.manager||'—',c.agency||'—',c.note||''],fill,tag:Object.assign({11:tg},last?{12:last.result==='불합격'?'r':'g'}:{},ngN?{14:'r'}:{})};
   });
   return {name:'검교정',title:'검교정 관리대장',
-    meta:`총 ${calibs.length}건 · 불합격 ${fail} · 영향평가 미결 ${ngOpen} · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${xrDay(today)}`,
+    meta:`${pre}총 ${calibs.length}건 · 불합격 ${fail} · 영향평가 미결 ${ngOpen} · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${xrDay(today)}`,
     sums:[['총 항목',calibs.length,'#,##0',null,{fn:'count',col:1}],['불합격',fail,'#,##0',XR.NG,{fn:'countIf',col:11,eq:'불합격'}],
       ['영향평가 미결',ngOpen,'#,##0',XR.NG,{fn:'countIf',col:14,eq:'미결'}],['초과',over,'#,##0',null,{fn:'countIf',col:11,eq:'초과'}],
       ['임박(10일)',warn,'#,##0',null,{fn:'countIf',col:11,pre:'D-'}],['정상',ok,'#,##0',null,{fn:'countIf',col:11,eq:'정상'}]],
@@ -7233,8 +7350,8 @@ function xrCertCell(r){
   return {text,hyperlink:fs[0].url,links:fs.map(f=>({text:'📎 '+(f.name||'성적서'),url:f.url})),pre:no};
 }
 // 검교정 이력 : 회차별 결과 · 성적서 · 기준 벗어남 제품 영향 평가 (IATF 16949 7.1.5.2.1)
-function xrSpecCalibHist(){
-  const list=(db.calibs||[]).flatMap(c=>(c.hist||[]).map(r=>({c,r})))
+function xrSpecCalibHist(calibs=db.calibs||[],pre=''){
+  const list=calibs.flatMap(c=>(c.hist||[]).map(r=>({c,r})))
     .sort((a,b)=>(b.r.date||'').localeCompare(a.r.date||'')||(a.c.name||'').localeCompare(b.c.name||'','ko'));
   let pass=0,fail=0,open=0;
   const rows=list.map(({c,r},i)=>{
@@ -7251,7 +7368,7 @@ function xrSpecCalibHist(){
       tag:Object.assign({5:r.result==='불합격'?'r':'g'},st==='미결'?{18:'r'}:st==='완료'?{18:'g'}:{},ng.judge==='영향 있음'?{12:'r'}:ng.judge==='영향 없음'?{12:'g'}:{})};
   });
   return {name:'검교정 이력',title:'검교정 이력 · 제품 영향 평가',
-    meta:`IATF 16949 7.1.5.2.1 · 총 ${list.length}건 · 합격 ${pass} · 불합격 ${fail} · 영향평가 미결 ${open} · 기준일 ${xrDay(localToday())}`,
+    meta:`${pre}IATF 16949 7.1.5.2.1 · 총 ${list.length}건 · 합격 ${pass} · 불합격 ${fail} · 영향평가 미결 ${open} · 기준일 ${xrDay(localToday())}`,
     sums:[['총 이력',list.length,'#,##0',null,{fn:'count',col:1}],['합격',pass,'#,##0',XR.OK,{fn:'countIf',col:5,eq:'합격'}],
       ['불합격',fail,'#,##0',XR.NG,{fn:'countIf',col:5,eq:'불합격'}],['영향평가 미결',open,'#,##0',XR.NG,{fn:'countIf',col:18,eq:'미결'}]],
     cols:[{h:'No',w:5,al:'center'},{h:'설비명',w:16},{h:'관리번호',w:12},{h:'검교정 항목',w:14},{h:'검교정일',w:14,al:'center'},{h:'결과',w:8,al:'center'},
@@ -7262,7 +7379,9 @@ function xrSpecCalibHist(){
 }
 async function exportCalibXLSX(){
   if(!db.calibs||!db.calibs.length){toast('검교정 데이터 없음','w');return;}
-  await xrExport([xrSpecCalib(),xrSpecCalibHist()],'검교정관리대장_'+localToday()+'.xlsx','검교정 관리대장 Excel 다운로드 완료');
+  const list=calibFiltered(), pre=calibSearchQ?`검색: ${calibSearchQ} · `:'';
+  if(!list.length){toast('해당 조건의 검교정 항목 없음','w');return;}
+  await xrExport([xrSpecCalib(list,pre),xrSpecCalibHist(list,pre)],'검교정관리대장_'+localToday()+'.xlsx','검교정 관리대장 Excel 다운로드 완료');
 }
 
 // 점검 이력 보고서
@@ -7695,7 +7814,9 @@ function exportPartsReport(){
 
 function exportCalibReport(){
   if(!db.calibs||!db.calibs.length){toast('검교정 데이터 없음','w');return;}
-  const spec=xrSpecCalib(), hist=xrSpecCalibHist();
+  const list=calibFiltered(), pre=calibSearchQ?`검색: ${calibSearchQ} · `:'';
+  if(!list.length){toast('해당 조건의 검교정 항목 없음','w');return;}
+  const spec=xrSpecCalib(list,pre), hist=xrSpecCalibHist(list,pre);
   const body=XR_HTML_CSS+xrSpecHtml(spec,null,true)+xrSpecHtml(hist);
   downloadFile('검교정관리대장_'+localToday()+'.html',reportShell('검교정 관리대장',spec.meta,body),'text/html');
   toast('검교정 관리대장 다운로드 완료');
@@ -8570,7 +8691,7 @@ async function exportCapaXLSX(){
       const col=startCol+i, h=C(R,col), v=C(R+1,col);
       h.value=it[0]; h.font=font({bold:true,size:9,color:{argb:'FF334155'}}); h.fill=fill(HEAD);
       h.alignment={horizontal:'center',vertical:'middle',wrapText:true}; h.border=boxB;
-      v.value=it[1]; v.font=font(it[3]||{}); v.alignment={horizontal:'center',vertical:'middle',wrapText:true}; v.border=boxB;
+      v.value=it[1]; v.font=font(it[3]||{}); v.alignment={horizontal:'right',vertical:'middle',shrinkToFit:true}; v.border=boxB;
       if(it[2]) v.numFmt=it[2];
     });
     ws.getRow(R).height=30; ws.getRow(R+1).height=24; R+=2;
@@ -8663,7 +8784,7 @@ async function exportCapaXLSX(){
       const c=C(R,i+1); c.value=v; c.border=boxB;
       c.font=font(Object.assign({},opt.font||{},(opt.cellFont||{})[i]||{}));
       if(FMT[i]&&typeof v==='number') c.numFmt=FMT[i];
-      c.alignment={horizontal:i===0?'left':'center',vertical:'middle',indent:i===0?1:0};
+      c.alignment={horizontal:i===0?'left':'right',vertical:'middle',indent:i===0?1:0,shrinkToFit:true};
       if(opt.fill) c.fill=fill(opt.fill);
     });
     ws.getRow(R).height=20; R++;
