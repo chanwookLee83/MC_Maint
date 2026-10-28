@@ -654,6 +654,14 @@ canvas{display:block;width:100%!important;}
 .alarm-icon{display:none;}
 .alarm-text{font-size:14px;color:var(--text);line-height:1.5;}
 .alarm-sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px;}
+/* 알림 종류별 구분 (장비 점검 / 소모품 재고 / 정비 의뢰) — 왼쪽 굵은 선은 심각도, 나머지 테두리·라벨은 종류 색 */
+.alarm-item{--cat:var(--muted);}
+.alarm-item.cat-eq{--cat:#4fc3f7;}
+.alarm-item.cat-part{--cat:#ffb74d;}
+.alarm-item.cat-req{--cat:#f48fb1;}
+.alarm-item.cat-eq,.alarm-item.cat-part,.alarm-item.cat-req{border-top-color:var(--cat);border-right-color:var(--cat);border-bottom-color:var(--cat);}
+.alarm-item.cat-req{background:linear-gradient(90deg,#f48fb112,transparent 60%),var(--card);}
+.alarm-cat{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--cat);border:1px solid var(--cat);border-radius:999px;padding:1px 8px;margin-bottom:5px;}
 
 /* SHARE */
 .share-btn{width:100%;border:none;border-radius:11px;font-family:var(--cond);font-size:15px;font-weight:700;letter-spacing:2px;padding:14px;cursor:pointer;margin-bottom:9px;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s,transform .15s;}
@@ -803,6 +811,11 @@ body.light .alarm-text{color:#111827;}
 body.light .alarm-sub{color:#4b5563;}
 body.light .alarm-item.warning{background:#fffbf0;border-color:#5a68c030;}
 body.light .alarm-item.critical{background:#fff5f5;border-color:#d42b2b30;}
+body.light .alarm-item.cat-eq{--cat:#0277bd;}
+body.light .alarm-item.cat-part{--cat:#c25e00;}
+body.light .alarm-item.cat-req{--cat:#c2185b;}
+body.light .alarm-item.cat-eq,body.light .alarm-item.cat-part,body.light .alarm-item.cat-req{border-top-color:var(--cat);border-right-color:var(--cat);border-bottom-color:var(--cat);}
+body.light .alarm-item.cat-req{background:linear-gradient(90deg,#c2185b10,transparent 60%),#fff;}
 body.light .share-note{color:#4b5563;}
 body.light .eq-info-cell{background:#f9fafb;border-color:#d4d9e2;}
 body.light .eq-info-cell-label{color:#4b5563;}
@@ -3372,7 +3385,7 @@ function checkAlarms(){
   // ── 안전재고 이하 ──
   db.parts.forEach(p=>{
     if(p.qty<=p.safe && p.alertOn!==false){
-      alarms.push({type:'critical',icon:'',text:`[${p.pn}] ${p.name} 재고 부족`,sub:`현재 ${p.qty}개 / 안전재고 ${p.safe}개`,tab:'parts',id:p.id});
+      alarms.push({type:'critical',icon:'',text:`[${p.pn}] ${p.name} 재고 부족`,sub:`현재 ${p.qty}개 / 안전재고 ${p.safe}개`,tab:'parts',id:p.id,cat:'part'});
     }
   });
 
@@ -3384,7 +3397,7 @@ function checkAlarms(){
 
     // 한 번도 점검 안 한 장비
     if(!lastInsp){
-      alarms.push({type:'warning',icon:'',text:`[${eq.name}] 미점검 장비`,sub:`점검 기록 없음 — 점검이 필요합니다`,tab:'insp',eqId:eq.id});
+      alarms.push({type:'warning',icon:'',text:`[${eq.name}] 미점검 장비`,sub:`점검 기록 없음 — 점검이 필요합니다`,tab:'insp',eqId:eq.id,cat:'eq'});
       return;
     }
 
@@ -3394,9 +3407,9 @@ function checkAlarms(){
     const days=daysSince(lastInsp.date);
     const remain=cycle-days;
     if(remain<=0){
-      alarms.push({type:'critical',icon:'',text:`[${eq.name}] 점검 기한 초과`,sub:`마지막 점검 후 ${days}일 경과 (주기 ${cycle}일)`,tab:'insp',eqId:eq.id});
+      alarms.push({type:'critical',icon:'',text:`[${eq.name}] 점검 기한 초과`,sub:`마지막 점검 후 ${days}일 경과 (주기 ${cycle}일)`,tab:'insp',eqId:eq.id,cat:'eq'});
     } else if(remain<=5){
-      alarms.push({type:'warning',icon:'',text:`[${eq.name}] 점검 D-${remain}`,sub:`${dw(lastInsp.date)} 점검 후 ${days}일 경과`,tab:'insp',eqId:eq.id});
+      alarms.push({type:'warning',icon:'',text:`[${eq.name}] 점검 D-${remain}`,sub:`${dw(lastInsp.date)} 점검 후 ${days}일 경과`,tab:'insp',eqId:eq.id,cat:'eq'});
     }
   });
 
@@ -3435,7 +3448,7 @@ function checkAlarms(){
     alarms.unshift({type:!r.ack&&mins>=10?'critical':'warning',icon:'',
       text:r.ack?`[의뢰] ${nm} 수리 중`:`[의뢰] ${nm} 미확인`,
       sub:`${r.reqDate?dw(r.reqDate):''} ${r.reqTime||''} 접수${ago?' · '+ago:''}`
-        +(r.ack?` · 확인 ${String(r.ack.by||'').replace(/</g,'&lt;')} ${r.ack.at?r.ack.at.slice(11):''}`:(r.requester?' · '+String(r.requester).replace(/</g,'&lt;'):'')),tab:'req'});
+        +(r.ack?` · 확인 ${String(r.ack.by||'').replace(/</g,'&lt;')} ${r.ack.at?r.ack.at.slice(11):''}`:(r.requester?' · '+String(r.requester).replace(/</g,'&lt;'):'')),tab:'req',cat:'req'});
   });
   const reqBadge=document.getElementById('reqBadge');
   if(reqBadge){if(openReqs.length){reqBadge.textContent=openReqs.length;reqBadge.classList.add('show');}else reqBadge.classList.remove('show');}
@@ -3461,9 +3474,11 @@ function checkAlarms(){
   else badge.classList.remove('show');
 
   const el=document.getElementById('alarmList');
+  const ALARM_CAT_LABEL={eq:'장비 점검',part:'소모품 재고',req:'정비 의뢰'};
   el.innerHTML=alarms.length?alarms.map(a=>`
-    <div class="alarm-item ${a.type}"${a.tab?` onclick="goAlarm('${a.tab}',${a.eqId!=null?a.eqId:'null'},${a.id!=null?a.id:'null'})" style="cursor:pointer;"`:''}>
+    <div class="alarm-item ${a.type}${a.cat?' cat-'+a.cat:''}"${a.tab?` onclick="goAlarm('${a.tab}',${a.eqId!=null?a.eqId:'null'},${a.id!=null?a.id:'null'})" style="cursor:pointer;"`:''}>
       <div class="alarm-icon">${a.icon}</div>
+      ${a.cat?`<div class="alarm-cat">${ALARM_CAT_LABEL[a.cat]}</div>`:''}
       <div class="alarm-text">${a.text}</div>
       <div class="alarm-sub">${a.sub}</div>
     </div>`).join(''):'<div class="empty" style="padding:20px;">알림 없음 </div>';
@@ -6987,7 +7002,7 @@ function exportMaintReport(){
     return (!fEq||m.eqId==fEq)&&(!fType||m.type===fType)&&(!fFrom||md>=fFrom)&&(!fTo||md<=fTo);
   }).sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
   if(!list.length){toast('해당 조건의 정비 이력 없음','w');return;}
-  let totCost=0,totFail=0;
+  let totCost=0,totFail=0,totH=0;
   const rows=list.map(m=>{
     const rd=(m.start?m.start.slice(0,10):null)||m.date;
     const rdEnd=m.end?m.end.slice(0,10):null;
@@ -6995,7 +7010,7 @@ function exportMaintReport(){
     const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
     const parts=(m.parts||[]).map(p=>`[${esc(p.pn)}] ${esc(p.name)} ×${p.qty}`).join('<br>')||'—';
     const pc=(m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;
-    totCost+=pc; if(m.type==='고장')totFail++;
+    totCost+=pc; totH+=durH; if(m.type==='고장')totFail++;
     return `<tr>
       <td class="c">${rdTxt}</td>
       <td>${esc(m.eqName)}</td>
@@ -7009,12 +7024,11 @@ function exportMaintReport(){
     </tr>`;
   }).join('');
   const eqName=fEq?(db.eqs.find(e=>e.id==fEq)?.name||'선택 장비'):'전체';
-  const body=`<div class="sum">
-    <div>정비 건수<b>${list.length}</b></div>
-    <div>고장 건수<b>${totFail}</b></div>
-    <div>부품비용 합계<b>${fmtCost(totCost)}</b></div>
-  </div>
-  <table><thead><tr><th>수리 일시</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const sumSpec=xrSpecMaintSum(list,'');
+  // 요약 박스(건수 · 고장 · 총 정비시간 · 평균 · 비용) + 유형별 표 + 고장 TOP 5 → 그 아래 이력 목록
+  const body=XR_HTML_CSS+xrSpecHtml(sumSpec)+`<h2>정비 이력</h2>
+  <table><thead><tr><th>수리 일시</th><th>장비</th><th>유형</th><th>수리시간</th><th>내용</th><th>원인</th><th>사용 부품</th><th>부품비용</th><th>작업자</th></tr></thead><tbody>${rows}
+  <tr style="font-weight:700;background:#f1f5f9;"><td>합계</td><td></td><td></td><td class="c">${xrFmtVal(totH/24,XR_DUR)}</td><td></td><td></td><td></td><td class="num">${fmtCost(totCost)}</td><td></td></tr></tbody></table>`;
   const meta=`장비: ${esc(eqName)} · 유형: ${esc(fType||'전체')} · 기간: ${dwp(fFrom)||'처음'} ~ ${dwp(fTo)||'현재'} · 총 ${list.length}건`;
   downloadFile('정비이력서_'+localToday()+'.html',reportShell('설비 정비 이력서',meta,body),'text/html');
   toast('정비 이력서 다운로드 완료');
@@ -7053,6 +7067,7 @@ async function xrSave(wb,name,okMsg){
 // s: {name,title,meta,sums:[[라벨,값,서식,색,수식]],sumAccent,sumW,legend:[[라벨,배경,글자색]],cols:[{h,w,al,fmt}],headDark,rows,totals:[열번호],images:[{base64,w,h}],empty,footer}
 // 수식(필터 반영) : {fn:'sum'|'count'|'avg',col} · {fn:'countIf',col,eq:'값'} · {fn:'countIf',col,pre:'앞글자'} — col 은 0부터
 // rows: {vals,fill,fills:{i},font:{i},tag:{i:'r|a|g|m'},bold} · {group:'제목'} 남색 구분 바 · {head:true} 머리글 반복 · {sep:true} 구분선
+// after: [{title,cols,rows,empty}] 본 표 아래에 붙는 작은 표 (열 수는 본 표 이하)
 // 한 줄 표시 : 셀 안 줄바꿈을 공백으로 (자동 줄바꿈 해제)
 function xrOne(v){
   if(typeof v==='string') return v.replace(/\s*\n\s*/g,' ');
@@ -7068,10 +7083,14 @@ function xrSheet(wb,s){
   const rows=s.rows||[];
   // 줄바꿈 없이 한 줄로 보이도록 열 너비를 내용 길이에 맞춤 (최대 80)
   const units=v=>[...xrOne(xrText(v))].reduce((n,ch)=>n+(/[ㄱ-힝]/.test(ch)?1.7:0.95),0);
+  // 아래 덧붙는 표(after)도 같은 열을 쓰므로 너비 계산에 함께 넣음
+  const tables=[{cols:s.cols,rows}].concat(s.after||[]);
   const cols=s.cols.map((c,i)=>{
-    let w=Math.max(c.w,units(c.h)+2);
-    rows.forEach(r=>{if(!r.vals) return;const v=r.vals[i];
-      w=Math.max(w,(typeof v==='number'?xrFmtVal(v,c.fmt).length*1.1:units(v))+2);});
+    let w=c.w;
+    tables.forEach(t=>{const tc=t.cols[i];if(!tc) return;
+      w=Math.max(w,tc.w||0,units(tc.h)+2);
+      (t.rows||[]).forEach(r=>{if(!r.vals) return;const v=r.vals[i];
+        w=Math.max(w,units(typeof v==='number'?xrFmtVal(v,tc.fmt):v)+2);});});
     return Object.assign({},c,{w:Math.min(80,Math.ceil(w))});
   }),NC=cols.length;
   const thin={style:'thin',color:{argb:XR.LINE}},box={top:thin,left:thin,bottom:thin,right:thin};
@@ -7122,9 +7141,9 @@ function xrSheet(wb,s){
   }
   // 표
   let H=0;
-  const head=()=>{
+  const head=(cs=cols)=>{
     if(!H) H=R;
-    cols.forEach((c,i)=>{const x=C(R,i+1);x.value=xrOne(c.h);
+    cs.forEach((c,i)=>{const x=C(R,i+1);x.value=xrOne(c.h);
       x.font=xrFont({bold:true,color:{argb:s.headDark?'FFFFFFFF':XR.HEADTX}});
       x.fill=xrFill(s.headDark?XR.NAVY:XR.HEAD);
       x.border=s.headDark?{top:{style:'thin',color:{argb:XR.NAVY}},left:{style:'thin',color:{argb:XR.NAVY}},bottom:{style:'thin',color:{argb:XR.NAVY}},right:{style:'thin',color:{argb:XR.NAVY}}}:box;
@@ -7137,11 +7156,8 @@ function xrSheet(wb,s){
     for(let k=1;k<=NC;k++) C(R,k).border=box;
     R++;
   }
-  rows.forEach(row=>{
-    if(row.group){const x=full(R,row.group,xrFont({size:11,bold:true,color:{argb:'FFFFFFFF'}}),22);x.fill=xrFill(XR.NAVY);x.alignment={vertical:'middle',indent:1};R++;return;}
-    if(row.head){head();return;}
-    if(row.sep){full(R,'',xrFont(),4).fill=xrFill(XR.LINE);R++;return;}
-    cols.forEach((c,i)=>{
+  const dataRow=(row,cs)=>{
+    cs.forEach((c,i)=>{
       const x=C(R,i+1),v=row.vals[i],tg=row.tag&&row.tag[i];
       x.value=v==null?'':xrOne(v); x.border=box;
       const f=Object.assign({},row.bold?{bold:true}:{},(row.font&&row.font[i])||{});
@@ -7153,6 +7169,12 @@ function xrSheet(wb,s){
       x.alignment={horizontal:xrAl(tg?'center':c.al),vertical:'middle'};
     });
     ws.getRow(R).height=20;R++;
+  };
+  rows.forEach(row=>{
+    if(row.group){const x=full(R,row.group,xrFont({size:11,bold:true,color:{argb:'FFFFFFFF'}}),22);x.fill=xrFill(XR.NAVY);x.alignment={vertical:'middle',indent:1};R++;return;}
+    if(row.head){head();return;}
+    if(row.sep){full(R,'',xrFont(),4).fill=xrFill(XR.LINE);R++;return;}
+    dataRow(row,cols);
   });
   // 필터 반영 수식 : 단순 표(구분 바 · 반복 머리글 없음)이면 요약 박스와 합계 행을 SUBTOTAL 로 — 자동 필터로 숨긴 행은 계산에서 빠짐
   const simple=H&&!rows.some(r=>r.group||r.head);
@@ -7184,6 +7206,20 @@ function xrSheet(wb,s){
       ws.getRow(R).height=22;R++;
     }
   }
+  // 덧붙는 표 (after) : 제목 + 머리글 + 행 — 본 표와 같은 열 사용
+  (s.after||[]).forEach(b=>{
+    R++;
+    full(R,b.title,xrFont({size:11,bold:true}),22);
+    for(let k=1;k<=NC;k++) C(R,k).border={bottom:{style:'medium',color:{argb:XR.NAVY}}};
+    R++;
+    head(b.cols);
+    if(!b.rows.length){
+      full(R,b.empty||'데이터 없음',xrFont({color:{argb:XR.FAINT}}),22).alignment={horizontal:'center',vertical:'middle'};
+      for(let k=1;k<=NC;k++) C(R,k).border=box;
+      R++;
+    }
+    b.rows.forEach(r=>dataRow(r,b.cols));
+  });
   // 그래프 이미지
   (s.images||[]).forEach(im=>{
     R++;
@@ -7210,20 +7246,48 @@ async function xrExport(specs,file,msg){
 }
 const xrSortMaint=list=>list.slice().sort((a,b)=>{const ka=a.start||a.date||'';const kb=b.start||b.date||'';return kb>ka?1:kb<ka?-1:0;});
 
-// 정비 이력
+// 정비 이력 — 수리시간은 Excel 시간값(일 단위)으로 넣어 합계 · 필터 합계가 되도록 함
+const XR_DUR='[h]"시간" mm"분"';
+function maintHours(m){return (m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);}
+function maintPartCost(m){return (m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;}
+// 정비 요약 : 유형별 건수 · 시간 + 고장 빈도 TOP 5 장비
+function xrSpecMaintSum(list,meta){
+  const totH=list.reduce((s,m)=>s+maintHours(m),0), fails=list.filter(m=>m.type==='고장');
+  const byType={};
+  list.forEach(m=>{const t=m.type||'기타',x=byType[t]=byType[t]||{n:0,h:0,c:0};x.n++;x.h+=maintHours(m);x.c+=maintPartCost(m);});
+  const byEq={};
+  fails.forEach(m=>{const k=m.eqId||m.eqName,x=byEq[k]=byEq[k]||{name:m.eqName||'—',n:0,h:0,timed:0,last:''};
+    const h=maintHours(m),d=(m.start?m.start.slice(0,10):null)||m.date||'';
+    x.n++;x.h+=h;if(h>0)x.timed++;if(d>x.last)x.last=d;});
+  const top=Object.values(byEq).sort((a,b)=>b.n-a.n||b.h-a.h).slice(0,5);
+  return {name:'정비 요약',title:'정비 이력 요약',meta,
+    sums:[['정비 건수',list.length,'#,##0'],['고장 건수',fails.length,'#,##0',XR.NG],['총 정비시간',totH/24,XR_DUR,'FF5A68C0'],
+      ['건당 평균',list.length?totH/24/list.length:0,XR_DUR],['부품비용 합계',maintCostSum(list),XR.WON]],sumW:16,
+    cols:[{h:'정비 유형',w:16},{h:'건수',w:10,al:'right',fmt:'#,##0'},{h:'비율',w:10,al:'right',fmt:'0.0"%"'},
+      {h:'정비시간',w:16,al:'right',fmt:XR_DUR},{h:'건당 평균',w:16,al:'right',fmt:XR_DUR},{h:'부품비용',w:14,al:'right',fmt:XR.WON}],
+    totals:[1,3,5],
+    rows:Object.entries(byType).sort((a,b)=>b[1].n-a[1].n).map(([t,x])=>({
+      vals:[t,x.n,list.length?x.n/list.length*100:0,x.h/24,x.h/24/x.n,x.c],
+      font:{0:{bold:true,color:{argb:xrArgb(getMaintTypeColor(t))}}}})),
+    after:[{title:'고장 빈도 TOP 5 장비',empty:'고장 기록 없음',
+      cols:[{h:'순위',al:'center'},{h:'장비'},{h:'고장 건수',al:'right',fmt:'#,##0'},{h:'고장 정지시간',al:'right',fmt:XR_DUR},
+        {h:'평균 수리시간 (MTTR)',al:'right',fmt:XR_DUR},{h:'최근 고장일',al:'center'}],
+      rows:top.map((x,i)=>({vals:[i+1,x.name,x.n,x.h/24,x.timed?x.h/24/x.timed:'—',xrDay(x.last)||'—'],
+        font:{1:{bold:true},2:{bold:true,color:{argb:XR.NG}}}}))}]};
+}
 function xrSpecMaint(list,meta){
   return {name:'정비 이력',title:'설비 정비 이력서',meta,
     sums:[['정비 건수',list.length,'#,##0',null,{fn:'count',col:0}],['고장 건수',list.filter(m=>m.type==='고장').length,'#,##0',null,{fn:'countIf',col:2,eq:'고장'}],
-      ['부품비용 합계',maintCostSum(list),XR.WON,null,{fn:'sum',col:7}]],totals:[7],
-    cols:[{h:'수리 일시',w:23,al:'center'},{h:'장비',w:18},{h:'유형',w:10,al:'center'},{h:'수리시간',w:12,al:'center'},
+      ['총 정비시간',list.reduce((s,m)=>s+maintHours(m),0)/24,XR_DUR,null,{fn:'sum',col:3}],
+      ['부품비용 합계',maintCostSum(list),XR.WON,null,{fn:'sum',col:7}]],totals:[3,7],
+    cols:[{h:'수리 일시',w:23,al:'center'},{h:'장비',w:18},{h:'유형',w:10,al:'center'},{h:'수리시간',w:14,al:'right',fmt:XR_DUR},
       {h:'내용',w:46},{h:'원인',w:24},{h:'사용 부품',w:38},{h:'부품비용',w:13,al:'right',fmt:XR.WON},{h:'작업자',w:10,al:'center'}],
     rows:list.map(m=>{
       const rd=(m.start?m.start.slice(0,10):null)||m.date, rdEnd=m.end?m.end.slice(0,10):null;
-      const durH=(m.start&&m.end)?diffHours(m.start,m.end):(m.hours||0);
-      const pc=(m.parts||[]).reduce((s,p)=>s+((+p.price||0)*(+p.qty||0)),0)||m.partCost||0;
+      const durH=maintHours(m), pc=maintPartCost(m);
       return {vals:[
         maintPeriodTxt(m,xrDay,'\n'),
-        m.eqName||'',m.type||'',durH>0?fmtDur(durH):'—',m.content||'',m.cause||'—',
+        m.eqName||'',m.type||'',durH>0?durH/24:'—',m.content||'',m.cause||'—',
         (m.parts||[]).map(p=>`[${p.pn}] ${p.name} ×${p.qty}`).join('\n')||'—',pc||'—',m.worker||'—']};
     })};
 }
@@ -7232,7 +7296,8 @@ async function exportMaintXLSX(){
   const f=getMaintFilter(), list=xrSortMaint(f.list);
   if(!list.length){toast('해당 조건의 정비 이력 없음','w');return;}
   const eqName=f.eq?(db.eqs.find(e=>e.id==f.eq)?.name||'선택 장비'):'전체';
-  await xrExport(xrSpecMaint(list,`장비: ${eqName} · 유형: ${f.type||'전체'} · 기간: ${f.from?xrDay(f.from):'처음'} ~ ${f.to?xrDay(f.to):'현재'} · 총 ${list.length}건`),
+  const meta=`장비: ${eqName} · 유형: ${f.type||'전체'} · 기간: ${f.from?xrDay(f.from):'처음'} ~ ${f.to?xrDay(f.to):'현재'} · 총 ${list.length}건`;
+  await xrExport([xrSpecMaintSum(list,meta),xrSpecMaint(list,meta)],
     '정비이력서_'+localToday()+'.xlsx','정비 이력 Excel 다운로드 완료');
 }
 
@@ -7627,7 +7692,7 @@ function xrAllSpecs(){
   const events=[...db.events].sort((a,b)=>b.date.localeCompare(a.date));
   const sections=[
     ['장비',[xrSpecEq(eqs,`${all} · 총 ${eqs.length}대`)]],
-    ['정비',[xrSpecMaint(maints,`${all} · 총 ${maints.length}건`)]],
+    ['정비',[xrSpecMaintSum(maints,`${all} · 총 ${maints.length}건`),xrSpecMaint(maints,`${all} · 총 ${maints.length}건`)]],
     ['부품',[xrSpecParts(parts,`${all} · 총 ${parts.length}품목`)]],
     ['검교정',[xrSpecCalib(),xrSpecCalibHist()]],
     ['통계',xrSpecsStats(getStatsExportData(true),'통계 ')],
@@ -7656,6 +7721,7 @@ const xrCss=argb=>'#'+String(argb).slice(2);
 // Excel 숫자 서식 → 표시 문자열 ('"₩"#,##0' · '0.0"h"' · '#,##0"일"' 등)
 function xrFmtVal(v,fmt){
   if(!fmt) return v.toLocaleString('ko-KR');
+  if(fmt===XR_DUR){const t=Math.round(v*1440);return Math.floor(t/60).toLocaleString('ko-KR')+'시간 '+String(t%60).padStart(2,'0')+'분';}
   const pre=(fmt.match(/^"([^"]*)"/)||[])[1]||'', suf=(fmt.match(/"([^"]*)"$/)||[])[1]||'';
   const dec=((fmt.replace(/"[^"]*"/g,'').split('.')[1]||'').match(/0/g)||[]).length;
   return pre+v.toLocaleString('ko-KR',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suf;
@@ -7707,8 +7773,9 @@ function xrSpecHtml(s,id,bare){
   if(plain&&s.totals&&s.totals.length) body+='<tr class="xr-tot">'+s.cols.map((c,i)=>i===0?'<td>합계</td>'
     :s.totals.includes(i)?`<td style="text-align:right;">${xrFmtVal(rows.reduce((a,r)=>a+(typeof r.vals[i]==='number'?r.vals[i]:0),0),c.fmt)}</td>`:'<td></td>').join('')+'</tr>';
   const firstGroup=rows.length&&rows[0].group;
-  return `<section class="xr-sec"${id?` id="${id}"`:''}>${bare?'':`<h2>${esc(s.title)}</h2><div class="meta">${esc(s.meta||'')}</div>`}
-    ${sums}${legend}<table>${firstGroup?'':`<thead>${head}</thead>`}<tbody>${body}</tbody></table>${imgs}</section>`;
+  const after=(s.after||[]).map(b=>xrSpecHtml({title:b.title,cols:b.cols,rows:b.rows,empty:b.empty})).join('');
+  return `<section class="xr-sec"${id?` id="${id}"`:''}>${bare?'':`<h2>${esc(s.title)}</h2>${s.meta?`<div class="meta">${esc(s.meta)}</div>`:''}`}
+    ${sums}${legend}<table>${firstGroup?'':`<thead>${head}</thead>`}<tbody>${body}</tbody></table>${after}${imgs}</section>`;
 }
 const XR_HTML_CSS=`<style>
 .xr-grp{background:#1e293b;color:#fff;font-weight:700;font-size:10.5pt;padding:8px 12px !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
