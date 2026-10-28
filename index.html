@@ -1537,6 +1537,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
             <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">관리번호</th>
             <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">검교정 항목</th>
             <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">Maker/Model</th>
+            <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">시리얼번호</th>
             <th style="padding:8px 6px;text-align:left;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">설치위치</th>
             <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">주기(개월)</th>
             <th style="padding:8px 6px;text-align:center;white-space:nowrap;font-family:var(--cond);font-size:13px;letter-spacing:1px;color:var(--muted);">최종 검교정일</th>
@@ -1552,7 +1553,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
           </tr>
         </thead>
         <tbody id="calibBody">
-          <tr><td colspan="17" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음</td></tr>
+          <tr><td colspan="18" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음</td></tr>
         </tbody>
       </table>
     </div>
@@ -1569,20 +1570,21 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
     <div class="frow">
       <div class="field"><label class="flabel">검교정 항목 *</label><input class="finput" id="cItem" placeholder="Leak Test"></div>
-      <div class="field"><label class="flabel">Maker/Model</label><input class="finput" id="cMaker" placeholder="FUKUDA/F611"></div>
-    </div>
-    <div class="frow">
       <div class="field"><label class="flabel">설치위치</label><input class="finput" id="cLocation" placeholder="미래 1층 조립"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">Maker/Model</label><input class="finput" id="cMaker" placeholder="FUKUDA/F611"></div>
+      <div class="field"><label class="flabel">시리얼번호</label><input class="finput" id="cSerial" placeholder="S/N" autocomplete="off"></div>
+    </div>
+    <div class="frow">
       <div class="field"><label class="flabel">검교정 주기(개월) *</label><input class="finput" id="cCycle" type="number" min="1" max="120" value="12"></div>
-    </div>
-    <div class="frow">
       <div class="field"><label class="flabel">최종 검교정일 *</label><input class="finput" id="cLastDate" type="date"></div>
-      <div class="field"><label class="flabel">담당자</label><input class="finput" id="cManager" placeholder="이름"></div>
     </div>
     <div class="frow">
+      <div class="field"><label class="flabel">담당자</label><input class="finput" id="cManager" placeholder="이름"></div>
       <div class="field"><label class="flabel">검교정 기관</label><input class="finput" id="cAgency" placeholder="주식회사 키스트"></div>
-      <div class="field"><label class="flabel">비고</label><input class="finput" id="cNote" placeholder=""></div>
     </div>
+    <div class="field"><label class="flabel">비고</label><input class="finput" id="cNote" placeholder=""></div>
     <input type="hidden" id="cId">
     <!-- 검교정 이력 · 성적서 · 제품 영향 평가 (IATF 16949 7.1.5.2.1) -->
     <div id="calibHistWrap" style="margin:6px 0 14px;padding-top:12px;border-top:1px solid var(--border);">
@@ -2928,7 +2930,7 @@ function renderCalib(){
   if(!tbody) return;
   const today=localToday();
   if(!db.calibs.length){
-    tbody.innerHTML='<tr><td colspan="17" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음 — + 추가 버튼으로 등록하세요</td></tr>';
+    tbody.innerHTML='<tr><td colspan="18" style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">검교정 항목 없음 — + 추가 버튼으로 등록하세요</td></tr>';
     if(summary) summary.innerHTML='';
     return;
   }
@@ -2958,6 +2960,7 @@ function renderCalib(){
       <td style="${td}font-family:var(--mono);font-size:14px;color:var(--blue);">${c.mgmtNo||'—'}</td>
       <td style="${td}color:var(--text);">${c.item||'—'}</td>
       <td style="${td}color:var(--muted);">${c.maker||'—'}</td>
+      <td style="${td}font-family:var(--mono);font-size:13px;color:var(--muted);">${_rptEsc(c.serial||'')||'—'}</td>
       <td style="${td}color:var(--muted);">${c.location||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);">${c.cycleMon||'—'}</td>
       <td style="${td}text-align:center;font-family:var(--mono);">${dw(c.lastDate)||'—'}</td>
@@ -2989,6 +2992,7 @@ function openCalibForm(id){
   document.getElementById('cMgmtNo').value=c?c.mgmtNo:'';
   document.getElementById('cItem').value=c?c.item:'';
   document.getElementById('cMaker').value=c?c.maker:'';
+  document.getElementById('cSerial').value=c?(c.serial||''):'';
   document.getElementById('cLocation').value=c?c.location:'';
   document.getElementById('cCycle').value=c?c.cycleMon:12;
   document.getElementById('cLastDate').value=c?c.lastDate:'';
@@ -3012,6 +3016,7 @@ function saveCalib(){
     name,item,lastDate,cycleMon:cycle,
     mgmtNo:document.getElementById('cMgmtNo').value.trim(),
     maker:document.getElementById('cMaker').value.trim(),
+    serial:document.getElementById('cSerial').value.trim(),
     location:document.getElementById('cLocation').value.trim(),
     manager:document.getElementById('cManager').value.trim(),
     agency:document.getElementById('cAgency').value.trim(),
@@ -7204,17 +7209,17 @@ function xrSpecCalib(){
       else if(remain<=10){fill=XR.ROW.warn;tg='a';txt='D-'+remain;warn++;}
       else{tg='g';txt='정상';ok++;}
     }
-    return {vals:[i+1,c.name||'—',c.mgmtNo||'—',c.item||'—',c.maker||'—',c.location||'—',c.cycleMon||'—',xrDay(c.lastDate)||'—',
+    return {vals:[i+1,c.name||'—',c.mgmtNo||'—',c.item||'—',c.maker||'—',c.serial||'—',c.location||'—',c.cycleMon||'—',xrDay(c.lastDate)||'—',
       xrDay(next)||'—',remain!==null?remain:'—',txt,
       last?last.result:'—',last?xrCertCell(last):'—',ngN?'미결':'—',
-      c.manager||'—',c.agency||'—',c.note||''],fill,tag:Object.assign({10:tg},last?{11:last.result==='불합격'?'r':'g'}:{},ngN?{13:'r'}:{})};
+      c.manager||'—',c.agency||'—',c.note||''],fill,tag:Object.assign({11:tg},last?{12:last.result==='불합격'?'r':'g'}:{},ngN?{14:'r'}:{})};
   });
   return {name:'검교정',title:'검교정 관리대장',
     meta:`총 ${calibs.length}건 · 불합격 ${fail} · 영향평가 미결 ${ngOpen} · 초과 ${over} · 임박 ${warn} · 정상 ${ok} · 기준일 ${xrDay(today)}`,
-    sums:[['총 항목',calibs.length,'#,##0',null,{fn:'count',col:1}],['불합격',fail,'#,##0',XR.NG,{fn:'countIf',col:10,eq:'불합격'}],
-      ['영향평가 미결',ngOpen,'#,##0',XR.NG,{fn:'countIf',col:13,eq:'미결'}],['초과',over,'#,##0',null,{fn:'countIf',col:10,eq:'초과'}],
-      ['임박(10일)',warn,'#,##0',null,{fn:'countIf',col:10,pre:'D-'}],['정상',ok,'#,##0',null,{fn:'countIf',col:10,eq:'정상'}]],
-    cols:[{h:'No',w:5,al:'center'},{h:'설비명',w:18},{h:'관리번호',w:13},{h:'검교정 항목',w:16},{h:'Maker/Model',w:16},{h:'설치위치',w:14},
+    sums:[['총 항목',calibs.length,'#,##0',null,{fn:'count',col:1}],['불합격',fail,'#,##0',XR.NG,{fn:'countIf',col:11,eq:'불합격'}],
+      ['영향평가 미결',ngOpen,'#,##0',XR.NG,{fn:'countIf',col:14,eq:'미결'}],['초과',over,'#,##0',null,{fn:'countIf',col:11,eq:'초과'}],
+      ['임박(10일)',warn,'#,##0',null,{fn:'countIf',col:11,pre:'D-'}],['정상',ok,'#,##0',null,{fn:'countIf',col:11,eq:'정상'}]],
+    cols:[{h:'No',w:5,al:'center'},{h:'설비명',w:18},{h:'관리번호',w:13},{h:'검교정 항목',w:16},{h:'Maker/Model',w:16},{h:'시리얼번호',w:14},{h:'설치위치',w:14},
       {h:'주기(월)',w:8,al:'center'},{h:'최종일',w:14,al:'center'},{h:'차기일',w:14,al:'center'},{h:'잔여',w:8,al:'right',fmt:'#,##0"일"'},
       {h:'상태',w:9,al:'center'},{h:'최근 결과',w:9,al:'center'},{h:'성적서',w:18},{h:'영향평가',w:9,al:'center'},
       {h:'담당자',w:10},{h:'기관',w:14},{h:'비고',w:18}],
