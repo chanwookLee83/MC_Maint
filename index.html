@@ -1233,6 +1233,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 .annual-table td.cycle-col{color:var(--muted);font-size:11px;background:var(--card);}
 .ac-done{background:#10b98115;color:var(--green);}
 .ac-partial{background:#5a68c018;color:var(--amber);}
+.ac-early{display:block;font-size:9px;font-weight:700;opacity:.8;line-height:1.1;}
 .ac-miss{background:#ef444418;color:var(--red);}
 .ac-plan{color:var(--muted);}
 .ac-none{color:var(--border2);}
@@ -7509,24 +7510,58 @@ async function exportInspXLSX(){
 }
 
 // 연간 점검 계획표
+// 연간계획 월별 실적 — 휴일 · 주말로 다음 계획월 점검을 앞당겨 한 경우 (말일 7일 이내, 그 달엔 이미 점검했거나 계획 없음,
+// 다음 달이 계획월인데 점검 없음) 그 점검은 다음 달 실적으로 인정. 연도 경계(12월 말 → 1월)도 처리. 주기 28일 미만 장비는 제외
+const ANNUAL_EARLY_DAYS=7;
+function annualIsTarget(cycle,m){const n=Math.max(1,Math.round(365/cycle));return Math.floor(m*n/12)<Math.floor((m+1)*n/12);}
+function annualMonthDone(eq,year){
+  const cycle=parseInt(eq.cycle)||30;
+  const list=db.insps.filter(d=>d.eqId==eq.id&&d.date).map(d=>d.date.slice(0,10)).sort();
+  const key=(y,m)=>y+'-'+String(m+1).padStart(2,'0');
+  const own=(y,m)=>list.filter(d=>d.startsWith(key(y,m)));
+  // (y,m) 에서 다음 달로 넘어가는 점검일 (없으면 '')
+  const moved=(y,m)=>{
+    if(cycle<28) return '';
+    const ny=m===11?y+1:y, nm=(m+1)%12;
+    if(!annualIsTarget(cycle,nm)||own(ny,nm).length) return '';
+    const ds=own(y,m);
+    if(ds.length<=(annualIsTarget(cycle,m)?1:0)) return '';
+    const last=ds[ds.length-1];
+    return +last.slice(8,10)>new Date(y,m+1,0).getDate()-ANNUAL_EARLY_DAYS?last:'';
+  };
+  // 계획월 실적은 월 1회로 집계 — 30일 주기로 점검일이 앞당겨져 한 달에 2번 들어간 경우 (예: 8/1 · 8/31)
+  const done=[],early=[],extra=[];
+  for(let m=0;m<12;m++){
+    const inn=m===0?moved(year-1,11):moved(year,m-1);
+    const ds=own(year,m), out=moved(year,m);
+    const n=ds.length-(out?1:0)+(inn?1:0);
+    const cap=annualIsTarget(cycle,m)?Math.min(n,1):n;
+    done.push(cap);
+    early.push(inn);   // 앞당겨 들어온 점검일
+    extra.push(n>cap?ds.filter(d=>d!==out):[]);   // 1회로 묶인 점검일들 (안내용)
+  }
+  return {done,early,extra};
+}
+const annualMD=d=>`${+d.slice(5,7)}/${+d.slice(8,10)}`;
+const annualEarlyTip=d=>d?`${annualMD(d)} 조기 점검`:'';
+const annualExtraTip=ds=>ds&&ds.length?`${ds.map(annualMD).join(' · ')} 점검 — 월 1회로 집계`:'';
+
 function annualPlanData(year){
   const today=new Date();
   const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
-  const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
   return eqs.map(eq=>{
     const cycle=parseInt(eq.cycle)||30, yearlyCount=Math.max(1,Math.round(365/cycle));
     let coverStart=null;   // 점검 개시일 = 설치일 + 1주기(유예기간)
     if(eq.install){const ci=new Date(eq.install+'T00:00:00');if(!isNaN(ci)){ci.setDate(ci.getDate()+cycle);coverStart=ci;}}
     let tot=0,exp=0;
-    const cells=[];
+    const cells=[], md=annualMonthDone(eq,year);
     for(let m=0;m<12;m++){
-      const ms=year+'-'+String(m+1).padStart(2,'0');
       const e=Math.floor(m*yearlyCount/12)<Math.floor((m+1)*yearlyCount/12)?1:0;
-      const d=yearInsps.filter(i=>i.eqId==eq.id&&i.date.startsWith(ms)).length;
+      const d=md.done[m];
       const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
       if(coverStart&&new Date(year,m+1,0,23,59,59)<coverStart&&d===0){cells.push({st:'na',done:0,exp:0});continue;}
       tot+=d;exp+=e;
-      cells.push({st:e===0?'none':isFut?'plan':d>=e?'done':d>0?'partial':'miss',done:d,exp:e});
+      cells.push({st:e===0?'none':isFut&&!d?'plan':d>=e?'done':d>0?'partial':'miss',done:d,exp:e,early:md.early[m]});
     }
     return {eq,cycle,cells,tot,exp,rate:exp>0?Math.round(tot/exp*100):null};
   });
@@ -7534,11 +7569,11 @@ function annualPlanData(year){
 function xrSpecAnnual(year){
   const data=annualPlanData(year);
   const ST={done:['FFF0FDF4',XR.OK],partial:['FFFFFBEB','FF92400E'],miss:['FFFFF1F2',XR.NG],plan:['FFF8FAFC',XR.FAINT],none:['FFF8FAFC','FFCBD5E1'],na:['FFF8FAFC',XR.FAINT]};
-  const txt=c=>c.st==='na'?'해당없음':c.st==='none'?'―':c.st==='plan'?'계획':c.st==='done'?'✓ '+c.done+'회':c.st==='partial'?'△ '+c.done+'/'+c.exp:'미실시';
+  const txt=c=>c.st==='na'?'해당없음':c.st==='none'?'―':c.st==='plan'?'계획':c.st==='done'?'✓ '+c.done+'회'+(c.early?'\n('+annualEarlyTip(c.early)+')':''):c.st==='partial'?'△ '+c.done+'/'+c.exp:'미실시';
   return {name:year+'년 점검 계획',title:`${year}년 설비 연간 점검 계획표`,headDark:true,
     meta:`출력일: ${xrDay(localToday())} · 대상 장비: ${data.length}대`,empty:'점검 주기가 설정된 장비 없음',
     legend:[['완료',...ST.done],['부분완료',...ST.partial],['미실시',...ST.miss],['계획(미도래)',...ST.plan],['해당없음(설치 전·유예기간)',...ST.na]],
-    cols:[{h:'장비명',w:22},{h:'주기',w:7,al:'center'},...Array.from({length:12},(_,m)=>({h:(m+1)+'월',w:9,al:'center'})),{h:'연간합계',w:17,al:'center'}],
+    cols:[{h:'장비명',w:22},{h:'주기',w:7,al:'center'},...Array.from({length:12},(_,m)=>({h:(m+1)+'월',w:10,al:'center'})),{h:'연간합계',w:17,al:'center'}],
     rows:data.map(r=>{
       const fills={0:'FFF8FAFC'},font={0:{bold:true},1:{color:{argb:XR.MUTED}}};
       r.cells.forEach((c,m)=>{fills[m+2]=ST[c.st][0];font[m+2]={color:{argb:ST[c.st][1]},bold:c.st==='done'||c.st==='partial'||c.st==='miss'};});
@@ -7905,7 +7940,6 @@ function renderAnnualPlan(){
   const el=document.getElementById('annualTable');
   if(!eqs.length){el.innerHTML='<div class="empty"><span class="empty-icon"></span>점검 주기가 설정된 장비 없음</div>';return;}
 
-  const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
   let cntDone=0,cntPartial=0,cntMiss=0;
   const isMobile=window.innerWidth<640;
   const MON_LABEL=isMobile
@@ -7932,11 +7966,11 @@ function renderAnnualPlan(){
     }
     let yearDone=0,yearExp=0;
     let cells='';
+    const md=annualMonthDone(eq,year);
     for(let m=0;m<12;m++){
-      const monthStr=year+'-'+String(m+1).padStart(2,'0');
       const isTarget=Math.floor(m*yearlyCount/12)<Math.floor((m+1)*yearlyCount/12);
       const exp=isTarget?1:0;
-      const done=yearInsps.filter(d=>d.eqId==eq.id&&d.date.startsWith(monthStr)).length;
+      const done=md.done[m], early=md.early[m];
       const isPast=today.getFullYear()>year||(today.getFullYear()===year&&today.getMonth()>m);
       const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
       const monthEnd=new Date(year,m+1,0,23,59,59);
@@ -7946,12 +7980,13 @@ function renderAnnualPlan(){
       else{
         yearDone+=done; yearExp+=exp;
         if(exp===0){cls='ac-none';txt='—';}
-        else if(isFut){cls='ac-plan';txt='· 계획';}
-        else if(done>=exp){cls='ac-done';txt=''+done+'회';cntDone++;}
+        else if(isFut&&!done){cls='ac-plan';txt='· 계획';}
+        else if(done>=exp){cls='ac-done';txt=''+done+'회'+(early?'<span class="ac-early">조기</span>':'');cntDone++;}
         else if(done>0){cls='ac-partial';txt=''+done+'/'+exp;cntPartial++;}
         else{cls='ac-miss';txt='미실시';if(isPast)cntMiss++;}
       }
-      cells+=`<td class="${cls}">${txt}</td>`;
+      const tip=early?annualEarlyTip(early):annualExtraTip(md.extra[m]);
+      cells+=`<td class="${cls}"${tip?` title="${tip}"`:''}>${txt}</td>`;
     }
     const rate=yearExp>0?Math.round(yearDone/yearExp*100):null;
     const rateC=rate===null?'var(--muted)':rate>=100?'var(--green)':rate>=50?'var(--amber)':'var(--red)';
@@ -7974,7 +8009,6 @@ function exportAnnualPlanCSV(){
   const MON=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
   const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='\ub2e8\uc885'&&e.status!=='\uace0\uc7a5');
   if(!eqs.length){toast('\uc7a5\ube44 \uc5c6\uc74c','w');return;}
-  const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
   const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const header=[esc('\uc7a5\ube44\uba85'),esc('\uc8fc\uae30(\uc77c)'),...MON.map(m=>esc(m)),esc('\uc5f0\uac04\ud569\uacc4(\uc2e4/\ubaa9\ud45c)'),esc('\ub2ec\uc131\ub960(%)')].join(',');
   const rows=[esc(year+'\ub144 \uc124\ube44 \uc5f0\uac04 \uc810\uac80 \uacc4\ud68d\ud45c'),'',header];
@@ -7988,11 +8022,11 @@ function exportAnnualPlanCSV(){
     }
     let yearDone=0,yearExp=0;
     const cells=[];
+    const md=annualMonthDone(eq,year);
     for(let m=0;m<12;m++){
-      const monthStr=year+'-'+String(m+1).padStart(2,'0');
       const isTarget=Math.floor(m*yearlyCount/12)<Math.floor((m+1)*yearlyCount/12);
       const exp=isTarget?1:0;
-      const done=yearInsps.filter(d=>d.eqId==eq.id&&d.date.startsWith(monthStr)).length;
+      const done=md.done[m];
       const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
       const monthEnd=new Date(year,m+1,0,23,59,59);
       const isNA=coverStart&&monthEnd<coverStart&&done===0;
@@ -8000,8 +8034,8 @@ function exportAnnualPlanCSV(){
       if(isNA){ txt='\ud574\ub2f9\uc5c6\uc74c'; cells.push(esc(txt)); continue; }
       yearDone+=done; yearExp+=exp;
       if(exp===0) txt='\u2014';
-      else if(isFut) txt='\uacc4\ud68d';
-      else if(done>=exp) txt='\uc644\ub8cc('+done+'\ud68c)';
+      else if(isFut&&!done) txt='\uacc4\ud68d';
+      else if(done>=exp) txt='\uc644\ub8cc('+done+'\ud68c'+(md.early[m]?' \u00b7 '+annualEarlyTip(md.early[m]):'')+')';
       else if(done>0) txt='\ubd80\ubd84('+done+'/'+exp+')';
       else txt='\ubbf8\uc2e4\uc2dc';
       cells.push(esc(txt));
@@ -8020,7 +8054,6 @@ function exportAnnualPlan(){
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
   if(!eqs.length){toast('장비 없음','w');return;}
-  const yearInsps=db.insps.filter(d=>d.date.startsWith(String(year)));
 
   let rows='';
   eqs.forEach(eq=>{
@@ -8032,11 +8065,11 @@ function exportAnnualPlan(){
       if(!isNaN(ci)){ ci.setDate(ci.getDate()+cycle); coverStart=ci; }
     }
     let cells='',tot=0,exp=0;
+    const md=annualMonthDone(eq,year);
     for(let m=0;m<12;m++){
-      const ms=year+'-'+String(m+1).padStart(2,'0');
       const isTarget=Math.floor(m*yearlyCount/12)<Math.floor((m+1)*yearlyCount/12);
       const e=isTarget?1:0;
-      const d=yearInsps.filter(i=>i.eqId==eq.id&&i.date.startsWith(ms)).length;
+      const d=md.done[m];
       const isFut=today.getFullYear()<year||(today.getFullYear()===year&&today.getMonth()<m);
       const monthEnd=new Date(year,m+1,0,23,59,59);
       const isNA=coverStart&&monthEnd<coverStart&&d===0;
@@ -8046,8 +8079,8 @@ function exportAnnualPlan(){
         continue;}
       tot+=d; exp+=e;
       if(e===0){bg='#f8fafc';color='#cbd5e1';txt='―';}
-      else if(isFut){bg='#f8fafc';color='#94a3b8';txt='계획';}
-      else if(d>=e){bg='#f0fdf4';color='#15803d';txt='✓ '+d+'회';}
+      else if(isFut&&!d){bg='#f8fafc';color='#94a3b8';txt='계획';}
+      else if(d>=e){bg='#f0fdf4';color='#15803d';txt='✓ '+d+'회'+(md.early[m]?`<br><span style="font-size:8pt;">(${annualEarlyTip(md.early[m])})</span>`:'');}
       else if(d>0){bg='#fffbeb';color='#92400e';txt='△ '+d+'/'+e;}
       else{bg='#fff1f2';color='#b91c1c';txt='미실시';}
       cells+=`<td style="padding:6px 4px;text-align:center;border:1px solid #e2e8f0;background:${bg};color:${color};font-size:10pt;white-space:nowrap;">${txt}</td>`;
@@ -8083,7 +8116,7 @@ table{border-collapse:collapse;width:100%;}.footer{margin-top:18px;font-size:9pt
   ${ths}
   <th style="padding:8px 6px;text-align:center;background:#1e293b;color:#fff;border:1px solid #1e293b;min-width:80px;">연간합계</th>
 </tr></thead><tbody>${rows}</tbody></table>
-<div class="footer">※ 본 계획표는 설비관리 시스템에서 자동 생성되었습니다. 점검 실적은 실제 점검 이력 기준입니다.</div>
+<div class="footer">※ 본 계획표는 설비관리 시스템에서 자동 생성되었습니다. 점검 실적은 실제 점검 이력 기준이며, 휴일 등으로 다음 계획월 점검을 말일 7일 이내에 앞당겨 실시한 경우 다음 달 실적(조기 점검)으로 집계합니다.</div>
 </body></html>`;
   download('연간점검계획표_'+year+'년_'+localToday()+'.html',html,'text/html');
   toast(year+'년 연간 점검 계획표 다운로드 완료');
