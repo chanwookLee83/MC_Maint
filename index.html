@@ -1301,6 +1301,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
         <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eqInspCycle" type="number" placeholder="30" min="1"></div>
       </div>
       <div class="frow">
+        <div class="field"><label class="flabel">일 가동시간(h)</label><input class="finput" id="eqDailyH" type="number" placeholder="24" min="1" max="24" step="0.5"></div>
+        <div class="field"><label class="flabel">월 가동일수(일)</label><input class="finput" id="eqWorkDays" type="number" placeholder="전체" min="1" max="31"></div>
+      </div>
+      <div class="frow">
         <div class="field"><label class="flabel">사용 여부</label>
           <div class="fselect-w"><select class="fselect" id="eqStatus">
             <option value="정상">정상</option>
@@ -1762,6 +1766,39 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px;">현재 기간 필터가 적용된 통계를 파일로 저장합니다.</div>
     <button class="share-btn sb-green" onclick="exportStatsReport()"><span></span> 통계 리포트 (HTML · 그래프 포함)</button>
     <button class="share-btn sb-blue" style="margin-top:8px;" onclick="exportStatsXLSX()"><span></span> 통계 리포트 (Excel · 서식 · 그래프 포함)</button>
+  </div>
+  <div class="sec">
+    <div class="sec-title coll-head" onclick="toggleStatsPanel('formula')">
+      <span class="coll-arrow" id="formulaArrow">▸</span>산출식 안내
+    </div>
+    <div id="formulaBody" style="display:none;">
+    <div class="card" style="font-size:12px;line-height:1.7;padding:12px 14px;">
+      <div style="margin-bottom:10px;">
+        <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--green);">MTBF · 평균 고장 간격</div>
+        <div style="font-family:var(--mono);background:var(--bg2,rgba(127,127,127,.08));border-radius:6px;padding:6px 8px;margin:4px 0;">MTBF = (가동 기간 − 고장 다운타임 합) ÷ 고장 건수</div>
+        <div style="color:var(--muted);">고장(BM) 유형만 집계 · 단위 h (일 = h ÷ 24)</div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--blue);">MTBM · 평균 정비 간격</div>
+        <div style="font-family:var(--mono);background:var(--bg2,rgba(127,127,127,.08));border-radius:6px;padding:6px 8px;margin:4px 0;">MTBM = (가동 기간 − 전체 정비 다운타임 합) ÷ 전체 정비 건수</div>
+        <div style="color:var(--muted);">고장 · 계획정비 · 개선 · 청소 등 모든 정비 유형 포함</div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--amber);">MTTR · 평균 수리시간</div>
+        <div style="font-family:var(--mono);background:var(--bg2,rgba(127,127,127,.08));border-radius:6px;padding:6px 8px;margin:4px 0;">MTTR = 고장 수리시간 합 ÷ 수리시간 기록된 고장 건수</div>
+        <div style="color:var(--muted);">1h 미만은 분(min)으로 표시</div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:8px;color:var(--muted);">
+        <div>· <b>가동 기간</b> = Σ월별 (기간 내 일수 × 월 가동일수 ÷ 해당 월 일수) × 일 가동시간(h)</div>
+        <div style="padding-left:10px;">예) 월 22일 · 일 10h 장비, 한 달 전체 = 22 × 10 = 220h</div>
+        <div style="padding-left:10px;">일 가동시간 · 월 가동일수 : 장비 등록·수정에서 설정 (미입력 시 24h · 매일 가동)</div>
+        <div style="padding-left:10px;">시작일 : 필터 시작일 (설치일이 더 늦으면 설치일) / 필터 없으면 설치일 → 최초 기록일</div>
+        <div style="padding-left:10px;">종료일 : 필터 종료일 / 필터 없으면 오늘 (오늘 이후는 오늘로 제한)</div>
+        <div>· <b>다운타임·수리시간</b> = 종료시각 − 시작시각, 없으면 입력한 작업시간(h)</div>
+        <div>· <b>월별</b> 내역은 가동 기간을 해당 월 1일 ~ 말일(이번 달은 오늘)로 계산 · 여러 장비 합산 시 해당 장비들의 평균 가동시간 적용</div>
+      </div>
+    </div>
+    </div>
   </div>
 </div>
 
@@ -2391,6 +2428,10 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <div class="frow">
       <div class="field"><label class="flabel">설치일</label><input class="finput" id="eEqInstall" type="date"></div>
       <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eEqCycle" type="number" min="1"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label class="flabel">일 가동시간(h)</label><input class="finput" id="eEqDailyH" type="number" placeholder="24" min="1" max="24" step="0.5"></div>
+      <div class="field"><label class="flabel">월 가동일수(일)</label><input class="finput" id="eEqWorkDays" type="number" placeholder="전체" min="1" max="31"></div>
     </div>
     <div class="frow">
       <div class="field"><label class="flabel">사용 여부</label>
@@ -3862,6 +3903,8 @@ function registerEq(){
     install:document.getElementById('eqInstall').value,
     loc:document.getElementById('eqLoc').value.trim(),
     cycle:parseInt(document.getElementById('eqInspCycle').value)||0,
+    dailyH:Math.min(parseFloat(document.getElementById('eqDailyH').value)||24,24),
+    workDays:Math.min(parseInt(document.getElementById('eqWorkDays').value)||0,31),
     status:document.getElementById('eqStatus').value||'정상',
     memo:document.getElementById('eqMemo').value.trim(),
     // 전기
@@ -3877,7 +3920,7 @@ function registerEq(){
   toast('장비 등록 완료: '+name);
 }
 function clearEqForm(){
-  ['eqName','eqSerial','eqAsset','eqMaker','eqInstall','eqLoc','eqInspCycle','eqMemo','eqAirPres','eqGrade','eqCond'].forEach(id=>{
+  ['eqName','eqSerial','eqAsset','eqMaker','eqInstall','eqLoc','eqInspCycle','eqDailyH','eqWorkDays','eqMemo','eqAirPres','eqGrade','eqCond'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
   const pw=document.getElementById('eqPower');if(pw)pw.value='';
@@ -3981,6 +4024,10 @@ function renderEqList(){
             <div class="eq-info-cell-val">${eq.cycle?eq.cycle+'일':'미설정'}</div>
           </div>
           <div class="eq-info-cell">
+            <div class="eq-info-cell-label">일 가동시간</div>
+            <div class="eq-info-cell-val">${eqDailyH(eq.id)}h · ${eqWorkDays(eq.id)?'월 '+eqWorkDays(eq.id)+'일':'매일'}</div>
+          </div>
+          <div class="eq-info-cell">
             <div class="eq-info-cell-label">마지막 점검</div>
             <div class="eq-info-cell-val" style="color:${inspStatus==='overdue'?'var(--red)':inspStatus==='soon'?'var(--amber)':'var(--text)'}">
               ${lastInsp?dw(lastInsp.date):'기록 없음'}${inspRemain?`<span style="font-size:10px;margin-left:4px;color:${inspStatus==='overdue'?'var(--red)':inspStatus==='soon'?'var(--amber)':'var(--green)'};">${inspRemain}</span>`:''}
@@ -4080,6 +4127,8 @@ function openEqEdit(i){
   document.getElementById('eEqInstall').value=eq.install||'';
   document.getElementById('eEqLoc').value=eq.loc||'';
   document.getElementById('eEqCycle').value=eq.cycle||'';
+  document.getElementById('eEqDailyH').value=eq.dailyH||'';
+  document.getElementById('eEqWorkDays').value=eq.workDays||'';
   const stEl=document.getElementById('eEqStatus');if(stEl)stEl.value=eq.status||'정상';
   document.getElementById('eEqMemo').value=eq.memo||'';
   // 전기
@@ -4101,6 +4150,8 @@ function saveEqEdit(){
     install:document.getElementById('eEqInstall').value,
     loc:document.getElementById('eEqLoc').value.trim(),
     cycle:parseInt(document.getElementById('eEqCycle').value)||0,
+    dailyH:Math.min(parseFloat(document.getElementById('eEqDailyH').value)||24,24),
+    workDays:Math.min(parseInt(document.getElementById('eEqWorkDays').value)||0,31),
     status:document.getElementById('eEqStatus').value||'정상',
     memo:document.getElementById('eEqMemo').value.trim(),
     power:document.getElementById('eEqPower').value,
@@ -5080,7 +5131,9 @@ function calcMTBF(eqId){
     const cur=fails[i].date;
     totalGap+=(new Date(cur)-new Date(prev));
   }
-  return totalGap/(fails.length-1)/3600000;
+  // 달력 간격 → 가동시간 환산 (일 가동시간/24 × 월 가동일수/평균 월 일수)
+  const wd=eqWorkDays(eqId);
+  return totalGap/(fails.length-1)/3600000*eqDailyH(eqId)/24*(wd?Math.min(wd/30.44,1):1);
 }
 function calcMTTR(eqId){
   const fails=db.maints.filter(m=>m.eqId===eqId&&m.type==='고장');
@@ -5098,12 +5151,40 @@ function calcMTTR(eqId){
   if(!count) return null;
   return total/count;
 }
+// 장비 일 가동시간(h) : 미설정 24h (1~24)
+function eqDailyH(eqId){
+  const eq=db.eqs.find(e=>e.id===eqId);
+  const h=eq?parseFloat(eq.dailyH):NaN;
+  return h>0?Math.min(h,24):24;
+}
+// 장비 월 가동일수 : 미설정 null (= 달력 전체 일수)
+function eqWorkDays(eqId){
+  const eq=db.eqs.find(e=>e.id===eqId);
+  const d=eq?parseFloat(eq.workDays):NaN;
+  return d>0?Math.min(d,31):null;
+}
+// 장비 가동시간(h) : 월별로 (기간 내 일수 × 월 가동일수/해당 월 일수) × 일 가동시간 합산
+function eqOpHours(eqId,startStr,endStr){
+  const dailyH=eqDailyH(eqId), wd=eqWorkDays(eqId);
+  let y=+startStr.slice(0,4), mo=+startStr.slice(5,7), total=0;
+  while(true){
+    const ym=y+'-'+String(mo).padStart(2,'0');
+    if(ym>endStr.slice(0,7)) break;
+    const dim=new Date(y,mo,0).getDate();
+    const d0=ym===startStr.slice(0,7)?+startStr.slice(8,10):1;
+    const d1=ym===endStr.slice(0,7)?+endStr.slice(8,10):dim;
+    if(d1>=d0) total+=(d1-d0+1)*(wd?Math.min(wd,dim)/dim:1)*dailyH;
+    if(++mo>12){mo=1;y++;}
+  }
+  return total;
+}
 // 기간 기준 MTBF : (대상 기간 가동시간 − 다운타임) / 기간 내 고장건수
+// 여러 장비 합산(월별)이면 해당 장비들의 평균 가동시간
 function periodMTBF(fails,startStr,endStr){
   const n=fails.length;
-  if(!n||!startStr||!endStr) return null;
-  const start=new Date(startStr+'T00:00:00'), end=new Date(endStr+'T23:59:59');
-  const spanH=(end-start)/3600000;
+  if(!n||!startStr||!endStr||endStr<startStr) return null;
+  const ids=[...new Set(fails.map(m=>m.eqId))];
+  const spanH=ids.reduce((s,id)=>s+eqOpHours(id,startStr,endStr),0)/ids.length;
   if(spanH<=0) return null;
   let downH=0;
   fails.forEach(m=>{
