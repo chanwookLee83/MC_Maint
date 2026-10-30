@@ -494,6 +494,9 @@ input[type="datetime-local"]::-webkit-date-and-time-value{text-align:left;}
 .eq-card:hover{border-color:var(--border2);}
 .eq-card.st-fail{background:#ef444412;border-color:#ef444435;}
 .eq-card.st-eol{background:#6b728018;border-color:#6b728038;opacity:.8;}
+/* 장비 수정 저장 후 다음 수정 대상 카드 표시 */
+@keyframes eqNextPulse{0%,100%{box-shadow:0 0 0 2px var(--amber);}50%{box-shadow:0 0 0 5px #5a68c055;}}
+.eq-card.eq-next{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber);animation:eqNextPulse 1s ease-in-out 3;}
 .eq-head{padding:14px;cursor:pointer;display:flex;align-items:center;gap:11px;}
 .eq-icon{width:40px;height:40px;border-radius:10px;background:#5a68c022;border:1px solid #5a68c028;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
 .eq-info{flex:1;min-width:0;}
@@ -3977,12 +3980,13 @@ function renderEqList(){
 
     const stCls=eq.status==='고장'?'st-fail':eq.status==='단종'?'st-eol':'';
     return `
-    <div class="eq-card${stCls?' '+stCls:''}" id="eq-card-${i}">
+    <div class="eq-card${stCls?' '+stCls:''}${eq.id===eqNextId?' eq-next':''}" id="eq-card-${i}">
       <div class="eq-head" onclick="toggleEq(${i})">
         <div class="eq-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20M4 20V10l5 3v-3l5 3V6l6-2v16"/></svg></div>
         <div class="eq-info">
           <div style="display:flex;align-items:center;gap:7px;">
             <div class="eq-name">${hlText(eq.name,eqSearchQ)}</div>
+            ${eq.id===eqNextId?`<span class="badge badge-amber">다음 수정</span>`:''}
           </div>
           <div class="eq-serial">S/N: ${hlText(eq.serial||'미등록',eqSearchQ)}${eq.asset?` <span style="color:var(--muted2);">· 자산처 ${hlText(eq.asset,eqSearchQ)}</span>`:''}</div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;">
@@ -3997,6 +4001,7 @@ function renderEqList(){
             ${eq.status==='고장'?`<span class="badge badge-red">고장</span>`:eq.status==='단종'?`<span class="badge" style="background:#33333318;border-color:#55555560;color:#aaa;">단종</span>`:`<span class="badge badge-green">정상</span>`}
             ${eq.power?`<span class="badge badge-amber">${eq.power}</span>`:''}
             ${eq.airPres?`<span class="badge badge-blue" style="background:#5a68c018;border-color:#5a68c030;color:var(--blue);">${eq.airPres}MPa</span>`:''}
+            ${(eqDailyH(eq.id)<24||eqWorkDays(eq.id))?`<span class="badge badge-gray">${eqDailyH(eq.id)}h · ${eqWorkDays(eq.id)?'월 '+eqWorkDays(eq.id)+'일':'매일'}</span>`:''}
             ${maints.length?`<span class="badge badge-amber">${maints.length}회</span>`:''}
             ${fails.length?`<span class="badge badge-red">고장 ${fails.length}회</span>`:''}
             ${inspStatus==='overdue'?`<span class="badge badge-red">점검 초과</span>`:inspStatus==='soon'?`<span class="badge badge-amber">점검 임박</span>`:inspStatus==='ok'?`<span class="badge badge-green">점검 정상</span>`:''}
@@ -4118,6 +4123,7 @@ function goInspWithEq(eqId){
 
 // 장비 수정
 let eqEditIdx=-1;
+let eqNextId=null;   // 수정 저장 후 다음 수정 대상 (현재 목록에서 바로 아래 카드)
 function openEqEdit(i){
   eqEditIdx=i;const eq=db.eqs[i];
   document.getElementById('eEqName').value=eq.name;
@@ -4159,7 +4165,19 @@ function saveEqEdit(){
     grade:document.getElementById('eEqGrade').value,
     cond:document.getElementById('eEqCond').value,
   };
-  save();closeModal('eqModal');renderEqList();populateEqSelects();toast('수정 완료');
+  save();closeModal('eqModal');
+  // 현재 목록(검색 · 상태 필터 · 이름순)에서 바로 아래 카드를 다음 수정 대상으로 표시
+  eqNextId=null;
+  renderEqList();
+  const nextCard=document.getElementById('eq-card-'+eqEditIdx)?.nextElementSibling;
+  const nextIdx=nextCard?parseInt(nextCard.id.replace('eq-card-','')):-1;
+  if(nextIdx>=0&&db.eqs[nextIdx]) eqNextId=db.eqs[nextIdx].id;
+  renderEqList();populateEqSelects();
+  if(nextIdx>=0){
+    toggleEq(nextIdx);   // 펼쳐서 수정 버튼이 바로 보이게
+    setTimeout(()=>document.getElementById('eq-card-'+nextIdx)?.scrollIntoView({behavior:'smooth',block:'start'}),50);
+    toast('수정 완료 — 다음: '+db.eqs[nextIdx].name);
+  } else toast('수정 완료 — 목록의 마지막 장비입니다');
 }
 function deleteEq(i){
   if(!confirm(`[${db.eqs[i].name}] 삭제할까요?\n관련 정비이력도 삭제됩니다.`))return;
