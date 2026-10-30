@@ -104,6 +104,7 @@ async function pollFirestore() {
       db.capas     = serverDb.capas     || [];
       db.eqChk     = serverDb.eqChk     || {};
       db.customChk = serverDb.customChk || {};
+      db.kpiTargets = serverDb.kpiTargets || {};
       localStorage.setItem('mms_v1', data.db);
 
       // ── 새 정비 의뢰 로컬 알림 (FCM 푸시 미도달 대비 폴백) ──
@@ -1194,6 +1195,37 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 .mtbf-eq-body{display:none;padding:0 11px 11px;}
 .mtbf-eq-body.open{display:block;}
 
+/* ── 연간 KPI 실적 · 목표 ── */
+.kpiy-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;}
+@media(min-width:768px){.kpiy-grid{grid-template-columns:repeat(3,1fr);}}
+.kpiy-card{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--border2);border-radius:11px;padding:10px 11px;min-width:0;}
+.kpiy-card.g-g{border-top-color:var(--green);}
+.kpiy-card.g-b{border-top-color:var(--blue);}
+.kpiy-card.g-a{border-top-color:var(--ev-prog);}
+.kpiy-card.g-r{border-top-color:var(--red);}
+.kpiy-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+.kpiy-l{font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:1px;color:var(--muted2);}
+.kpiy-l small{display:block;font-size:10px;font-weight:400;letter-spacing:0;color:var(--muted);}
+.kpiy-v{font-family:var(--mono);font-size:21px;font-weight:bold;color:var(--text);margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kpiy-s{font-family:var(--mono);font-size:10.5px;color:var(--muted);min-height:14px;}
+.kpiy-row{display:flex;align-items:center;justify-content:space-between;gap:6px;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:5px;}
+.kpiy-row b{color:var(--text);font-weight:600;text-align:right;}
+.kpiy-row input{width:100px;min-width:0;background:var(--card2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:4px 6px;text-align:right;outline:none;}
+.kpiy-row input:focus{border-color:var(--amber);}
+.kpiy-up{color:var(--green);font-weight:700;}
+.kpiy-dn{color:var(--red);font-weight:700;}
+.kg{display:inline-block;font-family:var(--cond);font-size:11px;font-weight:800;letter-spacing:1px;padding:2px 8px;border-radius:5px;border:1px solid;white-space:nowrap;}
+.kg.g{color:var(--green);border-color:color-mix(in srgb,var(--green) 45%,transparent);background:color-mix(in srgb,var(--green) 12%,transparent);}
+.kg.b{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 45%,transparent);background:color-mix(in srgb,var(--blue) 12%,transparent);}
+.kg.a{color:var(--ev-prog);border-color:color-mix(in srgb,var(--ev-prog) 45%,transparent);background:color-mix(in srgb,var(--ev-prog) 12%,transparent);}
+.kg.r{color:var(--red);border-color:color-mix(in srgb,var(--red) 45%,transparent);background:color-mix(in srgb,var(--red) 12%,transparent);}
+.kpiy-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:640px;}
+.kpiy-tbl th{font-family:var(--cond);font-size:12px;letter-spacing:1px;color:var(--muted);text-align:center;padding:7px 6px;border-bottom:2px solid var(--border2);background:var(--card2);white-space:nowrap;}
+.kpiy-tbl td{font-family:var(--mono);text-align:center;padding:7px 6px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text);}
+.kpiy-tbl td.why{text-align:left;white-space:normal;font-family:var(--sans);font-size:11.5px;color:var(--muted2);min-width:240px;line-height:1.5;}
+.kpiy-note{font-size:11.5px;color:var(--muted);line-height:1.8;margin-bottom:10px;}
+.kpiy-note b{color:var(--text);}
+
 /* ── 월별 MTBF/MTTR 콜랩시블 ── */
 .mtbr-year-group{margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid var(--border);}
 .mtbr-year-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card2);cursor:pointer;user-select:none;transition:background .15s;}
@@ -1718,6 +1750,17 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <div class="kpi-box" style="border-top:2px solid var(--green)"><div class="kpi-label">총 정비건</div><div class="kpi-val" style="color:var(--green)" id="k-maint">0</div><div class="kpi-sub">건</div></div>
       <div class="kpi-box" style="border-top:2px solid var(--red)"><div class="kpi-label">고장 건수</div><div class="kpi-val" style="color:var(--red)" id="k-fail">0</div><div class="kpi-sub">건</div></div>
       <div class="kpi-box" style="border-top:2px solid var(--blue)"><div class="kpi-label">총 정비비용</div><div class="kpi-val" style="color:var(--blue);font-size:18px;" id="k-cost">₩0</div><div class="kpi-sub" id="k-cost-sub">누적</div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title coll-head open" onclick="toggleStatsPanel('kpiY')">
+      <span class="coll-arrow" id="kpiYArrow">▸</span>연간 KPI 실적 · 목표
+      <span class="coll-meta" id="kpiYCollMeta"></span>
+    </div>
+    <div id="kpiYBody">
+    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:-4px 0 8px;line-height:1.6;">전체 장비 연간 합산 · 위 기간 필터와 관계없이 연도 기준</div>
+    <div id="kpiYYears" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <div id="kpiYContent"></div>
     </div>
   </div>
   <div class="sec">
@@ -2956,6 +2999,7 @@ if(!db.partTypes) db.partTypes=[];
 if(!db.maintTypes) db.maintTypes=[];
 if(!db.capas) db.capas=[];
 if(!db.projects) db.projects=[];
+if(!db.kpiTargets) db.kpiTargets={};   // 연간 KPI 목표 {연도:{mtbf,mttr,mtbm,avail,fails,cost}}
 function save(){
   localStorage.setItem('mms_v1',JSON.stringify(db));
   // Firestore 동기화 (Firebase 준비됐을 때만)
@@ -3740,7 +3784,7 @@ function toggleTheme(){
   // meta theme-color 변경
   document.querySelector('meta[name="theme-color"]').content=isLight?'#ffffff':'#0a0c0f';
   // 통계 차트 다시 그리기
-  setTimeout(()=>{drawMonthlyChart();drawTypeChart();},50);
+  setTimeout(()=>{drawMonthlyChart(_statsChartMaints);drawTypeChart(_statsChartMaints);},50);
 }
 // 저장된 테마 적용
 (function(){
@@ -4912,7 +4956,7 @@ function toggleProjPanel(){
   document.getElementById('projArrow').parentElement.classList.toggle('open', projPanelOpen);
 }
 // 통계 접이식 패널 (장비별 · 월별 MTBF): 기본은 접힘, key = 'mtbf' | 'monthly' → #keyBody · #keyArrow
-const statsPanelOpen = {};
+const statsPanelOpen = {kpiY:true};   // 연간 KPI 는 기본 펼침
 function toggleStatsPanel(key){
   const open = statsPanelOpen[key] = !statsPanelOpen[key];
   document.getElementById(key+'Body').style.display = open ? '' : 'none';
@@ -5383,6 +5427,220 @@ function renderMonthlyMtbr(filteredMaints){
   }).join('');
 }
 
+// ══════ 연간 KPI 실적 · 목표 · 내년 목표 추천 ══════
+// hi : 높을수록 좋음 · count : 연간 합계 지표 (진행 중인 연도는 연환산으로 비교)
+const KPI_DEFS=[
+  {k:'mtbf', l:'MTBF',    sub:'평균 고장 간격',     u:'h', hi:true,  dec:0},
+  {k:'mttr', l:'MTTR',    sub:'평균 수리시간',      u:'h', hi:false, dec:2},
+  {k:'mtbm', l:'MTBM',    sub:'평균 정비 간격',     u:'h', hi:true,  dec:0},
+  {k:'avail',l:'가동률',  sub:'고장 정지 제외',     u:'%', hi:true,  dec:2},
+  {k:'fails',l:'고장 건수',sub:'연간',              u:'건',hi:false, dec:0, count:true},
+  {k:'cost', l:'정비비용',sub:'부품비 연간',        u:'원',hi:false, dec:0, count:true},
+];
+// 등급 : 목표 달성률 (목표가 없으면 전년 대비) — 낮을수록 좋은 지표는 목표 ÷ 실적, 가동률은 비가동률 기준
+const KPI_GRADES=[{min:110,t:'우수',c:'g'},{min:100,t:'양호',c:'b'},{min:90,t:'보통',c:'a'},{min:-Infinity,t:'미흡',c:'r'}];
+const KPI_STEP=0.05;   // 내년 추천 : 올해 실적에서 5% 개선
+let kpiYearSel=null, _kpiRecs=null;
+
+// 연간 실적 : 전체 장비 합산 — MTBF = (가동시간 합 − 고장 정지시간) ÷ 고장 건수
+function kpiYearActual(year){
+  const today=localToday(), cy=+today.slice(0,4), ys=year+'-01-01';
+  if(ys>today) return null;
+  const ye=year+'-12-31'>today?today:year+'-12-31';
+  const getD=m=>(m.start?m.start.slice(0,10):null)||m.date;
+  const ms=db.maints.filter(m=>{const d=getD(m);return d&&d>=ys&&d<=ye;});
+  if(!ms.length&&year<cy) return null;   // 기록 없는 지난 연도
+  const failList=ms.filter(m=>m.type==='고장');
+  // 가동시간 : 그 해에 설치돼 있던 장비 (단종 장비는 그 해 정비 기록이 있을 때만)
+  let opH=0;
+  db.eqs.forEach(eq=>{
+    if(eq.status==='단종'&&!ms.some(m=>m.eqId===eq.id)) return;
+    const s=eq.install&&eq.install>ys?eq.install:ys;
+    if(s<=ye) opH+=eqOpHours(eq.id,s,ye);
+  });
+  const dur=list=>list.reduce((s,m)=>s+maintHours(m),0);
+  const failDown=dur(failList), allDown=dur(ms), timed=failList.filter(m=>maintHours(m)>0);
+  const days=Math.round((new Date(ye)-new Date(ys))/86400000)+1;
+  const yearDays=new Date(year,1,29).getDate()===29?366:365, k=yearDays/days;
+  const cost=maintCostSum(ms);
+  return {year,days,yearDays,partial:days<yearDays,opH,ms,failList,failDown,timed:timed.length,
+    mtbf:failList.length&&opH>0?Math.max(opH-failDown,0)/failList.length:null,
+    mtbm:ms.length&&opH>0?Math.max(opH-allDown,0)/ms.length:null,
+    mttr:timed.length?dur(timed)/timed.length:null,
+    avail:opH>0?Math.max(opH-failDown,0)/opH*100:null,
+    fails:failList.length, failsY:failList.length*k, cost, costY:cost*k};
+}
+function kpiVal(def,a){return a?(def.count?a[def.k+'Y']:a[def.k]):null;}
+function kpiFmt(def,v){
+  if(v==null||!isFinite(v)) return '—';
+  if(def.k==='cost') return fmtCost(Math.round(v));
+  return capaFmt(v,def.k==='fails'&&v%1?1:def.dec)+def.u;
+}
+// 달성률(%) : base(목표 또는 전년) 대비 — Infinity = 고장 0건 등 초과 달성
+function kpiRate(def,act,base){
+  if(base==null||!isFinite(base)) return null;
+  if(def.k==='avail'){
+    if(act==null) return null;
+    const a=100-act, b=100-base;
+    return a<=0?Infinity:b>0?b/a*100:0;
+  }
+  if(def.hi){
+    if(act==null) return def.k==='mttr'?null:Infinity;   // MTBF · MTBM 값 없음 = 고장 · 정비 0건
+    return base>0?act/base*100:null;
+  }
+  if(act==null) return null;
+  return act<=0?Infinity:base>0?base/act*100:0;
+}
+function kpiRateTxt(r){return r==null?'—':isFinite(r)?Math.round(r)+'%':'초과 달성';}
+function kpiGrade(def,cur,tgt,prev){
+  for(const [basis,base] of [['목표',tgt],['전년',prev]]){
+    if(base==null) continue;
+    const r=kpiRate(def,cur,base);
+    if(r==null||isNaN(r)) continue;
+    return {basis,rate:r,g:KPI_GRADES.find(g=>r>=g.min)};
+  }
+  return null;
+}
+function kpiBadge(gr){return gr?`<span class="kg ${gr.g.c}" title="${gr.basis} 대비 ${kpiRateTxt(gr.rate)}">${gr.g.t}</span>`:'';}
+// 내년 추천 : 목표 우수 · 양호(또는 목표 없음) → 올해 실적에서 5% 개선 / 보통 · 미흡 → 올해 목표 유지(재도전)
+function kpiRec(def,a,tgt,prev){
+  const cur=kpiVal(def,a), gr=kpiGrade(def,cur,tgt,prev), onT=gr&&gr.basis==='목표';
+  const rnd=v=>def.k==='cost'?Math.round(v/10000)*10000:def.k==='fails'?Math.max(0,Math.round(v)):+v.toFixed(def.dec);
+  const imp=v=>def.k==='avail'?100-(100-v)*(1-KPI_STEP):def.hi?v*(1+KPI_STEP):v*(1-KPI_STEP);
+  let rec=null, why;
+  if(cur==null){
+    rec=tgt;
+    why=def.k==='mttr'?'고장 수리시간 기록 없음 — 고장 정비에 시작 · 종료 시각을 입력해야 산출됩니다'
+      :`${def.k==='mtbm'?'정비':'고장'} 0건 — 현 수준 유지`+(tgt!=null?' (목표 유지)':'');
+  } else if(onT&&(gr.g.t==='보통'||gr.g.t==='미흡')){
+    rec=tgt;
+    why=`목표 ${gr.g.t} (달성률 ${kpiRateTxt(gr.rate)}) — 목표 유지 · 재도전`+(gr.g.t==='미흡'?' · 원인 분석과 개선 활동 우선':'');
+  } else {
+    rec=rnd(imp(cur));
+    why=(onT?`목표 ${gr.g.t} (달성률 ${kpiRateTxt(gr.rate)}) — `:'목표 미설정 — ')+`올해 실적에서 ${KPI_STEP*100}% 개선`;
+  }
+  if(cur!=null&&prev!=null){
+    const r=kpiRate(def,cur,prev);
+    if(r!=null&&r<90) why+=' · 전년 대비 악화';
+    else if(r!=null&&r>=110) why+=' · 전년 대비 개선 추세';
+  }
+  return {cur,rec,why,gr};
+}
+function setKpiYear(y){kpiYearSel=y;renderKpiYear();}
+function setKpiTarget(y,k,v){
+  if(!db.kpiTargets) db.kpiTargets={};
+  const t=db.kpiTargets[y]=db.kpiTargets[y]||{}, n=parseFloat(v);
+  if(v===''||isNaN(n)) delete t[k]; else t[k]=n;
+  if(!Object.keys(t).length) delete db.kpiTargets[y];
+  save();
+  // onchange 는 다음 입력칸으로 이동할 때 발생 → 다시 그린 뒤 그 칸에 포커스 복원
+  const f=document.activeElement&&document.activeElement.id;
+  renderKpiYear();
+  if(f){const el=document.getElementById(f);if(el) el.focus();}
+}
+function applyKpiRec(){
+  if(!_kpiRecs) return;
+  const {year,vals}=_kpiRecs;
+  if(!Object.keys(vals).length){toast('적용할 추천값 없음','w');return;}
+  const cur=(db.kpiTargets||{})[year];
+  if(cur&&Object.keys(cur).length&&!confirm(`${year}년 목표가 이미 있습니다. 추천값으로 덮어쓸까요?`)) return;
+  if(!db.kpiTargets) db.kpiTargets={};
+  db.kpiTargets[year]=Object.assign({},cur||{},vals);
+  save();kpiYearSel=year;renderKpiYear();
+  toast(`${year}년 KPI 목표 적용 — 필요하면 값을 직접 조정하세요`);
+}
+function renderKpiYear(){
+  const box=document.getElementById('kpiYContent'), yEl=document.getElementById('kpiYYears');
+  if(!box||!yEl) return;
+  const cy=+localToday().slice(0,4), T=db.kpiTargets||{}, Y=kpiYearSel||cy;
+  const ys=new Set([cy,cy+1,Y,...Object.keys(T).map(Number)]);
+  db.maints.forEach(m=>{const d=(m.start?m.start.slice(0,10):null)||m.date;if(d) ys.add(+d.slice(0,4));});
+  const years=[...ys].filter(y=>y>2000).sort((a,b)=>b-a);
+  yEl.innerHTML=years.map(y=>`<button class="filter-chip${y===Y?' active':''}" onclick="setKpiYear(${y})">${y}년${y===cy?' · 올해':y>cy?' · 목표':''}</button>`).join('');
+  const tv=(y,k)=>{const t=(T[y]||{})[k];return typeof t==='number'?t:null;};
+  const a=kpiYearActual(Y), p=kpiYearActual(Y-1), cnt={};
+
+  const cards=KPI_DEFS.map(def=>{
+    const cur=kpiVal(def,a), prev=kpiVal(def,p), t=tv(Y,def.k), gr=a?kpiGrade(def,cur,t,prev):null;
+    if(gr) cnt[gr.g.t]=(cnt[gr.g.t]||0)+1;
+    let main='실적 없음', sub='';
+    if(a){
+      main=cur!=null?kpiFmt(def,cur):def.k==='mttr'?'기록 없음':def.k==='mtbm'?'정비 0건':'고장 0건';
+      sub=def.k==='mtbf'?`고장 ${a.fails}건 · 가동 ${capaFmt(a.opH)}h`
+        :def.k==='mtbm'?`정비 ${a.ms.length}건`
+        :def.k==='mttr'?`수리시간 기록 ${a.timed}건`
+        :def.k==='avail'?`고장 정지 ${capaFmt(a.failDown,1)}h`
+        :a.partial?`누계 ${kpiFmt(def,a[def.k])} · 연환산`:'연간 합계';
+    }
+    let delta='';
+    if(cur!=null&&prev!=null&&prev!==0){
+      const ch=(cur-prev)/Math.abs(prev)*100, r=kpiRate(def,cur,prev);
+      delta=` <span class="${r!=null&&r>=100?'kpiy-up':'kpiy-dn'}">${ch>=0?'▲':'▼'}${capaFmt(Math.abs(ch),1)}%</span>`;
+    }
+    return `<div class="kpiy-card${gr?' g-'+gr.g.c:''}">
+      <div class="kpiy-hd"><span class="kpiy-l">${def.l}<small>${def.sub}</small></span>${kpiBadge(gr)}</div>
+      <div class="kpiy-v">${main}</div>
+      <div class="kpiy-s">${sub}</div>
+      <div class="kpiy-row"><span>목표 (${def.u})</span><input id="kpiT_${def.k}" type="number" inputmode="decimal" min="0" step="any" value="${t??''}" placeholder="미설정" onchange="setKpiTarget(${Y},'${def.k}',this.value)"></div>
+      ${a?`<div class="kpiy-row"><span>${gr?(gr.basis==='목표'?'목표 달성률':'전년 대비'):'달성률'}</span><b>${gr?kpiRateTxt(gr.rate):'—'}</b></div>
+      <div class="kpiy-row"><span>${Y-1}년</span><b>${p?kpiFmt(def,prev):'—'}${delta}</b></div>`:''}
+    </div>`;
+  }).join('');
+
+  const meta=document.getElementById('kpiYCollMeta');
+  if(meta) meta.innerHTML=a?`${Y}년${a.partial?' 진행 중':''}`+KPI_GRADES.filter(g=>cnt[g.t]).map(g=>` · <b class="kg ${g.c}" style="padding:0 5px;">${g.t} ${cnt[g.t]}</b>`).join(''):`${Y}년 목표 설정`;
+
+  let h=`<div class="kpiy-note">${a
+      ?(a.partial?`<b>${Y}년 진행 중</b> — ${a.days}/${a.yearDays}일 실적 · 고장 건수와 정비비용은 연환산값으로 비교합니다.<br>`:'')
+      :`<b>${Y}년 실적 없음</b> — 목표만 설정할 수 있습니다.<br>`}
+    등급 : <span class="kg g">우수</span> 110% 이상 · <span class="kg b">양호</span> 100~110% · <span class="kg a">보통</span> 90~100% · <span class="kg r">미흡</span> 90% 미만
+    <span style="font-size:10.5px;">(목표 달성률 · 목표가 없으면 전년 대비 · MTTR · 고장 · 비용은 낮을수록, 가동률은 비가동률 기준)</span></div>
+    <div class="kpiy-grid">${cards}</div>`;
+
+  // 내년 목표 추천
+  _kpiRecs=null;
+  if(a){
+    const vals={};
+    const rows=KPI_DEFS.map(def=>{
+      const rc=kpiRec(def,a,tv(Y,def.k),kpiVal(def,p));
+      if(rc.rec!=null) vals[def.k]=rc.rec;
+      return `<tr><td style="text-align:left;font-family:var(--cond);font-weight:700;font-size:13px;">${def.l}</td>
+        <td>${kpiFmt(def,rc.cur)}</td><td>${kpiFmt(def,tv(Y,def.k))}</td><td>${kpiBadge(rc.gr)||'—'}</td>
+        <td style="font-weight:700;color:var(--blue);">${kpiFmt(def,rc.rec)}</td><td class="why">${rc.why}</td></tr>`;
+    }).join('');
+    _kpiRecs={year:Y+1,vals};
+    const byEq={};
+    a.failList.forEach(m=>{const x=byEq[m.eqId]=byEq[m.eqId]||{name:m.eqName||'—',n:0,h:0};x.n++;x.h+=maintHours(m);});
+    const worst=Object.values(byEq).sort((x,y)=>y.n-x.n||y.h-x.h).slice(0,3);
+    h+=`<div class="capa-sub">${Y+1}년 KPI 목표 추천 <span style="font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:0;color:var(--muted);">${Y}년 실적 기준</span></div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;">
+      <table class="kpiy-tbl"><thead><tr><th style="text-align:left;">지표</th><th>${Y} 실적</th><th>${Y} 목표</th><th>등급</th><th>${Y+1} 추천</th><th style="text-align:left;">근거</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    <div class="kpiy-note">
+      · 추천 기준 : 목표 <b>우수 · 양호</b>(또는 목표 미설정)면 올해 실적에서 ${KPI_STEP*100}% 개선, <b>보통 · 미흡</b>이면 올해 목표를 유지하고 재도전합니다.<br>
+      ${worst.length?`· 개선 우선 장비 (고장 많은 순) : ${worst.map(w=>`<b>${projEsc(w.name)}</b> ${w.n}건${w.h>0?' · 정지 '+capaFmt(w.h,1)+'h':''}`).join(' / ')} — 이 장비들의 고장을 줄이는 것이 내년 MTBF · 가동률 목표 달성의 핵심입니다.<br>`:''}
+      ${a.partial?`· ${Y}년이 아직 끝나지 않았습니다${a.days<90?` (${a.days}일 — 데이터 기간이 짧아 참고용)`:''}. 연말 실적으로 다시 확인하세요.<br>`:''}
+      · 연간 MTBF = (전체 장비 가동시간 합 − 고장 정지시간) ÷ 고장 건수 · 가동시간은 장비별 일 가동시간 · 월 가동일수 반영
+    </div>
+    <button class="btn-primary" onclick="applyKpiRec()">${Y+1}년 목표로 적용</button>`;
+  }
+
+  // 연도별 추이
+  const trend=years.filter(y=>y<=cy).map(y=>({y,a:kpiYearActual(y),p:kpiYearActual(y-1)})).filter(x=>x.a);
+  if(trend.length){
+    h+=`<div class="capa-sub" style="margin-top:14px;">연도별 추이</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;">
+      <table class="kpiy-tbl"><thead><tr><th>연도</th>${KPI_DEFS.map(d=>`<th>${d.l}</th>`).join('')}</tr></thead><tbody>
+      ${trend.map(x=>`<tr><td style="font-weight:700;">${x.y}${x.a.partial?'*':''}</td>${KPI_DEFS.map(def=>{
+        const cur=kpiVal(def,x.a), gr=kpiGrade(def,cur,tv(x.y,def.k),kpiVal(def,x.p));
+        return `<td>${kpiFmt(def,cur)}${gr?' '+kpiBadge(gr):''}</td>`;}).join('')}</tr>`).join('')}
+      </tbody></table>
+    </div>
+    ${trend.some(x=>x.a.partial)?'<div class="kpiy-note">* 진행 중인 연도 — 고장 건수 · 정비비용은 연환산</div>':''}`;
+  }
+  box.innerHTML=h;
+}
+
 // ══════ 통계 ══════
 function clearStatsDateFilter(){
   const f=document.getElementById('sFilterDateFrom');
@@ -5406,6 +5664,7 @@ function toggleStatsMtbfOnly(){
 }
 function renderStats(){
   renderProjects();
+  renderKpiYear();
   const fFrom=document.getElementById('sFilterDateFrom')?.value||'';
   const fTo=document.getElementById('sFilterDateTo')?.value||'';
   // 날짜 필터 적용된 정비 목록 (정비일 기준)
@@ -5494,8 +5753,10 @@ function renderStats(){
 
   renderYearButtons();
   renderMonthlyMtbr(filteredMaints);
+  _statsChartMaints=filteredMaints;
   drawMonthlyChart(filteredMaints);
   drawTypeChart(filteredMaints);
+  watchStatsChartResize();
 
   // 부품 사용 TOP5
   const puMap={};
@@ -5526,15 +5787,40 @@ function renderStats(){
   }
 }
 
+// 화면 폭 · 확대율이 바뀌면 통계 차트를 실제 픽셀 크기로 다시 그림 (CSS 늘림으로 흐려지는 현상 방지)
+let _statsChartMaints=null,_statsChartRO=null,_statsChartTimer=null;
+function watchStatsChartResize(){
+  if(_statsChartRO||typeof ResizeObserver==='undefined')return;
+  const lastW=new WeakMap();
+  _statsChartRO=new ResizeObserver(entries=>{
+    const changed=entries.some(e=>{const w=Math.round(e.contentRect.width);if(!w||lastW.get(e.target)===w)return false;lastW.set(e.target,w);return true;});
+    if(!changed)return;
+    clearTimeout(_statsChartTimer);
+    _statsChartTimer=setTimeout(()=>{drawMonthlyChart(_statsChartMaints);drawTypeChart(_statsChartMaints);},80);
+  });
+  ['cvMonthly','cvType'].forEach(id=>{const c=document.getElementById(id);if(c)_statsChartRO.observe(c.parentElement);});
+  // 확대/축소로 devicePixelRatio만 바뀌는 경우
+  window.addEventListener('resize',()=>{
+    clearTimeout(_statsChartTimer);
+    _statsChartTimer=setTimeout(()=>{drawMonthlyChart(_statsChartMaints);drawTypeChart(_statsChartMaints);},80);
+  });
+}
+// 캔버스를 CSS 크기 × devicePixelRatio 정수 픽셀로 맞춤
+function setupChartCanvas(canvas,W,H,dpr){
+  const ctx=canvas.getContext('2d');
+  canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
+  ctx.clearRect(0,0,W,H);
+  return ctx;
+}
+
 // range={from,to} : 내보내기용 월 범위 (없으면 화면 기간 필터)
 function drawMonthlyChart(filteredMaints,exportCanvas,exportW,range){
   const canvas=exportCanvas||document.getElementById('cvMonthly');if(!canvas)return;
-  const ctx=canvas.getContext('2d');
   const dpr=exportCanvas?2:(window.devicePixelRatio||1);
   const W=exportCanvas?(exportW||720):(canvas.parentElement.clientWidth||300),H=190;
-  canvas.width=W*dpr;canvas.height=H*dpr;
-  canvas.style.width=W+'px';canvas.style.height=H+'px';
-  ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  const ctx=setupChartCanvas(canvas,W,H,dpr);
   const isLight=exportCanvas?true:document.body.classList.contains('light');
   if(exportCanvas){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);}
   const textCol=isLight?'#374151':'#f1f5f9';
@@ -5545,7 +5831,12 @@ function drawMonthlyChart(filteredMaints,exportCanvas,exportW,range){
   const fFrom=range?range.from:(document.getElementById('sFilterDateFrom')?.value||'');
   const fTo=range?range.to:(document.getElementById('sFilterDateTo')?.value||'');
   const months=[];
-  if(fFrom&&fTo){
+  const curYear=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}).slice(0,4);
+  const yearMonths=y=>{for(let m=1;m<=12;m++)months.push(y+'-'+String(m).padStart(2,'0'));};
+  if(fFrom&&fTo&&fFrom.slice(5)==='01-01'&&fFrom.slice(0,4)===fTo.slice(0,4)){
+    // 연도 선택 : 1월 ~ 12월 전체
+    yearMonths(fFrom.slice(0,4));
+  } else if(fFrom&&fTo){
     let cur=new Date(fFrom.slice(0,7)+'-01');
     const end=new Date(fTo.slice(0,7)+'-01');
     while(cur<=end){
@@ -5553,10 +5844,8 @@ function drawMonthlyChart(filteredMaints,exportCanvas,exportW,range){
       cur.setMonth(cur.getMonth()+1);
     }
   } else {
-    for(let i=5;i>=0;i--){
-      const d=new Date();d.setMonth(d.getMonth()-i);
-      months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
-    }
+    // 기간 필터 없음 : 올해 1월 ~ 12월
+    yearMonths(curYear);
   }
   const counts=months.map(m=>maints.filter(mt=>{const md=(mt.start?mt.start.slice(0,10):null)||mt.date;return md&&md.startsWith(m);}).length);
   if(!counts.some(c=>c>0)){
@@ -5565,20 +5854,25 @@ function drawMonthlyChart(filteredMaints,exportCanvas,exportW,range){
   const pad={t:20,r:12,b:48,l:42};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   const mx=Math.max(...counts)||1;
-  const bw=cW/months.length*0.6,gap=cW/months.length;
+  // 막대 폭 : 칸의 60% (넓은 화면에서 과도하게 굵어지지 않도록 최대 44px)
+  const gap=cW/months.length,bw=Math.max(3,Math.min(gap*0.6,44));
+  // 칸이 좁으면 글자 축소 · 라벨 건너뛰기
+  const lblFont=gap<22?10:gap<30?11:13,cntFont=gap<18?9:gap<26?10:12;
+  const sameYear=months[0].slice(0,4)===months[months.length-1].slice(0,4);
+  const lblStep=gap<16?Math.ceil(16/gap):1;
   ctx.strokeStyle=gridCol;ctx.lineWidth=1;
-  for(let i=0;i<=4;i++){const y=pad.t+cH*(1-i/4);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();}
+  for(let i=0;i<=4;i++){const y=Math.round(pad.t+cH*(1-i/4))+0.5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();}
   counts.forEach((c,i)=>{
     const x=pad.l+i*gap+(gap-bw)/2;
     const bh=Math.max(c/mx*cH,c>0?2:0);
     const y=pad.t+cH-bh;
-    const grad=ctx.createLinearGradient(0,y,0,y+bh);
-    grad.addColorStop(0,'#5a68c0');grad.addColorStop(1,'#5a68c0');
-    ctx.fillStyle=grad;ctx.beginPath();ctx.roundRect(x,y,bw,bh,3);ctx.fill();
-    ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font='13px monospace';
-    const lbl=months.length>8?months[i].slice(5):months[i].slice(2);
-    ctx.fillText(lbl,x+bw/2,H-10);
-    if(c>0){ctx.fillStyle=isLight?'#3747ac':'#a5b0f0';ctx.font='bold 12px monospace';ctx.fillText(c,x+bw/2,y-5);}
+    if(bh>0){ctx.fillStyle='#5a68c0';ctx.beginPath();ctx.roundRect(x,y,bw,bh,Math.min(3,bw/2));ctx.fill();}
+    if(i%lblStep===0){
+      ctx.fillStyle=textCol;ctx.textAlign='center';ctx.font=lblFont+'px monospace';
+      const lbl=sameYear&&months.length>=6?(+months[i].slice(5))+'월':(months.length>8?months[i].slice(5):months[i].slice(2));
+      ctx.fillText(lbl,x+bw/2,H-10);
+    }
+    if(c>0){ctx.fillStyle=isLight?'#3747ac':'#a5b0f0';ctx.font='bold '+cntFont+'px monospace';ctx.fillText(c,x+bw/2,y-5);}
   });
   ctx.fillStyle=mutedCol;ctx.font='11px monospace';ctx.textAlign='right';
   for(let i=0;i<=4;i++){const v=Math.round(mx*i/4);const y=pad.t+cH*(1-i/4);ctx.fillText(v,pad.l-4,y+4);}
@@ -5586,12 +5880,9 @@ function drawMonthlyChart(filteredMaints,exportCanvas,exportW,range){
 
 function drawTypeChart(filteredMaints,exportCanvas,exportW){
   const canvas=exportCanvas||document.getElementById('cvType');if(!canvas)return;
-  const ctx=canvas.getContext('2d');
   const dpr=exportCanvas?2:(window.devicePixelRatio||1);
   const W=exportCanvas?(exportW||720):(canvas.parentElement.clientWidth||300),H=210;
-  canvas.width=W*dpr;canvas.height=H*dpr;
-  canvas.style.width=W+'px';canvas.style.height=H+'px';
-  ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  const ctx=setupChartCanvas(canvas,W,H,dpr);
   const isLight=exportCanvas?true:document.body.classList.contains('light');
   if(exportCanvas){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);}
   const textCol=isLight?'#111827':'#f1f5f9';
