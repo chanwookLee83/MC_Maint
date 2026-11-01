@@ -3039,32 +3039,43 @@ function gotoTab(n){
   if(tabEl) tabEl.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
 }
 // ── 모바일 : 화면을 좌우로 밀면 이전 / 다음 탭으로 이동 ──
-// 입력칸 · 차트 · 가로 스크롤 영역(표 · 필터칩) · 열린 모달 위에서는 무시
+// 입력칸 · 차트 위에서 밀어도 이동 (단, 커서가 있는 입력칸 안 · 슬라이더 · 탭바 · 열린 모달은 무시)
+// 가로 스크롤 영역(표 · 필터칩)은 그 영역이 실제로 스크롤됐으면 무시, 끝에 닿아 안 움직였으면 탭 이동
 (function(){
-  let sx=0,sy=0,st=0,track=false;
-  const hScrollable=el=>{
+  let sx=0,sy=0,st=0,track=false,scrollers=[];
+  const hScrollers=el=>{
+    const list=[];
     for(;el&&el!==document.body;el=el.parentElement){
-      if(el.matches('input,textarea,select,canvas,[contenteditable="true"],.tabbar'))return true;
-      if(el.scrollWidth>el.clientWidth+2){const ox=getComputedStyle(el).overflowX;if(ox==='auto'||ox==='scroll')return true;}
+      if(el.scrollWidth>el.clientWidth+2){const ox=getComputedStyle(el).overflowX;if(ox==='auto'||ox==='scroll')list.push([el,el.scrollLeft]);}
     }
-    return false;
+    return list;
+  };
+  const blocked=el=>{
+    if(el.closest('.tabbar,input[type="range"]'))return true;
+    // 입력 중(포커스 · 커서 있음)인 칸 안에서 밀기 = 커서 이동 · 글자 선택
+    const a=document.activeElement;
+    return !!(a&&a!==document.body&&a.matches('input,textarea,[contenteditable="true"]')&&a.contains(el));
   };
   document.addEventListener('touchstart',e=>{
     track=false;
     if(e.touches.length!==1||window.innerWidth>=1024)return;
     if(document.querySelector('.modal-bg.show'))return;
-    if(!e.target.closest('.page')||hScrollable(e.target))return;
+    if(!e.target.closest('.page')||blocked(e.target))return;
+    scrollers=hScrollers(e.target);
     const t=e.touches[0];sx=t.clientX;sy=t.clientY;st=Date.now();track=true;
   },{passive:true});
   document.addEventListener('touchend',e=>{
     if(!track)return;track=false;
     const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
     if(Date.now()-st>700||Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.8)return;
+    if(scrollers.some(([el,left])=>Math.abs(el.scrollLeft-left)>1))return;
     if(window.getSelection&&String(window.getSelection()).length)return;
     const tabs=[...document.querySelectorAll('.tabbar .tab')].filter(el=>el.offsetParent!==null);
     const cur=tabs.findIndex(el=>el.classList.contains('active'));
     const next=tabs[cur+(dx<0?1:-1)];
     if(cur<0||!next)return;
+    // 다른 입력칸에 커서가 있던 경우 키보드 닫고 이동
+    const a=document.activeElement;if(a&&a.matches&&a.matches('input,textarea,select'))a.blur();
     gotoTab(next.id.replace('tab-',''));
   },{passive:true});
 })();
