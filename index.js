@@ -37,8 +37,9 @@ const SCHEDULE_MAP = {
 const REQ_REMIND = { EVERY_MIN: 10, MIN_AGE_MIN: 10, MAX_AGE_DAYS: 3, HOURS: [0, 24] };
 
 // ── 공통: 등록된 모든 FCM 토큰으로 푸시 발송 ───────────────────────────────
-// notification(표시용) + data(SW에서 재구성·탭이동용)를 함께 보내 백그라운드
-// 수신 신뢰성을 높이고, 만료 토큰은 자동 정리한다.
+// data 전용 메시지(웹 푸시) : notification 을 함께 보내면 Firebase SDK 가 자동 표시 +
+// SW onBackgroundMessage 가 또 표시해 한 번에 두 번 울림 → title/body/tag/tab 은 data 로만 보내고
+// SW(백그라운드) · onMessage(포그라운드)에서 1번만 표시. 만료 토큰은 자동 정리한다.
 async function sendToAllTokens(title, body, data = {}) {
   const tokenSnap = await db.collection('fcm_tokens').get();
   if (tokenSnap.empty) {
@@ -64,20 +65,9 @@ async function sendToAllTokens(title, body, data = {}) {
     const chunk = tokens.slice(i, i + CHUNK);
     const res = await msg.sendEachForMulticast({
       tokens: chunk,
-      notification: { title, body },
       data: dataPayload,
-      android: {
-        priority: 'high',
-        notification: { channelId: 'mms_default', sound: 'default' }
-      },
-      apns: {
-        headers: { 'apns-priority': '10' },
-        payload: { aps: { sound: 'default', badge: 1 } }
-      },
       webpush: {
-        headers: { Urgency: 'high', TTL: '86400' },
-        notification: { icon: APP_URL + 'icon-192.png', badge: APP_URL + 'badge-96.png', tag: data.tag || 'mms' },
-        fcmOptions: { link: data.tab ? `${APP_URL}?tab=${data.tab}` : APP_URL }
+        headers: { Urgency: 'high', TTL: '86400' }
       }
     });
 
@@ -155,6 +145,13 @@ async function sendScheduledPush(hour) {
 
     // 검교정 만료 체크
     (appDb.calibs || []).forEach(c => {
+      // 불합격(기준 벗어남) : 제품 영향 평가 미완료 · 재교정 전 사용 금지
+      const hist = (c.hist || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || String(b.id).localeCompare(String(a.id)));
+      if (hist.some(r => r.result === '불합격' && !(r.ng && r.ng.date))) issues.push(`${c.name} 영향평가 미결`);
+      if (hist[0] && hist[0].result === '불합격' && !(c.lastDate && c.lastDate > hist[0].date)) {
+        issues.push(`${c.name} 검교정 불합격`);
+        return;
+      }
       if (!c.lastDate || !c.cycleMon) return;
       const next = new Date(c.lastDate);
       next.setMonth(next.getMonth() + parseInt(c.cycleMon));
