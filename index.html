@@ -3080,6 +3080,21 @@ function gotoTab(n){
   },{passive:true});
 })();
 window.addEventListener('popstate',function(e){
+  // 버튼 · 저장으로 모달을 닫으며 되돌린 히스토리 → 탭은 그대로
+  if(_modalBackPending){
+    _modalBackPending=false;
+    _modalQueued.splice(0).forEach(_pushModalState);
+    return;
+  }
+  // 뒤로 가기 : 열린 모달이 있으면 맨 위 모달만 닫음
+  const top=_topModal();
+  if(top){
+    top.classList.remove('show');_modalStack.pop();
+    // 아래 모달이 버튼으로 이미 닫혀 남은 칸이면 함께 되돌림 (뒤로 가기가 헛돌지 않게)
+    const st=history.state;
+    if(st&&st.modal&&!document.getElementById(st.modal)?.classList.contains('show')){_modalBackPending=true;history.back();}
+    return;
+  }
   const tab=(e.state&&e.state.tab)||'req';
   _gotoTabFromPop=true;
   gotoTab(tab);
@@ -3087,8 +3102,36 @@ window.addEventListener('popstate',function(e){
 });
 
 // ── 모달 ──
-function openModal(id){document.getElementById(id).classList.add('show');}
-function closeModal(id,e){if(e&&e.target!==document.getElementById(id))return;document.getElementById(id).classList.remove('show');}
+// 열 때마다 히스토리 1칸 추가 → 모바일 뒤로 가기는 탭 이동보다 열린 모달을 먼저 닫음
+// 버튼 · 저장으로 닫으면 그 칸을 되돌려(history.back) 뒤로 가기가 헛돌지 않게 함
+let _modalStack=[],_modalBackPending=false,_modalQueued=[];
+function _topModal(){
+  _modalStack=_modalStack.filter(id=>document.getElementById(id)?.classList.contains('show'));
+  const id=_modalStack[_modalStack.length-1];
+  return id?document.getElementById(id):null;
+}
+function _pushModalState(id){
+  const tab=document.querySelector('.tab.active')?.id?.replace('tab-','')||'req';
+  history.pushState({tab,modal:id},'',location.hash||'#'+tab);
+}
+function openModal(id){
+  const el=document.getElementById(id);
+  if(el.classList.contains('show'))return;
+  el.classList.add('show');
+  _modalStack=_modalStack.filter(x=>x!==id);_modalStack.push(id);
+  // 직전에 닫은 모달의 되돌리기가 끝나기 전이면 끝난 뒤에 추가
+  if(_modalBackPending)_modalQueued.push(id);else _pushModalState(id);
+}
+function closeModal(id,e){
+  if(e&&e.target!==document.getElementById(id))return;
+  const el=document.getElementById(id);
+  if(!el.classList.contains('show'))return;
+  el.classList.remove('show');
+  _modalStack=_modalStack.filter(x=>x!==id);
+  const qi=_modalQueued.indexOf(id);
+  if(qi>=0){_modalQueued.splice(qi,1);return;}   // 아직 히스토리에 안 올라간 모달
+  if(history.state&&history.state.modal===id&&!_modalBackPending){_modalBackPending=true;history.back();}
+}
 
 // ══════ 검교정 ══════
 function addCalibMonths(dateStr,months){
