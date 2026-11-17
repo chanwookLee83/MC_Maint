@@ -57,6 +57,16 @@ window._uploadCalibCert = async function(calibId, file) {
   return { path, url, name: file.name };
 };
 
+// 장비 사진 — Storage 규칙이 req-photos/ 아래만 쓰기를 허용하므로 그 안에 eq-<id> 폴더로 저장
+window._uploadEqPhoto = async function(eqId, file) {
+  const safeName = (file.name || 'photo.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `req-photos/eq-${eqId}/${Date.now()}_${safeName}`;
+  const sRef = storageRef(fStorage, path);
+  await uploadBytes(sRef, file, { contentType: file.type || 'image/jpeg' });
+  const url = await getDownloadURL(sRef);
+  return { path, url, name: file.name };
+};
+
 window._deleteReqPhotos = async function(photos) {
   if (!photos || !photos.length) return;
   for (const photo of photos) {
@@ -1493,6 +1503,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       <!-- 비고 -->
       <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
       <div class="field"><label class="flabel">메모</label><textarea class="ftextarea" id="eqMemo" placeholder="특이사항, 주의사항 등 자유롭게 입력..."></textarea></div>
+      <div class="field">
+        <label class="flabel">장비 사진 <span style="font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0;">선택 · 최대 5장</span></label>
+        <div id="eqPhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
+        <label for="eqPhotoInput" class="req-photo-label">사진 선택</label>
+        <input type="file" id="eqPhotoInput" accept="image/*" multiple style="display:none;" onchange="eqPhotoSelect(event,'new')">
+      </div>
 
       <div class="frow" style="margin-top:4px;">
         <button class="btn-ghost" onclick="clearEqForm()">↺ 초기화</button>
@@ -2622,6 +2638,12 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
 
     <div style="font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted2);margin:12px 0 8px;display:flex;align-items:center;gap:8px;">비고<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
     <div class="field"><label class="flabel">메모</label><textarea class="ftextarea" id="eEqMemo" autocomplete="off"></textarea></div>
+    <div class="field">
+      <label class="flabel">장비 사진 <span style="font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0;">최대 5장 · ✕ 는 저장 시 삭제</span></label>
+      <div id="eEqPhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
+      <label for="eEqPhotoInput" class="req-photo-label">사진 추가</label>
+      <input type="file" id="eEqPhotoInput" accept="image/*" multiple style="display:none;" onchange="eqPhotoSelect(event,'edit')">
+    </div>
 
     <button class="btn-primary" onclick="saveEqEdit()">저장</button>
   </div>
@@ -4195,11 +4217,83 @@ function gradeBadgeHtml(g){
 function gradeLabel(g){return g==='S'?'최우선 관리':g==='A'?'중요 관리':g==='B'?'일반 관리':g==='C'?'저우선 관리':'';}
 function condLabel(g){return g==='S'?'양호 / 신품':g==='A'?'정상':g==='B'?'경년 / 주의':g==='C'?'노후 / 교체검토':'';}
 
-function registerEq(){
+// ══════ 장비 사진 (등록 · 수정 · 최대 5장) ══════
+// 폰 사진은 긴 변 1600px JPEG 로 줄여서 업로드 (저장 용량 · 업로드 시간 절약)
+const EQ_PHOTO_MAX=5;
+let _eqPhotoNew=[];                                   // 등록 폼 : 저장 시 올릴 파일
+let _eqEditKeep=[], _eqEditNew=[], _eqEditDrop=[];    // 수정 창 : 유지할 사진 · 새 파일 · 지울 사진
+let _eqSaving=false;
+function eqPhotoSelect(e,mode){
+  const files=Array.from(e.target.files||[]).filter(f=>/^image\//.test(f.type));
+  e.target.value='';
+  const list=mode==='edit'?_eqEditNew:_eqPhotoNew;
+  const room=EQ_PHOTO_MAX-list.length-(mode==='edit'?_eqEditKeep.length:0);
+  if(room<=0){toast(`사진은 최대 ${EQ_PHOTO_MAX}장까지 등록할 수 있습니다`,'w');return;}
+  if(files.length>room) toast(`${room}장까지만 추가됩니다`,'w');
+  list.push(...files.slice(0,room));
+  renderEqPhotoPreview(mode);
+}
+function eqPhotoRm(mode,kind,i){
+  if(kind==='keep') _eqEditDrop.push(..._eqEditKeep.splice(i,1));
+  else (mode==='edit'?_eqEditNew:_eqPhotoNew).splice(i,1);
+  renderEqPhotoPreview(mode);
+}
+function renderEqPhotoPreview(mode){
+  const el=document.getElementById(mode==='edit'?'eEqPhotoPreview':'eqPhotoPreview');
+  if(!el) return;
+  const thumb=(src,kind,i)=>`<div class="req-photo-thumb"><img src="${String(src).replace(/"/g,'&quot;')}" alt="장비 사진">
+    <button class="rm" onclick="eqPhotoRm('${mode}','${kind}',${i})" title="삭제">✕</button></div>`;
+  const keep=mode==='edit'?_eqEditKeep.map((p,i)=>thumb(p.url,'keep',i)):[];
+  const nw=(mode==='edit'?_eqEditNew:_eqPhotoNew).map((f,i)=>thumb(URL.createObjectURL(f),'new',i));
+  el.innerHTML=keep.concat(nw).join('');
+}
+async function compressImage(file,maxPx=1600,q=0.85){
+  if(!/^image\/(jpeg|png|webp)$/.test(file.type)||typeof createImageBitmap!=='function') return file;   // HEIC 등은 그대로
+  try{
+    const bmp=await createImageBitmap(file);
+    const s=Math.min(1,maxPx/Math.max(bmp.width,bmp.height));
+    if(s===1&&file.size<800*1024) return file;
+    const c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',q));
+    if(!blob||blob.size>=file.size) return file;
+    return new File([blob],(file.name||'photo').replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'});
+  }catch(e){return file;}
+}
+// 업로드 실패 시 이번에 올라간 사진은 정리하고 예외 → 호출한 쪽은 저장하지 않음
+async function uploadEqPhotos(eqId,files){
+  if(!files.length) return [];
+  if(typeof window._uploadEqPhoto!=='function'||!navigator.onLine) throw new Error('사진 업로드는 인터넷 연결이 필요합니다');
+  const out=[];
+  try{
+    for(let i=0;i<files.length;i++){
+      toast(`사진 업로드 중... (${i+1}/${files.length})`);
+      out.push(await window._uploadEqPhoto(eqId,await compressImage(files[i])));
+    }
+  }catch(e){
+    if(out.length&&typeof window._deleteReqPhotos==='function') window._deleteReqPhotos(out);
+    throw e;
+  }
+  return out;
+}
+function eqPhotoErr(e){
+  console.warn('장비 사진 업로드 실패:',e);
+  toast('사진 업로드 실패 ('+(e&&(e.code||e.message)||'알 수 없음')+') — 다시 저장해주세요','e');
+}
+
+async function registerEq(){
   const name=document.getElementById('eqName').value.trim();
   if(!name){toast('장비명을 입력해 주세요','w');return;}
+  if(_eqSaving) return;
+  const id=Date.now();
+  let photos=[];
+  _eqSaving=true;
+  try{ photos=await uploadEqPhotos(id,_eqPhotoNew); }
+  catch(e){ eqPhotoErr(e); return; }
+  finally{ _eqSaving=false; }
   db.eqs.push({
-    id:Date.now(),name,
+    id,name,photos,
     serial:document.getElementById('eqSerial').value.trim(),
     asset:document.getElementById('eqAsset').value.trim(),
 
@@ -4231,6 +4325,7 @@ function clearEqForm(){
   const pw=document.getElementById('eqPower');if(pw)pw.value='';
   const st=document.getElementById('eqStatus');if(st){st.value='정상';st.dataset.prev='정상';}
   const io=document.getElementById('eqInspOn');if(io)io.checked=true;
+  _eqPhotoNew=[];renderEqPhotoPreview('new');
   ['S','A','B','C'].forEach(g=>{
     const b=document.getElementById('gbtn-'+g);if(b)b.className='grade-btn';
     const c=document.getElementById('cbtn-'+g);if(c)c.className='grade-btn';
@@ -4286,7 +4381,9 @@ function renderEqList(){
     return `
     <div class="eq-card${stCls?' '+stCls:''}${eq.id===eqNextId?' eq-next':''}" id="eq-card-${i}">
       <div class="eq-head" onclick="toggleEq(${i})">
-        <div class="eq-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20M4 20V10l5 3v-3l5 3V6l6-2v16"/></svg></div>
+        ${(eq.photos||[]).length
+          ?`<div class="eq-icon" style="padding:0;overflow:hidden;"><img src="${eq.photos[0].url}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
+          :`<div class="eq-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20M4 20V10l5 3v-3l5 3V6l6-2v16"/></svg></div>`}
         <div class="eq-info">
           <div style="display:flex;align-items:center;gap:7px;">
             <div class="eq-name">${hlText(eq.name,eqSearchQ)}</div>
@@ -4385,6 +4482,9 @@ function renderEqList(){
         <!-- 메모 -->
         ${eq.memo?`<div class="eq-memo-box"><div class="eq-memo-label">MEMO</div><div class="eq-memo-text">${hlText(eq.memo,eqSearchQ)}</div></div>`:''}
 
+        <!-- 장비 사진 (누르면 원본) -->
+        ${(eq.photos||[]).length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${eq.photos.map((p,k)=>`<a href="${p.url}" target="_blank" rel="noopener"><img src="${p.url}" alt="장비 사진 ${k+1}" loading="lazy" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border2);display:block;"></a>`).join('')}</div>`:''}
+
         <!-- 최근 정비 내용 미리보기 -->
         ${lastMaint?`<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:10px;">
           <div class="eq-info-cell-label">최근 정비 내용</div>
@@ -4450,11 +4550,25 @@ function openEqEdit(i){
   // 등급
   selectGrade('eEqGrade', eq.grade||'', true);
   selectGrade('eEqCond', eq.cond||'', true);
+  // 사진
+  _eqEditKeep=(eq.photos||[]).slice(); _eqEditNew=[]; _eqEditDrop=[];
+  renderEqPhotoPreview('edit');
   openModal('eqModal');
 }
-function saveEqEdit(){
-  if(eqEditIdx<0)return;
+async function saveEqEdit(){
+  if(eqEditIdx<0||_eqSaving)return;
+  // 사진 업로드 (대기 중 동기화로 목록이 바뀔 수 있어 id 로 다시 찾음)
+  const eqId=db.eqs[eqEditIdx].id;
+  let added=[];
+  _eqSaving=true;
+  try{ added=await uploadEqPhotos(eqId,_eqEditNew); }
+  catch(e){ eqPhotoErr(e); return; }
+  finally{ _eqSaving=false; }
+  eqEditIdx=db.eqs.findIndex(e=>e.id===eqId);
+  if(eqEditIdx<0){toast('장비를 찾을 수 없습니다 (다른 기기에서 삭제됨)','e');return;}
+  if(_eqEditDrop.length&&typeof window._deleteReqPhotos==='function') window._deleteReqPhotos(_eqEditDrop);
   db.eqs[eqEditIdx]={...db.eqs[eqEditIdx],
+    photos:_eqEditKeep.concat(added),
     name:document.getElementById('eEqName').value.trim(),
     serial:document.getElementById('eEqSerial').value.trim(),
     asset:document.getElementById('eEqAsset').value.trim(),
@@ -4488,8 +4602,9 @@ function saveEqEdit(){
 }
 function deleteEq(i){
   if(!confirm(`[${db.eqs[i].name}] 삭제할까요?\n관련 정비이력도 삭제됩니다.`))return;
-  const id=db.eqs[i].id;
+  const id=db.eqs[i].id, photos=db.eqs[i].photos||[];
   db.eqs.splice(i,1);
+  if(photos.length&&typeof window._deleteReqPhotos==='function') window._deleteReqPhotos(photos);
   db.maints=db.maints.filter(m=>m.eqId!==id);
   db.insps=db.insps.filter(d=>d.eqId!==id);
   save();renderEqList();populateEqSelects();toast('삭제됨','w');
