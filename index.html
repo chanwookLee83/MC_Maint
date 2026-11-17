@@ -163,6 +163,7 @@ function applyServerDb(serverDb, json) {
       db.parts     = serverDb.parts     || [];
       db.partTypes = serverDb.partTypes || [];
       db.maintTypes = serverDb.maintTypes || [];
+      db.eqStatuses = serverDb.eqStatuses || [];
       db.insps     = serverDb.insps     || [];
       db.inbounds  = serverDb.inbounds  || [];
       db.events    = serverDb.events    || [];
@@ -1441,7 +1442,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </div>
       <div class="frow">
         <div class="field"><label class="flabel">설치일</label><input class="finput" id="eqInstall" type="date"></div>
-        <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eqInspCycle" type="number" placeholder="30" min="1"></div>
+        <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eqInspCycle" type="number" placeholder="30" min="1"><label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="eqInspOn" checked style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0;"><span style="font-size:12px;color:var(--muted2);">연간 점검 계획 적용</span></label></div>
       </div>
       <div class="frow">
         <div class="field"><label class="flabel">일 가동시간(h)</label><input class="finput" id="eqDailyH" type="number" placeholder="24" min="1" max="24" step="0.5"></div>
@@ -1449,11 +1450,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
       </div>
       <div class="frow">
         <div class="field"><label class="flabel">사용 여부</label>
-          <div class="fselect-w"><select class="fselect" id="eqStatus">
-            <option value="정상">정상</option>
-            <option value="고장">고장</option>
-            <option value="단종">단종</option>
-          </select></div>
+          <div class="fselect-w"><select class="fselect" id="eqStatus" onchange="onEqStatusSelectChange(this)"></select></div>
         </div>
       </div>
 
@@ -1513,9 +1510,6 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     <!-- 상태 필터 -->
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;" id="eqStatusFilter">
       <button class="filter-chip active" data-status="ALL" onclick="setEqStatusFilter('ALL')">ALL</button>
-      <button class="filter-chip" data-status="정상" onclick="setEqStatusFilter('정상')">정상</button>
-      <button class="filter-chip" data-status="고장" onclick="setEqStatusFilter('고장')">고장</button>
-      <button class="filter-chip" data-status="단종" onclick="setEqStatusFilter('단종')">단종</button>
     </div>
     <div class="search-result-count" id="eqSearchCount"></div>
     <div id="eqList"><div class="empty"><span class="empty-icon"></span>등록된 장비 없음</div></div>
@@ -2581,7 +2575,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
     <div class="frow">
       <div class="field"><label class="flabel">설치일</label><input class="finput" id="eEqInstall" type="date"></div>
-      <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eEqCycle" type="number" min="1"></div>
+      <div class="field"><label class="flabel">점검주기(일)</label><input class="finput" id="eEqCycle" type="number" min="1"><label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="eEqInspOn" checked style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0;"><span style="font-size:12px;color:var(--muted2);">연간 점검 계획 적용</span></label></div>
     </div>
     <div class="frow">
       <div class="field"><label class="flabel">일 가동시간(h)</label><input class="finput" id="eEqDailyH" type="number" placeholder="24" min="1" max="24" step="0.5"></div>
@@ -2589,11 +2583,7 @@ body.light .ac-item.ac-active{background:#f3f4f6;color:var(--amber);}
     </div>
     <div class="frow">
       <div class="field"><label class="flabel">사용 여부</label>
-        <div class="fselect-w"><select class="fselect" id="eEqStatus">
-          <option value="정상">정상</option>
-          <option value="고장">고장</option>
-          <option value="단종">단종</option>
-        </select></div>
+        <div class="fselect-w"><select class="fselect" id="eEqStatus" onchange="onEqStatusSelectChange(this)"></select></div>
       </div>
     </div>
 
@@ -3105,6 +3095,7 @@ if(!db.reqs) db.reqs=[];
 if(!db.calibs) db.calibs=[];
 if(!db.partTypes) db.partTypes=[];
 if(!db.maintTypes) db.maintTypes=[];
+if(!db.eqStatuses) db.eqStatuses=[];   // 사용자가 추가한 장비 사용 여부(상태)
 if(!db.capas) db.capas=[];
 if(!db.projects) db.projects=[];
 if(!db.kpiTargets) db.kpiTargets={};   // 연간 KPI 목표 {연도:{mtbf,mttr,mtbm,avail,fails,cost}}
@@ -3794,6 +3785,77 @@ function setEqStatusFilter(status){
   renderEqList();
 }
 
+// ══════ 장비 사용 여부 (상태) — 기본 + 사용자 추가 ══════
+// 고장 · 단종은 점검 알림 · 연간계획에서 제외되는 특수 상태, 그 외(정상 · A/S · 추가 상태)는 일반 상태
+const EQ_STATUS_BASE = ['정상','고장','A/S','단종'];
+function getEqStatuses(){
+  const set=new Set(EQ_STATUS_BASE);
+  (db.eqStatuses||[]).forEach(t=>t&&set.add(t));
+  (db.eqs||[]).forEach(e=>e.status&&set.add(e.status));
+  return [...set];
+}
+// 표 · 배지 색 : 정상 초록 · 고장 빨강 · 단종 회색 · 그 외 주황
+function eqStTag(st){return st==='고장'?'r':st==='단종'?'m':(st||'정상')==='정상'?'g':'a';}
+function eqStatusBadge(st){
+  st=st||'정상';
+  const e=String(st).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const t=eqStTag(st);
+  return t==='r'?`<span class="badge badge-red">${e}</span>`
+    :t==='m'?`<span class="badge" style="background:#33333318;border-color:#55555560;color:#aaa;">${e}</span>`
+    :t==='g'?`<span class="badge badge-green">${e}</span>`
+    :`<span class="badge" style="background:#f59e0b18;border-color:#f59e0b50;color:#d97706;">${e}</span>`;
+}
+function renderEqStatusSelect(selId, selected){
+  const sel=document.getElementById(selId);
+  if(!sel) return;
+  const cur = selected!==undefined ? selected : sel.value;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const list=getEqStatuses();
+  sel.innerHTML = list.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')
+    + '<option value="__add__">+ 새 상태 추가...</option>'
+    + ((db.eqStatuses||[]).length?'<option value="__del__">− 추가 상태 삭제...</option>':'');
+  sel.value = (cur && list.includes(cur)) ? cur : '정상';
+  sel.dataset.prev = sel.value;
+}
+function onEqStatusSelectChange(sel){
+  const prev=sel.dataset.prev||'정상';
+  if(sel.value==='__add__'){
+    const name=(prompt('추가할 사용 여부(상태)를 입력하세요\n예) 수리 대기, 이설, 예비')||'').trim();
+    if(!name || name.startsWith('__')){ sel.value=prev; return; }
+    if(!db.eqStatuses) db.eqStatuses=[];
+    if(!EQ_STATUS_BASE.includes(name) && !db.eqStatuses.includes(name)){ db.eqStatuses.push(name); save(); }
+    renderAllEqStatusUI();
+    sel.value=name;
+  } else if(sel.value==='__del__'){
+    const name=(prompt('삭제할 상태를 입력하세요\n(추가 상태: '+(db.eqStatuses||[]).join(', ')+')')||'').trim();
+    sel.value=prev;
+    if(!name) return;
+    if(!(db.eqStatuses||[]).includes(name)){ toast('추가한 상태 중에 없습니다: '+name,'w'); return; }
+    const used=db.eqs.filter(e=>e.status===name).length;
+    if(used && !confirm(`'${name}' 상태인 장비 ${used}대가 있습니다.\n목록에서만 제거하고 장비 상태는 유지됩니다(해당 장비가 있는 동안 필터엔 계속 표시). 계속할까요?`)) return;
+    db.eqStatuses=db.eqStatuses.filter(t=>t!==name); save();
+    if(eqStatusFilter===name && !used) eqStatusFilter='ALL';
+    renderAllEqStatusUI();
+    sel.value = getEqStatuses().includes(prev) ? prev : '정상';
+    toast('상태 삭제: '+name);
+  }
+  sel.dataset.prev = sel.value;
+}
+function renderAllEqStatusUI(){
+  const a=document.getElementById('eqStatus'), b=document.getElementById('eEqStatus');
+  renderEqStatusSelect('eqStatus', a&&a.value&&!a.value.startsWith('__')?a.value:undefined);
+  renderEqStatusSelect('eEqStatus', b&&b.value&&!b.value.startsWith('__')?b.value:undefined);
+  const wrap=document.getElementById('eqStatusFilter');
+  if(!wrap) return;
+  const list=getEqStatuses();
+  if(eqStatusFilter!=='ALL' && !list.includes(eqStatusFilter)) eqStatusFilter='ALL';
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const escJs=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  wrap.innerHTML=['ALL',...list].map(t=>`<button class="filter-chip${eqStatusFilter===t?' active':''}" data-status="${esc(t)}" onclick="setEqStatusFilter('${escJs(t)}')">${esc(t)}</button>`).join('');
+}
+// 연간 점검 계획 대상 : 점검주기 있음 · 고장/단종 아님 · '연간 점검 계획 적용' 체크
+function annualPlanEqs(){return db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장'&&e.inspOn!==false);}
+
 // ══════ 부품 검색 ══════
 let partSearchQ = '';
 let partTypeFilter = 'ALL';
@@ -4145,6 +4207,7 @@ function registerEq(){
     install:document.getElementById('eqInstall').value,
     loc:document.getElementById('eqLoc').value.trim(),
     cycle:parseInt(document.getElementById('eqInspCycle').value)||0,
+    inspOn:document.getElementById('eqInspOn').checked,
     dailyH:Math.min(parseFloat(document.getElementById('eqDailyH').value)||24,24),
     workDays:Math.min(parseInt(document.getElementById('eqWorkDays').value)||0,31),
     status:document.getElementById('eqStatus').value||'정상',
@@ -4166,13 +4229,15 @@ function clearEqForm(){
     const el=document.getElementById(id);if(el)el.value='';
   });
   const pw=document.getElementById('eqPower');if(pw)pw.value='';
-  const st=document.getElementById('eqStatus');if(st)st.value='정상';
+  const st=document.getElementById('eqStatus');if(st){st.value='정상';st.dataset.prev='정상';}
+  const io=document.getElementById('eqInspOn');if(io)io.checked=true;
   ['S','A','B','C'].forEach(g=>{
     const b=document.getElementById('gbtn-'+g);if(b)b.className='grade-btn';
     const c=document.getElementById('cbtn-'+g);if(c)c.className='grade-btn';
   });
 }
 function renderEqList(){
+  renderAllEqStatusUI();
   const el=document.getElementById('eqList');
   const cntEl=document.getElementById('eqSearchCount');
   if(!db.eqs.length){el.innerHTML='<div class="empty"><span class="empty-icon"></span>등록된 장비 없음</div>';if(cntEl)cntEl.innerHTML='';return;}
@@ -4237,7 +4302,8 @@ function renderEqList(){
           </div>`:''}
           <div class="eq-meta">
             ${eq.loc?`<span class="badge badge-gray">${hlText(eq.loc,eqSearchQ)}</span>`:''}
-            ${eq.status==='고장'?`<span class="badge badge-red">고장</span>`:eq.status==='단종'?`<span class="badge" style="background:#33333318;border-color:#55555560;color:#aaa;">단종</span>`:`<span class="badge badge-green">정상</span>`}
+            ${eqStatusBadge(eq.status)}
+            ${eq.cycle&&eq.inspOn===false?`<span class="badge badge-gray">연간점검 미적용</span>`:''}
             ${eq.power?`<span class="badge badge-amber">${eq.power}</span>`:''}
             ${eq.airPres?`<span class="badge badge-blue" style="background:#5a68c018;border-color:#5a68c030;color:var(--blue);">${eq.airPres}MPa</span>`:''}
             ${(eqDailyH(eq.id)<24||eqWorkDays(eq.id))?`<span class="badge badge-gray">${eqDailyH(eq.id)}h · ${eqWorkDays(eq.id)?'월 '+eqWorkDays(eq.id)+'일':'매일'}</span>`:''}
@@ -4374,7 +4440,8 @@ function openEqEdit(i){
   document.getElementById('eEqCycle').value=eq.cycle||'';
   document.getElementById('eEqDailyH').value=eq.dailyH||'';
   document.getElementById('eEqWorkDays').value=eq.workDays||'';
-  const stEl=document.getElementById('eEqStatus');if(stEl)stEl.value=eq.status||'정상';
+  renderEqStatusSelect('eEqStatus', eq.status||'정상');
+  document.getElementById('eEqInspOn').checked=eq.inspOn!==false;
   document.getElementById('eEqMemo').value=eq.memo||'';
   // 전기
   document.getElementById('eEqPower').value=eq.power||'';
@@ -4395,6 +4462,7 @@ function saveEqEdit(){
     install:document.getElementById('eEqInstall').value,
     loc:document.getElementById('eEqLoc').value.trim(),
     cycle:parseInt(document.getElementById('eEqCycle').value)||0,
+    inspOn:document.getElementById('eEqInspOn').checked,
     dailyH:Math.min(parseFloat(document.getElementById('eEqDailyH').value)||24,24),
     workDays:Math.min(parseInt(document.getElementById('eEqWorkDays').value)||0,31),
     status:document.getElementById('eEqStatus').value||'정상',
@@ -7927,7 +7995,7 @@ function xrSpecEq(list,meta){
       return {vals:[i+1,eq.name,eq.serial||'—',eq.asset||'—',eq.maker||'—',eq.loc||'—',eq.grade||'—',eq.cond||'—',st,xrDay(eq.install)||'—',
         eq.cycle?eq.cycle+'일':'—',mtbf||'—',mttr||'—',`${maints.length} / ${fails.length}`,lastInsp?xrDay(lastInsp.date):'—',
         lastMaint?xrDay((lastMaint.start?lastMaint.start.slice(0,10):null)||lastMaint.date):'—'],
-        tag:{8:st==='고장'?'r':st==='단종'?'m':'g'}};
+        tag:{8:eqStTag(st)}};
     })};
 }
 async function exportEqXLSX(){
@@ -8145,7 +8213,7 @@ const annualExtraTip=ds=>ds&&ds.length?`${ds.map(annualMD).join(' · ')} 점검 
 
 function annualPlanData(year){
   const today=new Date();
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
+  const eqs=annualPlanEqs();
   return eqs.map(eq=>{
     const cycle=parseInt(eq.cycle)||30, yearlyCount=Math.max(1,Math.round(365/cycle));
     let coverStart=null;   // 점검 개시일 = 설치일 + 1주기(유예기간)
@@ -8446,7 +8514,7 @@ function exportEqReport(){
     const mtbf=calcMTBF(eq.id),mttr=calcMTTR(eq.id);
     const lastInsp=db.insps.filter(d=>d.eqId===eq.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
     const lastMaint=maints.slice().sort((a,b)=>((b.start||b.date)||'').localeCompare((a.start||a.date)||''))[0];
-    const stTag=eq.status==='고장'?'<span class="tag r">고장</span>':eq.status==='단종'?'<span class="tag m">단종</span>':'<span class="tag g">정상</span>';
+    const stTag=`<span class="tag ${eqStTag(eq.status)}">${esc(eq.status||'정상')}</span>`;
     return `<tr>
       <td class="c">${i+1}</td>
       <td>${esc(eq.name)}</td>
@@ -8533,7 +8601,7 @@ function renderAnnualPlan(){
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   document.getElementById('annualYearLabel').textContent=year+'년';
 
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
+  const eqs=annualPlanEqs();
   const el=document.getElementById('annualTable');
   if(!eqs.length){el.innerHTML='<div class="empty"><span class="empty-icon"></span>점검 주기가 설정된 장비 없음</div>';return;}
 
@@ -8604,7 +8672,7 @@ function exportAnnualPlanCSV(){
   const year=_annualYear;
   const today=new Date();
   const MON=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='\ub2e8\uc885'&&e.status!=='\uace0\uc7a5');
+  const eqs=annualPlanEqs();
   if(!eqs.length){toast('\uc7a5\ube44 \uc5c6\uc74c','w');return;}
   const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const header=[esc('\uc7a5\ube44\uba85'),esc('\uc8fc\uae30(\uc77c)'),...MON.map(m=>esc(m)),esc('\uc5f0\uac04\ud569\uacc4(\uc2e4/\ubaa9\ud45c)'),esc('\ub2ec\uc131\ub960(%)')].join(',');
@@ -8649,7 +8717,7 @@ function exportAnnualPlan(){
   const year=_annualYear;
   const today=new Date();
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const eqs=db.eqs.filter(e=>e.cycle&&e.status!=='단종'&&e.status!=='고장');
+  const eqs=annualPlanEqs();
   if(!eqs.length){toast('장비 없음','w');return;}
 
   let rows='';
