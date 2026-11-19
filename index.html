@@ -1057,6 +1057,8 @@ body.light{--cp-day:#3747ac;--cp-week:#0f8578;--cp-month:#a8690f;--cp-year:#b833
 .cp-bar i.over{background:var(--red);}
 .cp-d{font-family:var(--mono);font-size:10.5px;color:var(--muted2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cp-d b.neg{color:var(--red);}.cp-d b.pos{color:var(--green);}
+.capa-plan-msg{margin-top:10px;font-size:12.5px;line-height:1.65;color:var(--muted2);border-top:1px dashed var(--border2);padding-top:9px;}
+.capa-plan-msg b{font-family:var(--mono);}
 /* 병목 공정 C/T 구분 */
 .capa-kpi.capa-bn{grid-column:span 2;border-color:color-mix(in srgb,var(--red) 45%,transparent);}
 .capa-kpi.capa-bn .v{color:var(--red);}
@@ -9215,6 +9217,62 @@ function capaPeriodPanel(r){
     </div>
   </div>`;
 }
+// 요구수량 대비 필요 가동 계획 — 병목 효율 반영 C/T 기준 필요 작업시간 산출
+function capaHM(h){
+  const m=Math.round(h*60);
+  const hh=Math.floor(m/60), mm=m%60;
+  return hh&&mm?`${hh}시간 ${mm}분`:hh?`${hh}시간`:`${mm}분`;
+}
+function capaDH(days,H){
+  let full=Math.floor(days+1e-9), remM=Math.round((days-full)*H*60);
+  if(remM>=Math.round(H*60)){full++;remM=0;}
+  if(!remM) return `${full}일`;
+  return full?`${full}일 ${capaHM(remM/60)}`:capaHM(remM/60);
+}
+function capaPlan(r){
+  if(!(r.dem>0)||!r.valid||!(r.H>0)||!(r.D>0)) return null;
+  const ct=r.bn.ctReal, H=r.H, dDay=r.dem/r.D;
+  const mk=(k,l,qty,avail)=>{const hrs=qty*ct/3600, days=hrs/H;return {k,l,qty,avail,hrs,days,spare:avail-days,load:days/avail*100};};
+  return {
+    ct,H,
+    periods:[
+      mk('week','주',dDay*r.weekDays,r.weekDays),
+      mk('month','월',r.dem,r.D),
+      mk('year','년',r.dem*12,r.yearDays),
+    ],
+    dayHours:r.dem*ct/3600/r.D,
+  };
+}
+function capaPlanPanel(r){
+  const p=capaPlan(r);if(!p) return '';
+  const t1=x=>capaFmt(x,1).replace(/\.0$/,'');
+  const m=p.periods[1], short=m.days>m.avail+1e-9;
+  const dh=p.dayHours, dhOver=dh>24;
+  const cards=p.periods.map(x=>{
+    const sh=x.spare<-1e-9;
+    return `<div class="cp ${x.k}">
+      <div class="cp-l">${x.l} 필요 가동<em>요구 ${capaFmt(x.qty)} EA</em></div>
+      <div class="cp-v">${capaDH(x.days,p.H)}</div>
+      <div class="cp-b">총 ${capaHM(x.hrs)} · ${t1(x.days)}일 환산</div>
+      <div class="cp-bar"><i class="${sh?'over':''}" style="width:${Math.min(x.load,100).toFixed(1)}%;"></i></div>
+      <div class="cp-d">가용 ${t1(x.avail)}일 중 · <b class="${sh?'neg':'pos'}">${sh?'부족 ':'여유 '}${capaDH(Math.abs(x.spare),p.H)}</b></div>
+    </div>`;}).join('');
+  const dCard=`<div class="cp day">
+      <div class="cp-l">일 필요 가동시간<em>월 ${t1(r.D)}일 유지 시</em></div>
+      <div class="cp-v">${dhOver?'24시간 초과':capaHM(dh)}</div>
+      <div class="cp-b">현재 일 ${t1(p.H)}시간 가동 기준</div>
+      <div class="cp-bar"><i class="${dh>p.H+1e-9?'over':''}" style="width:${Math.min(dh/p.H*100,100).toFixed(1)}%;"></i></div>
+      <div class="cp-d">${dh>p.H+1e-9?`<b class="neg">부족 ${capaHM(dh-p.H)}/일</b>${dhOver?' · 가동일 확대 필요':''}`:`<b class="pos">여유 ${capaHM(p.H-dh)}/일</b>`}</div>
+    </div>`;
+  const msg=short
+    ? `월 요구 ${capaFmt(r.dem)} EA 생산에 일 ${t1(p.H)}시간 기준 <b style="color:var(--red);">${capaDH(m.days,p.H)}</b> 필요 — 현재 월 ${t1(m.avail)}일로는 <b style="color:var(--red);">${capaDH(-m.spare,p.H)}</b> 부족합니다.`
+    : `월 요구 ${capaFmt(r.dem)} EA는 일 ${t1(p.H)}시간 기준 <b style="color:var(--green);">${capaDH(m.days,p.H)}</b> 가동이면 생산 가능 — 월 ${t1(m.avail)}일 중 <b style="color:var(--green);">${capaDH(m.spare,p.H)}</b> 여유 (휴무 · 타 모델 투입 · 보전 계획에 활용).`;
+  return `<div class="capa-period">
+    <div class="capa-period-hd">요구수량 대비 필요 가동<span>병목 [${projEsc(r.bn.name)}] 효율 반영 C/T ${capaFmt(p.ct,1)}초 · 일 ${t1(p.H)}h 기준</span></div>
+    <div class="capa-period-grid">${dCard}${cards}</div>
+    <div class="capa-plan-msg">${msg}</div>
+  </div>`;
+}
 function capaBnBlock(r){
   const b=r.bn;
   return `<div class="capa-kpi capa-bn"><div class="l">병목 공정</div><div class="v">${projEsc(b.name)}</div>
@@ -9244,6 +9302,7 @@ function renderCapaResult(){
   const vd=capaVerdictText(r);
   const vBorder=vd.cls==='r'?'var(--red)':vd.cls==='a'?'var(--amber)':vd.cls==='g'?'var(--green)':'var(--border2)';
   h+=`<div class="capa-verdict" style="border-left:3px solid ${vBorder};">${vd.html}</div>`;
+  h+=capaPlanPanel(r);
 
   // Yamazumi (공정별 효율 반영 C/T vs Takt)
   const v=r.rows.filter(x=>x.valid);
@@ -9462,7 +9521,13 @@ function exportCapaReport(){
     <div>기존 / 신규 인원<b>${pplTxt(r.pplOld)}명 / ${pplTxt(r.pplNew)}명</b></div>
     <div>공정 구성<b>신규 ${r.nNew}공정 · 기존 ${r.nOld}공정</b></div>
   </div>
-  <div style="border:1px solid #e2e8f0;border-left:3px solid ${st?(st.tag==='r'?'#b91c1c':st.tag==='a'?'#b45309':'#15803d'):'#64748b'};border-radius:7px;padding:10px 12px;font-size:9.5pt;line-height:1.7;margin-bottom:6px;">${vd}</div></div>
+  <div style="border:1px solid #e2e8f0;border-left:3px solid ${st?(st.tag==='r'?'#b91c1c':st.tag==='a'?'#b45309':'#15803d'):'#64748b'};border-radius:7px;padding:10px 12px;font-size:9.5pt;line-height:1.7;margin-bottom:6px;">${vd}</div>
+  ${(()=>{const p=capaPlan(r);if(!p) return '';const t1=x=>capaFmt(x,1).replace(/\.0$/,'');
+    const dh=p.dayHours;
+    return `<table class="ctr" style="margin-top:8px;"><thead><tr><th>요구수량 대비 필요 가동</th><th>요구수량</th><th>필요 작업시간</th><th>필요 가동 (일 ${t1(p.H)}h 기준)</th><th>가용 일수</th><th>여유 / 부족</th></tr></thead><tbody>
+      ${p.periods.map(x=>`<tr><td>${x.l}</td><td class="c">${capaFmt(x.qty)} EA</td><td class="c">${capaHM(x.hrs)}</td><td class="c"><b>${capaDH(x.days,p.H)}</b> (${t1(x.days)}일)</td><td class="c">${t1(x.avail)}일</td><td class="c" style="color:${x.spare<-1e-9?'#b91c1c':'#15803d'};font-weight:700;">${x.spare<-1e-9?'부족 ':'여유 '}${capaDH(Math.abs(x.spare),p.H)}</td></tr>`).join('')}
+      <tr><td>일 필요 가동시간 (월 ${t1(r.D)}일 유지)</td><td class="c">${capaFmt(r.dem/r.D)} EA/일</td><td class="c" colspan="2"><b>${dh>24?'24시간 초과':capaHM(dh)}</b></td><td class="c">${t1(p.H)}시간</td><td class="c" style="color:${dh>p.H+1e-9?'#b91c1c':'#15803d'};font-weight:700;">${dh>p.H+1e-9?'부족 '+capaHM(dh-p.H):'여유 '+capaHM(p.H-dh)}/일</td></tr>
+    </tbody></table>`;})()}</div>
   <div class="nobrk"><h2>3. 공정별 효율 반영 C/T (Yamazumi)</h2>
   ${chart}</div>
   <div class="nobrk"><h2>4. 공정별 캐파 상세</h2>
